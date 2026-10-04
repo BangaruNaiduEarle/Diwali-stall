@@ -1,0 +1,162 @@
+product_id,product_name,category,source,source_page,line_no,supplier_price_internal,reference_price_5x,selling_price_4x,discount_percent,duplicate_name,image_no,image_filename,observed_image_label,image_match_confidence,image_status,next_action
+P001,EMERALD GIFT BOX,Gift Boxes,Estimate 20261049,1-2,1,423.5,2117.5,1694.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P002,SILVER GIFT BOX,Gift Boxes,Estimate 20261049,1-2,2,573.1,2865.5,2292.4,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P003,GOLD GIFT BOX,Gift Boxes,Estimate 20261049,1-2,3,701.8,3509.0,2807.2,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P004,DIAMOND GIFT BOX,Gift Boxes,Estimate 20261049,1-2,4,1095.6,5478.0,4382.4,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P005,GC BIG 10P,Others,Estimate 20261049,1-2,5,38.5,192.5,154.0,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P006,GC SPECIAL,Others,Estimate 20261049,1-2,6,81.4,407.0,325.6,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P007,GC DELUXE,Others,Estimate 20261049,1-2,7,151.8,759.0,607.2,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P008,FP SPECIAL,Flower Pots & Fountains,Estimate 20261049,1-2,8,112.2,561.0,448.8,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P009,FP ASHOKA,Flower Pots & Fountains,Estimate 20261049,1-2,9,177.1,885.5,708.4,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P010,COLOUR KOTI DLX,Others,Estimate 20261049,1-2,10,352.0,1760.0,1408.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P011,4 TWINKLING,Chakkars & Wheels,Estimate 20261049,1-2,11,81.4,407.0,325.6,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P012,Magic pencil dlx,"Matches, Pencils & Caps",Estimate 20261049,1-2,12,88.0,440.0,352.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P013,ITALIAN TORCHERS,Novelty,Estimate 20261049,1-2,13,157.3,786.5,629.2,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P014,JURASSIC BOMB,Bombs,Estimate 20261049,1-2,14,158.4,792.0,633.6,20,False,71,WhatsApp Image 2026-10-02 at 20.43.54 (1).jpeg,Jurassic,High,Mapped - verify,Confirm image shows the exact listed variant
+P015,MIGHTY BOMB,Bombs,Estimate 20261049,1-2,15,189.2,946.0,756.8,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P016,Ganga jamuna,Others,Estimate 20261049,1-2,16,86.9,434.5,347.6,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P017,SIGNAL BOMB (7 SHOTS),Fancy / Multi-Shots,Estimate 20261049,1-2,17,125.4,627.0,501.6,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P018,MEGA STAR,Others,Estimate 20261049,1-2,18,170.5,852.5,682.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P019,flintstones 10 shot,Fancy / Multi-Shots,Estimate 20261049,1-2,19,170.5,852.5,682.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P020,Mottu pattu,Others,Estimate 20261049,1-2,20,334.4,1672.0,1337.6,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P021,Swat cats,Others,Estimate 20261049,1-2,21,334.4,1672.0,1337.6,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P022,Kur kure,Others,Estimate 20261049,1-2,22,102.3,511.5,409.2,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P023,SPARSA GREEN 2PC,Others,Estimate 20261049,1-2,23,102.3,511.5,409.2,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P024,Scooby doo,Others,Estimate 20261049,1-2,24,73.7,368.5,294.8,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P025,CLASSIC WHEEL,Chakkars & Wheels,Estimate 20261049,1-2,25,69.3,346.5,277.2,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P026,BLOSSOM,Others,Estimate 20261049,1-2,26,122.1,610.5,488.4,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P027,PINKIE PIE,Others,Estimate 20261049,1-2,27,122.1,610.5,488.4,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P028,minions,Others,Estimate 20261049,1-2,28,299.2,1496.0,1196.8,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P029,OSCAR,Others,Estimate 20261049,1-2,29,338.8,1694.0,1355.2,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P030,Mario,Others,Estimate 20261049,1-2,30,152.9,764.5,611.6,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P031,Tuity fruity,Others,Estimate 20261049,1-2,31,193.6,968.0,774.4,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P032,JOY WHEEL,Chakkars & Wheels,Estimate 20261049,1-2,32,137.5,687.5,550.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P033,MAGICAL SWORD,Novelty,Estimate 20261049,1-2,33,202.4,1012.0,809.6,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P034,PARTY APPLE,Others,Estimate 20261049,1-2,34,196.9,984.5,787.6,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P035,Pinto Box 9 SHOTS,Fancy / Multi-Shots,Estimate 20261049,1-2,35,347.6,1738.0,1390.4,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P036,P 50 COLOUR FOLDER,"Matches, Pencils & Caps",Estimate 20261049,1-2,36,18.6,93.0,74.4,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P037,ROLL CAPS,"Matches, Pencils & Caps",Estimate 20261049,1-2,37,50.0,250.0,200.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P038,GB WONDERFULL 40 ITEMS,Gift Boxes,Estimate 20261049,1-2,38,620.0,3100.0,2480.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P039,45 ITEMS NATCHIYAR,Gift Boxes,Estimate 20261049,1-2,39,890.0,4450.0,3560.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P040,5 GANESH BOMB,Bombs,Estimate 20261040,3,1,38.0,190.0,152.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P041,4 DLX GANESH,Bombs,Estimate 20261040,3,2,27.0,135.0,108.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P042,3.5 LAXMI,Bombs,Estimate 20261040,3,3,12.0,60.0,48.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P043,4 LAXMI,Bombs,Estimate 20261040,3,4,16.0,80.0,64.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P044,4 GOLD LAXMI DLX,Bombs,Estimate 20261040,3,5,20.0,100.0,80.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P045,2 SOUND BOMB,Bombs,Estimate 20261040,3,6,28.0,140.0,112.0,20,False,73,WhatsApp Image 2026-10-02 at 20.43.54.jpeg,2 Sound,High,Mapped - verify,Confirm image shows the exact listed variant
+P046,3 SOUND BOMB,Bombs,Estimate 20261040,3,7,30.0,150.0,120.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P047,28 WALA PIN,Others,Estimate 20261040,3,8,12.0,60.0,48.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P048,28 GAINT,Others,Estimate 20261040,3,9,18.0,90.0,72.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P049,24 DLX,Others,Estimate 20261040,3,10,30.0,150.0,120.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P050,50 DLX,Others,Estimate 20261040,3,11,75.0,375.0,300.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P051,100 DLX,Others,Estimate 20261040,3,12,150.0,750.0,600.0,20,False,109,WhatsApp Image 2026-10-02 at 21.03.02.jpeg,100 Deluxe,Medium,Mapped - verify,Confirm image shows the exact listed variant
+P052,100 MEGA DLX,Others,Estimate 20261040,3,13,300.0,1500.0,1200.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P053,RED BIJILI 100P,Bijili,Estimate 20261040,3,14,22.0,110.0,88.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P054,100 WALA,Others,Estimate 20261040,3,15,25.0,125.0,100.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P055,1K BIJILI,Bijili,Estimate 20261040,3,16,135.0,675.0,540.0,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P056,1K BIJILI,Bijili,Estimate 20261040,3,17,200.0,1000.0,800.0,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P057,2K BIJILI,Bijili,Estimate 20261040,3,18,270.0,1350.0,1080.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P058,5K BIJILI,Bijili,Estimate 20261040,3,19,675.0,3375.0,2700.0,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P059,5K BIJILI,Bijili,Estimate 20261040,3,20,1000.0,5000.0,4000.0,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P060,10K BIJILI,Bijili,Estimate 20261040,3,21,1350.0,6750.0,5400.0,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P061,10K BIJILI,Bijili,Estimate 20261040,3,22,2000.0,10000.0,8000.0,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P062,GC BIG 10p,Others,Estimate 20261040,3,23,30.0,150.0,120.0,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P063,GC SPECIAL,Others,Estimate 20261040,3,24,50.0,250.0,200.0,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P064,GC DELUXE,Others,Estimate 20261040,3,25,99.0,495.0,396.0,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P065,WIRE SPECIAL,Others,Estimate 20261040,3,26,96.0,480.0,384.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P066,FP BIG,Flower Pots & Fountains,Estimate 20261040,3,27,58.0,290.0,232.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P067,FP SPECIAL,Flower Pots & Fountains,Estimate 20261040,3,28,78.0,390.0,312.0,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P068,FP ASHOKA,Flower Pots & Fountains,Estimate 20261040,3,29,95.0,475.0,380.0,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P069,FP GAINT,Flower Pots & Fountains,Estimate 20261040,3,30,130.0,650.0,520.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P070,COLOURKOTI DLX 5PC,Others,Estimate 20261040,3,31,120.0,600.0,480.0,20,False,77,WhatsApp Image 2026-10-02 at 20.43.56 (1).jpeg,Colour Koti,High,Mapped - verify,Confirm image shows the exact listed variant
+P071,COLOUR KOTI LB,Others,Estimate 20261040,3,32,160.0,800.0,640.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P072,MAZA COLOUR KOTI RED & GREEN,Others,Estimate 20261040,3,33,150.0,750.0,600.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P073,Z BEAST FLOWER POTS 45C,Flower Pots & Fountains,Estimate 20261040,3,34,165.0,825.0,660.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P074,MASTI COLOUR KOTI R&Gi MEGA,Others,Estimate 20261040,3,35,250.0,1250.0,1000.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P075,COLOUR KOTI DLX LB,Others,Estimate 20261040,4,36,256.0,1280.0,1024.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P076,TINY 5 COLOUR FOUNTAIN,Flower Pots & Fountains,Estimate 20261040,4,37,145.0,725.0,580.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P077,TRI COLOUR FOUNTAIN,Flower Pots & Fountains,Estimate 20261040,4,38,240.0,1200.0,960.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P078,TIM LOOSE,Others,Estimate 20261040,4,39,20.0,100.0,80.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P079,BONANZA SD,Others,Estimate 20261040,4,40,395.0,1975.0,1580.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P080,TIM little star,Others,Estimate 20261040,4,41,190.0,950.0,760.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P081,DLX,Others,Estimate 20261040,4,42,370.0,1850.0,1480.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P082,GB,Others,Estimate 20261040,4,43,500.0,2500.0,2000.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P083,1.5 TWINKLING,Chakkars & Wheels,Estimate 20261040,4,44,21.0,105.0,84.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P084,4 TWINKLING,Chakkars & Wheels,Estimate 20261040,4,45,65.0,325.0,260.0,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P085,4 TWINKLING,Chakkars & Wheels,Estimate 20261040,4,46,54.0,270.0,216.0,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P086,ANACONDA,Chakkars & Wheels,Estimate 20261040,4,47,55.0,275.0,220.0,20,False,50,WhatsApp Image 2026-10-02 at 20.43.45 (1).jpeg,Anaconda,High,Mapped,Confirm image shows the exact listed variant
+P087,SNAKE BIG,Chakkars & Wheels,Estimate 20261040,4,48,150.0,750.0,600.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P088,Sub matches,"Matches, Pencils & Caps",Estimate 20261040,4,49,400.0,2000.0,1600.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P089,POPS,Novelty,Estimate 20261040,4,50,50.0,250.0,200.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P090,JOSH,Novelty,Estimate 20261040,4,51,68.0,340.0,272.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P091,NINJA,Novelty,Estimate 20261040,4,52,87.0,435.0,348.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P092,DASARA,Novelty,Estimate 20261040,4,53,135.0,675.0,540.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P093,VIP 10 1 matches,"Matches, Pencils & Caps",Estimate 20261040,4,54,120.0,600.0,480.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P094,10 PENCIL,"Matches, Pencils & Caps",Estimate 20261040,4,55,30.0,150.0,120.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P095,18 PENCIL DLX UV,"Matches, Pencils & Caps",Estimate 20261040,4,56,80.0,400.0,320.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P096,10 CM ELECTRIC,Others,Estimate 20261040,4,57,12.0,60.0,48.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P097,10 CM COLOUR,Others,Estimate 20261040,4,58,13.5,67.5,54.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P098,10 CM GREEN,Others,Estimate 20261040,4,59,13.5,67.5,54.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P099,10 CM RED,Others,Estimate 20261040,4,60,15.0,75.0,60.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P100,15 CM ELECTRIC,Others,Estimate 20261040,4,61,22.0,110.0,88.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P101,15 CM COLOUR,Others,Estimate 20261040,4,62,24.0,120.0,96.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P102,15 CM GREEN,Others,Estimate 20261040,4,63,25.0,125.0,100.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P103,15 CM RED,Others,Estimate 20261040,4,64,27.0,135.0,108.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P104,30 CM ELECTRICAL,Others,Estimate 20261040,4,65,22.0,110.0,88.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P105,30 CM COLOUR,Others,Estimate 20261040,4,66,24.0,120.0,96.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P106,30 CM GREEN,Others,Estimate 20261040,4,67,25.0,125.0,100.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P107,30 CM RED,Others,Estimate 20261040,4,68,27.0,135.0,108.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P108,50 CM ELECTRIC ROLL,Others,Estimate 20261040,4,69,92.0,460.0,368.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P109,50 CM CRACKLING ROLL,Others,Estimate 20261040,4,70,102.0,510.0,408.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P110,75 CM ELECTRIC ROLL,Others,Estimate 20261040,4,71,138.0,690.0,552.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P111,75 CM CRACKLING ROLL,Others,Estimate 20261040,4,72,160.0,800.0,640.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P112,30 CM 5IN1 SPARKLERS,Sparklers,Estimate 20261040,4,73,40.0,200.0,160.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P113,KIT KAT,Others,Estimate 20261040,4,74,150.0,750.0,600.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P114,DORA DORA,Novelty,Estimate 20261040,4,75,19.0,95.0,76.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P115,NAVARANGA STONES,Others,Estimate 20261040,4,76,24.0,120.0,96.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P116,HYDRO BOMB,Bombs,Estimate 20261040,4,77,42.0,210.0,168.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P117,Classic bomb,Bombs,Estimate 20261040,4,78,65.0,325.0,260.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P118,555 BOMB,Bombs,Estimate 20261040,4,79,110.0,550.0,440.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P119,[VERIFY PRODUCT NAME - ROW 80],Others,Estimate 20261040,5,80,180.0,900.0,720.0,20,False,,,,,Source product name needs verification,Verify product name from page 5 row 80 before publishing
+P120,TARZAN BOMB N6,Bombs,Estimate 20261040,5,81,198.0,990.0,792.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P121,TARZAN BOMB N7,Bombs,Estimate 20261040,5,82,68.0,340.0,272.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P122,SS DIGITAL BOMB,Bombs,Estimate 20261040,5,83,120.0,600.0,480.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P123,LAL MIRCHI BOMB,Bombs,Estimate 20261040,5,84,45.0,225.0,180.0,20,False,62,WhatsApp Image 2026-10-02 at 20.43.49.jpeg,Lal Mirchi Bomb,High,Mapped,Confirm image shows the exact listed variant
+P124,GANGA JAMUNA,Others,Estimate 20261040,5,85,80.0,400.0,320.0,20,True,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P125,ROCKET BOMB,Rockets,Estimate 20261040,5,86,100.0,500.0,400.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P126,SHOWER MIX,Others,Estimate 20261040,5,87,75.0,375.0,300.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P127,ASHRAFI MIX,Others,Estimate 20261040,5,88,63.0,315.0,252.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P128,7 SHOTS (5PCS),Fancy / Multi-Shots,Estimate 20261040,5,89,75.0,375.0,300.0,20,False,67,WhatsApp Image 2026-10-02 at 20.43.52 (2).jpeg,7 Shots,High,Mapped - verify,Confirm image shows the exact listed variant
+P129,PHOTO CAPTURE,"Matches, Pencils & Caps",Estimate 20261040,5,90,75.0,375.0,300.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P130,TIN SERIES,Fancy / Multi-Shots,Estimate 20261040,5,91,65.0,325.0,260.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P131,HELICOPTER,Novelty,Estimate 20261040,5,92,75.0,375.0,300.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P132,DARLING DANCER,Novelty,Estimate 20261040,5,93,140.0,700.0,560.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P133,Musical torch,Novelty,Estimate 20261040,5,94,105.0,525.0,420.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P134,WHIZZ WHEEL,Chakkars & Wheels,Estimate 20261040,5,95,125.0,625.0,500.0,20,False,115,WhatsApp Image 2026-10-02 at 23.24.05.jpeg,Whizz Wheel,High,Mapped,Confirm image shows the exact listed variant
+P135,DRONE,Novelty,Estimate 20261040,5,96,150.0,750.0,600.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P136,SIREN,Novelty,Estimate 20261040,5,97,135.0,675.0,540.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P137,SPINNER DLX,Novelty,Estimate 20261040,5,98,80.0,400.0,320.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P138,SPINNER SPL,Novelty,Estimate 20261040,5,99,175.0,875.0,700.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P139,THANIGAI EXPRESS,Others,Estimate 20261040,5,100,200.0,1000.0,800.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P140,MAGIC SHOW,Novelty,Estimate 20261040,5,101,350.0,1750.0,1400.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P141,PEACOCK BIG,Others,Estimate 20261040,5,102,120.0,600.0,480.0,20,False,110,WhatsApp Image 2026-10-02 at 21.19.23 (1).jpeg,Peacock,High,Mapped - verify,Confirm image shows the exact listed variant
+P142,WARRIOR SWARD,Others,Estimate 20261040,5,103,80.0,400.0,320.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P143,12 SHOTS RIDER,Fancy / Multi-Shots,Estimate 20261040,5,104,120.0,600.0,480.0,20,False,87,WhatsApp Image 2026-10-02 at 20.43.59.jpeg,12 Shot,High,Mapped - verify,Confirm image shows the exact listed variant
+P144,15 Shot,Fancy / Multi-Shots,Estimate 20261040,5,105,250.0,1250.0,1000.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P145,25 SHOTS,Fancy / Multi-Shots,Estimate 20261040,5,106,375.0,1875.0,1500.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P146,30 shots,Fancy / Multi-Shots,Estimate 20261040,5,107,425.0,2125.0,1700.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P147,60 shots,Fancy / Multi-Shots,Estimate 20261040,5,108,850.0,4250.0,3400.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P148,120 shots,Fancy / Multi-Shots,Estimate 20261040,5,109,1700.0,8500.0,6800.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P149,240 shots,Fancy / Multi-Shots,Estimate 20261040,5,110,3400.0,17000.0,13600.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P150,CHOTA SHOT,Fancy / Multi-Shots,Estimate 20261040,5,111,30.0,150.0,120.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P151,SINGLE SHOT 2',Fancy / Multi-Shots,Estimate 20261040,5,112,75.0,375.0,300.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P152,SINGLE SHOT (3PCS) SET,Fancy / Multi-Shots,Estimate 20261040,5,113,200.0,1000.0,800.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P153,Nayagara falls,Others,Estimate 20261040,5,114,300.0,1500.0,1200.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P154,SINGLE SHOT 3.5,Fancy / Multi-Shots,Estimate 20261040,5,115,250.0,1250.0,1000.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P155,SINGLE SHOT 7steps,Fancy / Multi-Shots,Estimate 20261040,5,116,200.0,1000.0,800.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P156,RING GUNS SP 56 B,Others,Estimate 20261040,5,117,132.0,660.0,528.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P157,RING GUN 0088 C,Others,Estimate 20261040,5,118,66.0,330.0,264.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P158,RING GUNS 0011 C,Others,Estimate 20261040,5,119,22.8,114.0,91.2,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P159,RING CAPS,"Matches, Pencils & Caps",Estimate 20261040,5,120,6.0,30.0,24.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P160,POP POP NO 1,Others,Estimate 20261040,5,121,233.34,1166.7,933.36,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
+P161,LANTHERS,Others,Estimate 20261040,5,122,13.0,65.0,52.0,20,False,,,,,No confirmed product image,Match against contact sheet/PDF; request photo if unavailable
