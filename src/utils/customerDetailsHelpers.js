@@ -1,3 +1,5 @@
+import { getStallDatesList } from '../data/siteConfig'
+
 export const CUSTOMER_STORAGE_KEY = 'crackers_customer_details'
 
 const MAX = {
@@ -57,13 +59,17 @@ export function validateCustomerDetails(details) {
   const normalized = normalizeCustomerDetails(details)
   const errors = {}
 
-  if (normalized.name.length < 2) {
+  if (!normalized.name) {
+    errors.name = 'Name is required.'
+  } else if (normalized.name.length < 2) {
     errors.name = 'Enter your name (at least 2 characters).'
   }
 
   const digits = getMobileDigits(normalized.mobile)
-  if (digits.length !== 10) {
-    errors.mobile = 'Enter a valid 10-digit mobile number.'
+  if (!normalized.mobile?.trim()) {
+    errors.mobile = 'Please enter a valid 10-digit mobile number.'
+  } else if (digits.length !== 10) {
+    errors.mobile = 'Please enter a valid 10-digit mobile number.'
   }
 
   if (normalized.area.length > MAX.area) {
@@ -71,6 +77,13 @@ export function validateCustomerDetails(details) {
   }
   if (normalized.note.length > MAX.note) {
     errors.note = 'Note is too long.'
+  }
+
+  if (normalized.pickupDate) {
+    const allowed = getStallDatesList()
+    if (allowed.length > 0 && !allowed.includes(normalized.pickupDate)) {
+      errors.pickupDate = 'Please choose a stall date: November 6, 7, or 8, 2026.'
+    }
   }
 
   return errors

@@ -74,8 +74,9 @@ export default function CatalogueView({
   }
 
   const isAllCategories = !categorySlug || categorySlug === 'all'
+  const searchQuery = search.trim()
   const hasActiveFilters =
-    search.trim().length > 0 || (!isAllCategories && categorySlug !== 'all') || (budgetId && budgetId !== 'all')
+    searchQuery.length > 0 || (!isAllCategories && categorySlug !== 'all') || (budgetId && budgetId !== 'all')
 
   const handleClearAllFilters = () => {
     setSearch('')
@@ -83,82 +84,111 @@ export default function CatalogueView({
     onCategoryChange?.('all')
   }
 
+  const gridCountLabel =
+    hasActiveFilters || filtered.length !== totalActive
+      ? `${filtered.length} of ${totalActive} products`
+      : `${totalActive} products`
+
   return (
     <div ref={topRef}>
       {breadcrumbs}
+
       {!isAllCategories ? (
-        <Button to="/crackers" variant="ghost" size="sm" icon={ArrowLeft} className="mb-6">
+        <Button to="/crackers" variant="ghost" size="sm" icon={ArrowLeft} className="mb-3 md:mb-4">
           All crackers
         </Button>
       ) : null}
 
-      <header className="mb-6 max-w-3xl md:mb-10">
+      <header className="mb-3 max-w-3xl md:mb-4">
         {isAllCategories ? (
           <>
-            <p className="editorial-label-festive">Crackers</p>
-            <h1 className="editorial-title mt-2">{pageDescription}</h1>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-maroon)]">Crackers</p>
+            <h1 className="mt-1 text-xl font-semibold leading-tight tracking-tight text-[var(--color-charcoal)] sm:text-2xl md:editorial-title md:mt-2">
+              {pageDescription}
+            </h1>
           </>
         ) : (
           <>
-            {kicker ? <p className="editorial-label-festive">{kicker}</p> : null}
-            <h1 className={`editorial-title ${kicker ? 'mt-2' : ''}`}>{pageTitle}</h1>
-            <p className="editorial-lead mt-4">{pageDescription}</p>
+            {kicker ? (
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-maroon)]">{kicker}</p>
+            ) : null}
+            <h1
+              className={`text-xl font-semibold leading-tight tracking-tight text-[var(--color-charcoal)] sm:text-2xl md:editorial-title ${kicker ? 'mt-1 md:mt-2' : ''}`}
+            >
+              {pageTitle}
+            </h1>
+            <p className="mt-1 text-sm text-[var(--color-muted)] md:mt-2">{pageDescription}</p>
           </>
         )}
-        <p className="mt-4 text-sm text-[var(--color-muted)]">
-          {filtered.length} {filtered.length === 1 ? 'product' : 'products'}
-          {isAllCategories ? (
-            <span className="text-[var(--color-muted)]/80"> · {totalActive} in catalogue</span>
-          ) : null}
-        </p>
+        <p className="mt-1 text-sm text-[var(--color-muted)]">{`${totalActive} products`}</p>
       </header>
 
-      <div className="mb-6 hairline-b pb-5 md:mb-8 md:pb-6">
-        <ProductFilters
-          search={search}
-          onSearchChange={setSearch}
-          categorySlug={categorySlug}
-          onCategoryChange={onCategoryChange}
-          budgetId={budgetId}
-          onBudgetChange={handleBudgetChange}
-          onClearAll={handleClearAllFilters}
-          hasActiveFilters={hasActiveFilters}
-        />
-      </div>
+      <ProductFilters
+        search={search}
+        onSearchChange={setSearch}
+        categorySlug={categorySlug}
+        onCategoryChange={onCategoryChange}
+        budgetId={budgetId}
+        onBudgetChange={handleBudgetChange}
+        onClearAll={handleClearAllFilters}
+        hasActiveFilters={hasActiveFilters}
+      />
 
-      <p className="mb-6 text-sm text-[var(--color-muted)] md:mb-8" aria-live="polite">
-        Showing {filtered.length === 0 ? 0 : paginatedProducts.length} of {filtered.length}
-        {filtered.length !== totalActive ? (
-          <span className="text-[var(--color-muted)]/75"> (from {totalActive} total)</span>
+      <div className="mt-2.5 md:mt-4">
+        {searchQuery ? (
+          <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 md:mb-3">
+            <p className="text-sm text-[var(--color-charcoal)]" aria-live="polite">
+              Showing {filtered.length} {filtered.length === 1 ? 'result' : 'results'} for &quot;{searchQuery}&quot;
+            </p>
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                className="focus-ring text-xs font-medium text-[var(--color-brand)] underline-offset-2 hover:underline md:text-sm"
+                onClick={handleClearAllFilters}
+              >
+                Clear filters
+              </button>
+            ) : null}
+          </div>
+        ) : hasActiveFilters || filtered.length !== totalActive ? (
+          <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 md:mb-3">
+            <p className="text-xs font-medium text-[var(--color-muted)] md:text-sm">{gridCountLabel}</p>
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                className="focus-ring text-xs font-medium text-[var(--color-brand)] underline-offset-2 hover:underline md:text-sm"
+                onClick={handleClearAllFilters}
+              >
+                Clear filters
+              </button>
+            ) : null}
+          </div>
         ) : null}
-      </p>
 
-      <ProductGrid
-        products={paginatedProducts}
-        variant="light"
-        emptyMessage={
-          hasActiveFilters
-            ? 'Try another search or clear your filters.'
-            : 'No products are available in this view right now.'
-        }
-        emptyAction={
-          hasActiveFilters ? (
-            <Button type="button" variant="secondary" onClick={handleClearAllFilters}>
-              Clear filters
-            </Button>
-          ) : (
-            <Button to="/crackers" variant="secondary">
-              View all crackers
-            </Button>
-          )
-        }
-      />
+        <ProductGrid
+          products={paginatedProducts}
+          variant="light"
+          emptyMessage="Try another product name or clear your filters."
+          emptyAction={
+            hasActiveFilters ? (
+              <div className="flex flex-col items-center gap-2 sm:flex-row">
+                <Button type="button" variant="secondary" onClick={handleClearAllFilters}>
+                  Clear filters
+                </Button>
+                <Button to="/crackers" variant="ghost">
+                  View all crackers
+                </Button>
+              </div>
+            ) : (
+              <Button to="/crackers" variant="secondary">
+                View all crackers
+              </Button>
+            )
+          }
+        />
 
-      <CataloguePagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={handlePageChange}
-      />
+        <CataloguePagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+      </div>
     </div>
   )
 }

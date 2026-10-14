@@ -10,17 +10,15 @@ export const products = [
     "category": "Gift Boxes",
     "pack": "",
     "price": 1694,
-    "referencePrice": 2118,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
     "images": [
-      "/images/products/Ajanta-Emerald-Fireworks-Gift-Pack-1.png",
-      "/images/products/Ajanta-Emerald-Fireworks-Gift-Pack-Label-2.png",
-      "/images/products/Emerald-Fireworks-Gift-Pack-Packaging.png"
-    ]
+      "/images/products/images-mobile-webp/EMERALD_GIFT_BOX_1.webp",
+      "/images/products/images-mobile-webp/EMERALD_GIFT_BOX_2.webp"
+    ],
+    "x4": 1694
   },
   {
     "id": "P002",
@@ -28,17 +26,15 @@ export const products = [
     "category": "Gift Boxes",
     "pack": "",
     "price": 2292,
-    "referencePrice": 2866,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
     "images": [
-      "/images/products/silver-gift-box-1.png",
-      "/images/products/silver-gift-box-2.png",
-      "/images/products/silver-gift-box.png" 
-    ]
+      "/images/products/images-mobile-webp/SILVER_GIFT_BOX_1.webp",
+      "/images/products/images-mobile-webp/SILVER_GIFT_BOX_2.webp"
+    ],
+    "x4": 2292.4
   },
   {
     "id": "P003",
@@ -46,13 +42,15 @@ export const products = [
     "category": "Gift Boxes",
     "pack": "",
     "price": 2807,
-    "referencePrice": 3509,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/GOLD_GIFT_BOX_1.webp",
+      "/images/products/images-mobile-webp/GOLD_GIFT_BOX_2.webp"
+    ],
+    "x4": 2807.2
   },
   {
     "id": "P004",
@@ -60,87 +58,85 @@ export const products = [
     "category": "Gift Boxes",
     "pack": "",
     "price": 4382,
-    "referencePrice": 5478,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
     "images": [
-      "/images/products/diamond-gift-box-1.png",
-      "/images/products/diamond-gift-box-2.png",
-      "/images/products/diamond-gift-box.png"  
-    ]
+      "/images/products/images-mobile-webp/DIAMOND_GIFT_BOX_1.webp",
+      "/images/products/images-mobile-webp/DIAMOND_GIFT_BOX_2.webp"
+    ],
+    "x4": 4382.4
   },
   {
     "id": "P005",
     "name": "GC BIG 10P",
     "category": "Others",
     "pack": "",
-    "price": 154,
-    "referencePrice": 193,
-    "discount": 20,
+    "price": 120,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/GC_BIG_10p_LEO.webp"
+    ]
   },
   {
     "id": "P006",
     "name": "GC SPECIAL",
     "category": "Others",
     "pack": "",
-    "price": 326,
-    "referencePrice": 407,
-    "discount": 20,
+    "price": 300,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/GC_SPECIAL_AJN.webp"
+    ]
   },
   {
     "id": "P007",
     "name": "GC DELUXE",
     "category": "Others",
     "pack": "",
-    "price": 607,
-    "referencePrice": 759,
-    "discount": 20,
+    "price": 400,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/GC_DELUXE.webp"
+    ]
   },
   {
     "id": "P008",
     "name": "FP SPECIAL",
     "category": "Flower Pots & Fountains",
     "pack": "",
-    "price": 449,
-    "referencePrice": 561,
-    "discount": 20,
+    "price": 320,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/FP_SPECIAL.webp"
+    ]
   },
   {
     "id": "P009",
     "name": "FP ASHOKA",
     "category": "Flower Pots & Fountains",
     "pack": "",
-    "price": 708,
-    "referencePrice": 886,
-    "discount": 20,
+    "price":400,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/FP_ASHOKA.webp"
+    ]
   },
   {
     "id": "P010",
@@ -148,27 +144,28 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 1408,
-    "referencePrice": 1760,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/COLOUR_KOTI_DLX.webp"
+    ],
+    "x4": 1000
   },
   {
     "id": "P011",
     "name": "4 TWINKLING",
     "category": "Chakkars & Wheels",
     "pack": "",
-    "price": 326,
-    "referencePrice": 407,
-    "discount": 20,
+    "price": 250,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/4_TWINKLING.webp"
+    ]
   },
   {
     "id": "P012",
@@ -176,13 +173,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 352,
-    "referencePrice": 440,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/Magic_pencil_dlx.webp"
+    ],
+    "x4": 300
   },
   {
     "id": "P013",
@@ -190,13 +188,14 @@ export const products = [
     "category": "Novelty",
     "pack": "",
     "price": 629,
-    "referencePrice": 787,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/ITALIAN_TORCHERS.webp"
+    ],
+    "x4": 400
   },
   {
     "id": "P014",
@@ -204,15 +203,14 @@ export const products = [
     "category": "Bombs",
     "pack": "",
     "price": 634,
-    "referencePrice": 792,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
     "images": [
-      "/images/products/jurassic-bomb.png",
-    ]
+      "/images/products/images-mobile-webp/JURASSIC_BOMB.webp"
+    ],
+    "x4": 640
   },
   {
     "id": "P015",
@@ -220,27 +218,28 @@ export const products = [
     "category": "Bombs",
     "pack": "",
     "price": 757,
-    "referencePrice": 946,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/MIGHTY_BOMB.webp"
+    ],
+    "x4": 800
   },
   {
     "id": "P016",
     "name": "Ganga jamuna",
     "category": "Others",
     "pack": "",
-    "price": 348,
-    "referencePrice": 435,
-    "discount": 20,
+    "price": 200,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/GANGA_JAMUNA.webp"
+    ]
   },
   {
     "id": "P017",
@@ -248,13 +247,14 @@ export const products = [
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 502,
-    "referencePrice": 627,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/SIGNAL_BOMB( 7_SHOTS).webp"
+    ],
+    "x4": 501.6
   },
   {
     "id": "P018",
@@ -262,13 +262,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 682,
-    "referencePrice": 853,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 682
   },
   {
     "id": "P019",
@@ -276,13 +275,12 @@ export const products = [
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 682,
-    "referencePrice": 853,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 682
   },
   {
     "id": "P020",
@@ -290,13 +288,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 1338,
-    "referencePrice": 1672,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 1337.6
   },
   {
     "id": "P021",
@@ -304,13 +301,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 1338,
-    "referencePrice": 1672,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 1337.6
   },
   {
     "id": "P022",
@@ -318,13 +314,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 409,
-    "referencePrice": 512,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 409.2
   },
   {
     "id": "P023",
@@ -332,13 +327,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 409,
-    "referencePrice": 512,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 409.2
   },
   {
     "id": "P024",
@@ -346,13 +340,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 295,
-    "referencePrice": 369,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/Scooby_doo.webp"
+    ],
+    "x4": 300
   },
   {
     "id": "P025",
@@ -360,13 +355,14 @@ export const products = [
     "category": "Chakkars & Wheels",
     "pack": "",
     "price": 277,
-    "referencePrice": 347,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/CLASSIC_WHEEL.webp"
+    ],
+    "x4": 200
   },
   {
     "id": "P026",
@@ -374,13 +370,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 488,
-    "referencePrice": 611,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/BLOSSOM.webp"
+    ],
+    "x4": 500
   },
   {
     "id": "P027",
@@ -388,13 +385,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 488,
-    "referencePrice": 611,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/PINKIE_PIE.webp"
+    ],
+    "x4": 500
   },
   {
     "id": "P028",
@@ -402,13 +400,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 1197,
-    "referencePrice": 1496,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 1196.8
   },
   {
     "id": "P029",
@@ -416,13 +413,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 1355,
-    "referencePrice": 1694,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/OSCAR.webp"
+    ],
+    "x4": 1200
   },
   {
     "id": "P030",
@@ -430,13 +428,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 612,
-    "referencePrice": 765,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/Mario.webp"
+    ],
+    "x4": 600
   },
   {
     "id": "P031",
@@ -444,13 +443,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 774,
-    "referencePrice": 968,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/Tuity_fruity.webp"
+    ],
+    "x4": 800
   },
   {
     "id": "P032",
@@ -458,13 +458,12 @@ export const products = [
     "category": "Chakkars & Wheels",
     "pack": "",
     "price": 550,
-    "referencePrice": 688,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 550
   },
   {
     "id": "P033",
@@ -472,13 +471,12 @@ export const products = [
     "category": "Novelty",
     "pack": "",
     "price": 810,
-    "referencePrice": 1012,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 500
   },
   {
     "id": "P034",
@@ -486,13 +484,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 788,
-    "referencePrice": 985,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 787.6
   },
   {
     "id": "P035",
@@ -500,13 +497,12 @@ export const products = [
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 1390,
-    "referencePrice": 1738,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 1390.4
   },
   {
     "id": "P036",
@@ -514,13 +510,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 74,
-    "referencePrice": 93,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 74.4
   },
   {
     "id": "P037",
@@ -528,13 +523,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 200,
-    "referencePrice": 250,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 200
   },
   {
     "id": "P038",
@@ -542,17 +536,16 @@ export const products = [
     "category": "Gift Boxes",
     "pack": "",
     "price": 2480,
-    "referencePrice": 3100,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
     "images": [
-      "/images/products/GB-WONDERFULL-40-ITEMS-1.png",
-      "/images/products/GB-WONDERFULL-40-ITEMS-2.png",
-      "/images/products/GB-WONDERFULL-40-ITEMS.png"
-    ]
+      "/images/products/images-mobile-webp/GB-WONDERFULL-40-ITEMS-1.webp",
+      "/images/products/images-mobile-webp/GB-WONDERFULL-40-ITEMS.webp",
+      "/images/products/images-mobile-webp/GB-WONDERFULL-40-ITEMS-2.webp"
+    ],
+    "x4": 2480
   },
   {
     "id": "P039",
@@ -560,18 +553,16 @@ export const products = [
     "category": "Gift Boxes",
     "pack": "",
     "price": 3560,
-    "referencePrice": 4450,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
     "images": [
-      "/images/products/nachiyar-gift-box-1.png",
-      "/images/products/nachiyar-gift-box-2.png",
-      "/images/products/nachiyar-gift-box.png"
-     
-    ]
+      "/images/products/nachiyar-gift-box-1.webp",
+      "/images/products/nachiyar-gift-box-2.webp",
+      "/images/products/nachiyar-gift-box.webp"
+    ],
+    "x4": 3560
   },
   {
     "id": "P040",
@@ -579,13 +570,12 @@ export const products = [
     "category": "Bombs",
     "pack": "",
     "price": 152,
-    "referencePrice": 190,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 152
   },
   {
     "id": "P041",
@@ -593,13 +583,14 @@ export const products = [
     "category": "Bombs",
     "pack": "",
     "price": 108,
-    "referencePrice": 135,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/4_DLX_GANESH.webp"
+    ],
+    "x4": 120
   },
   {
     "id": "P042",
@@ -607,13 +598,14 @@ export const products = [
     "category": "Bombs",
     "pack": "",
     "price": 48,
-    "referencePrice": 60,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/3.5_LAXMI.webp"
+    ],
+    "x4": 60
   },
   {
     "id": "P043",
@@ -621,13 +613,14 @@ export const products = [
     "category": "Bombs",
     "pack": "",
     "price": 64,
-    "referencePrice": 80,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/4_LAXMI.webp"
+    ],
+    "x4": 80
   },
   {
     "id": "P044",
@@ -635,13 +628,14 @@ export const products = [
     "category": "Bombs",
     "pack": "",
     "price": 80,
-    "referencePrice": 100,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/4_GOLD_LAXMI_DLX.webp"
+    ],
+    "x4": 80
   },
   {
     "id": "P045",
@@ -649,13 +643,14 @@ export const products = [
     "category": "Bombs",
     "pack": "",
     "price": 112,
-    "referencePrice": 140,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/2_SOUND_BOMB.webp"
+    ],
+    "x4": 120
   },
   {
     "id": "P046",
@@ -663,13 +658,14 @@ export const products = [
     "category": "Bombs",
     "pack": "",
     "price": 120,
-    "referencePrice": 150,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/3_SOUND_BOMB.webp"
+    ],
+    "x4": 120
   },
   {
     "id": "P047",
@@ -677,13 +673,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 48,
-    "referencePrice": 60,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/28_WALA_PIN.webp"
+    ],
+    "x4": 48
   },
   {
     "id": "P048",
@@ -691,13 +688,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 72,
-    "referencePrice": 90,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/28_GAINT.webp"
+    ],
+    "x4": 52
   },
   {
     "id": "P049",
@@ -705,13 +703,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 120,
-    "referencePrice": 150,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/24_DLX.webp"
+    ],
+    "x4": 80
   },
   {
     "id": "P050",
@@ -719,13 +718,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 300,
-    "referencePrice": 375,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/50_DLX.webp"
+    ],
+    "x4": 200
   },
   {
     "id": "P051",
@@ -733,13 +733,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 600,
-    "referencePrice": 750,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/100_DLX.webp"
+    ],
+    "x4": 600
   },
   {
     "id": "P052",
@@ -747,13 +748,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 1200,
-    "referencePrice": 1500,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/100_MEGA_DLX.webp"
+    ],
+    "x4": 1200
   },
   {
     "id": "P053",
@@ -761,13 +763,12 @@ export const products = [
     "category": "Bijili",
     "pack": "",
     "price": 88,
-    "referencePrice": 110,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 100
   },
   {
     "id": "P054",
@@ -775,13 +776,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 100,
-    "referencePrice": 125,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/100_WALA.webp"
+    ],
+    "x4": 100
   },
   {
     "id": "P055",
@@ -789,13 +791,13 @@ export const products = [
     "category": "Bijili",
     "pack": "",
     "price": 540,
-    "referencePrice": 675,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/1K_BIJILI_MAY_May.webp"
+    ]
   },
   {
     "id": "P056",
@@ -803,13 +805,13 @@ export const products = [
     "category": "Bijili",
     "pack": "",
     "price": 800,
-    "referencePrice": 1000,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/1K_BIJILI_DRA_Dragon.webp"
+    ]
   },
   {
     "id": "P057",
@@ -817,13 +819,14 @@ export const products = [
     "category": "Bijili",
     "pack": "",
     "price": 1080,
-    "referencePrice": 1350,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/2K_BIJILI_May.webp"
+    ],
+    "x4": 1080
   },
   {
     "id": "P058",
@@ -831,13 +834,13 @@ export const products = [
     "category": "Bijili",
     "pack": "",
     "price": 2700,
-    "referencePrice": 3375,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/5K_BIJILI_MAY_May.webp"
+    ]
   },
   {
     "id": "P059",
@@ -845,13 +848,13 @@ export const products = [
     "category": "Bijili",
     "pack": "",
     "price": 4000,
-    "referencePrice": 5000,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/5K_BIJILI_DRA_Dragon.webp"
+    ]
   },
   {
     "id": "P060",
@@ -859,13 +862,13 @@ export const products = [
     "category": "Bijili",
     "pack": "",
     "price": 5400,
-    "referencePrice": 6750,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/10K_BIJILI_MAY_May.webp"
+    ]
   },
   {
     "id": "P061",
@@ -873,55 +876,55 @@ export const products = [
     "category": "Bijili",
     "pack": "",
     "price": 8000,
-    "referencePrice": 10000,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/10K_BIJILI_DRA_Dragon.webp"
+    ]
   },
   {
     "id": "P062",
     "name": "GC BIG 10p",
     "category": "Others",
     "pack": "",
-    "price": 120,
-    "referencePrice": 150,
-    "discount": 20,
+    "price": 160,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/GC_BIG_10p_AJN.webp"
+    ]
   },
   {
     "id": "P063",
-    "name": "GC SPECIAL",
+    "name": "GC SPECIAL LEO",
     "category": "Others",
     "pack": "",
     "price": 200,
-    "referencePrice": 250,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/GC_SPECIAL_AJN.webp"
+    ]
   },
   {
     "id": "P064",
-    "name": "GC DELUXE",
+    "name": "GC DELUXE AJN",
     "category": "Others",
     "pack": "",
-    "price": 396,
-    "referencePrice": 495,
-    "discount": 20,
+    "price": 600,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/GC_DELUXE_AJN.webp"
+    ]
   },
   {
     "id": "P065",
@@ -929,13 +932,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 384,
-    "referencePrice": 480,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/WIRE_SPECIAL.webp"
+    ],
+    "x4": 400
   },
   {
     "id": "P066",
@@ -943,41 +947,42 @@ export const products = [
     "category": "Flower Pots & Fountains",
     "pack": "",
     "price": 232,
-    "referencePrice": 290,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/FP_BIG.webp"
+    ],
+    "x4": 240
   },
   {
     "id": "P067",
-    "name": "FP SPECIAL",
+    "name": "FP SPECIAL AJN",
     "category": "Flower Pots & Fountains",
     "pack": "",
-    "price": 312,
-    "referencePrice": 390,
-    "discount": 20,
+    "price": 400,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/FP_SPECIAL_AJN.webp"
+    ]
   },
   {
     "id": "P068",
-    "name": "FP ASHOKA",
+    "name": "FP ASHOKA AJN",
     "category": "Flower Pots & Fountains",
     "pack": "",
-    "price": 380,
-    "referencePrice": 475,
-    "discount": 20,
+    "price": 600,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/FP_ASHOKA_AJN.webp"
+    ]
   },
   {
     "id": "P069",
@@ -985,13 +990,14 @@ export const products = [
     "category": "Flower Pots & Fountains",
     "pack": "",
     "price": 520,
-    "referencePrice": 650,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/FP_GAINT.webp"
+    ],
+    "x4": 500
   },
   {
     "id": "P070",
@@ -999,13 +1005,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 480,
-    "referencePrice": 600,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 480
   },
   {
     "id": "P071",
@@ -1013,13 +1018,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 640,
-    "referencePrice": 800,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/COLOUR_KOTI_LB.webp"
+    ],
+    "x4": 640
   },
   {
     "id": "P072",
@@ -1027,13 +1033,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 600,
-    "referencePrice": 750,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/MAZA_COLOUR_KOTI_RED_&_GREEN.webp"
+    ],
+    "x4": 600
   },
   {
     "id": "P073",
@@ -1041,13 +1048,14 @@ export const products = [
     "category": "Flower Pots & Fountains",
     "pack": "",
     "price": 660,
-    "referencePrice": 825,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/Z_BEAST_FLOWER_POTS_45C.webp"
+    ],
+    "x4": 700
   },
   {
     "id": "P074",
@@ -1055,13 +1063,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 1000,
-    "referencePrice": 1250,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/MASTI_COLOUR_KOTI_R&G_MEGA.webp"
+    ],
+    "x4": 1000
   },
   {
     "id": "P075",
@@ -1069,13 +1078,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 1024,
-    "referencePrice": 1280,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/COLOUR_KOTI_DLX_LB.webp"
+    ],
+    "x4": 1000
   },
   {
     "id": "P076",
@@ -1083,13 +1093,14 @@ export const products = [
     "category": "Flower Pots & Fountains",
     "pack": "",
     "price": 580,
-    "referencePrice": 725,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/TINY_5_COLOUR_FOUNTAIN.webp"
+    ],
+    "x4": 500
   },
   {
     "id": "P077",
@@ -1097,13 +1108,12 @@ export const products = [
     "category": "Flower Pots & Fountains",
     "pack": "",
     "price": 960,
-    "referencePrice": 1200,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 960
   },
   {
     "id": "P078",
@@ -1111,13 +1121,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 80,
-    "referencePrice": 100,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 80
   },
   {
     "id": "P079",
@@ -1125,13 +1134,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 1580,
-    "referencePrice": 1975,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/BONANZA_SD.webp"
+    ],
+    "x4": 1200
   },
   {
     "id": "P080",
@@ -1139,13 +1149,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 760,
-    "referencePrice": 950,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/TIM_little_star.webp"
+    ],
+    "x4": 800
   },
   {
     "id": "P081",
@@ -1153,13 +1164,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 1480,
-    "referencePrice": 1850,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 1600
   },
   {
     "id": "P082",
@@ -1167,55 +1177,54 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 2000,
-    "referencePrice": 2500,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 2000
   },
   {
     "id": "P083",
     "name": "1.5 TWINKLING",
     "category": "Chakkars & Wheels",
     "pack": "",
-    "price": 84,
-    "referencePrice": 105,
-    "discount": 20,
+    "price": 80,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/1.5_TWINKLING.webp"
+    ]
   },
   {
     "id": "P084",
-    "name": "4 TWINKLING",
+    "name": "4 TWINKLING AJN",
     "category": "Chakkars & Wheels",
     "pack": "",
     "price": 260,
-    "referencePrice": 325,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/4_TWINKLING_AJN.webp"
+    ]
   },
   {
     "id": "P085",
-    "name": "4 TWINKLING",
+    "name": "4 TWINKLING MAR",
     "category": "Chakkars & Wheels",
     "pack": "",
     "price": 216,
-    "referencePrice": 270,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/MAR_4_TWINKLING.webp"
+    ]
   },
   {
     "id": "P086",
@@ -1223,13 +1232,14 @@ export const products = [
     "category": "Chakkars & Wheels",
     "pack": "",
     "price": 220,
-    "referencePrice": 275,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/ANACONDA.webp"
+    ],
+    "x4": 200
   },
   {
     "id": "P087",
@@ -1237,13 +1247,12 @@ export const products = [
     "category": "Chakkars & Wheels",
     "pack": "",
     "price": 600,
-    "referencePrice": 750,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 600
   },
   {
     "id": "P088",
@@ -1251,13 +1260,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 1600,
-    "referencePrice": 2000,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 1600
   },
   {
     "id": "P089",
@@ -1265,13 +1273,14 @@ export const products = [
     "category": "Novelty",
     "pack": "",
     "price": 200,
-    "referencePrice": 250,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/POPS.webp"
+    ],
+    "x4": 200
   },
   {
     "id": "P090",
@@ -1279,13 +1288,12 @@ export const products = [
     "category": "Novelty",
     "pack": "",
     "price": 272,
-    "referencePrice": 340,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 272
   },
   {
     "id": "P091",
@@ -1293,13 +1301,12 @@ export const products = [
     "category": "Novelty",
     "pack": "",
     "price": 348,
-    "referencePrice": 435,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 348
   },
   {
     "id": "P092",
@@ -1307,13 +1314,14 @@ export const products = [
     "category": "Novelty",
     "pack": "",
     "price": 540,
-    "referencePrice": 675,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/DASARA.webp"
+    ],
+    "x4": 540
   },
   {
     "id": "P093",
@@ -1321,13 +1329,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 480,
-    "referencePrice": 600,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/VIP_10_IN_1_matches.webp"
+    ],
+    "x4": 440
   },
   {
     "id": "P094",
@@ -1335,13 +1344,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 120,
-    "referencePrice": 150,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/10_PENCIL.webp"
+    ],
+    "x4": 120
   },
   {
     "id": "P095",
@@ -1349,13 +1359,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 320,
-    "referencePrice": 400,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/18_PENCIL_DLX_UV.webp"
+    ],
+    "x4": 320
   },
   {
     "id": "P096",
@@ -1363,13 +1374,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 48,
-    "referencePrice": 60,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/10_CM_ELECTRIC.webp"
+    ],
+    "x4": 60
   },
   {
     "id": "P097",
@@ -1377,13 +1389,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 54,
-    "referencePrice": 68,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/10_CM_COLOUR.webp"
+    ],
+    "x4": 60
   },
   {
     "id": "P098",
@@ -1391,13 +1404,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 54,
-    "referencePrice": 68,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/10_CM_GREEN.webp"
+    ],
+    "x4": 60
   },
   {
     "id": "P099",
@@ -1405,13 +1419,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 60,
-    "referencePrice": 75,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 60
   },
   {
     "id": "P100",
@@ -1419,13 +1432,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 88,
-    "referencePrice": 110,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/15_CM_ELECTRIC.webp"
+    ],
+    "x4": 100
   },
   {
     "id": "P101",
@@ -1433,13 +1447,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 96,
-    "referencePrice": 120,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/15_CM_COLOUR.webp"
+    ],
+    "x4": 100
   },
   {
     "id": "P102",
@@ -1447,13 +1462,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 100,
-    "referencePrice": 125,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 100
   },
   {
     "id": "P103",
@@ -1461,13 +1475,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 108,
-    "referencePrice": 135,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/15_CM_RED.webp"
+    ],
+    "x4": 100
   },
   {
     "id": "P104",
@@ -1475,13 +1490,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 88,
-    "referencePrice": 110,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/30_CM_ELECTRICAL.webp"
+    ],
+    "x4": 100
   },
   {
     "id": "P105",
@@ -1489,13 +1505,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 96,
-    "referencePrice": 120,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/30_CM_COLOUR.webp"
+    ],
+    "x4": 120
   },
   {
     "id": "P106",
@@ -1503,13 +1520,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 100,
-    "referencePrice": 125,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 120
   },
   {
     "id": "P107",
@@ -1517,13 +1533,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 108,
-    "referencePrice": 135,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/30_CM_RED.webp"
+    ],
+    "x4": 120
   },
   {
     "id": "P108",
@@ -1531,13 +1548,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 368,
-    "referencePrice": 460,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 368
   },
   {
     "id": "P109",
@@ -1545,13 +1561,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 408,
-    "referencePrice": 510,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 408
   },
   {
     "id": "P110",
@@ -1559,13 +1574,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 552,
-    "referencePrice": 690,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 408
   },
   {
     "id": "P111",
@@ -1573,13 +1587,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 640,
-    "referencePrice": 800,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 552
   },
   {
     "id": "P112",
@@ -1587,13 +1600,14 @@ export const products = [
     "category": "Sparklers",
     "pack": "",
     "price": 160,
-    "referencePrice": 200,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/30_CM_5IN1_SPARKLERS.webp"
+    ],
+    "x4": 640
   },
   {
     "id": "P113",
@@ -1601,13 +1615,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 600,
-    "referencePrice": 750,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/KIT_KAT.webp"
+    ],
+    "x4": 100
   },
   {
     "id": "P114",
@@ -1615,13 +1630,12 @@ export const products = [
     "category": "Novelty",
     "pack": "",
     "price": 76,
-    "referencePrice": 95,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 76
   },
   {
     "id": "P115",
@@ -1629,13 +1643,12 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 96,
-    "referencePrice": 120,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 96
   },
   {
     "id": "P116",
@@ -1643,13 +1656,14 @@ export const products = [
     "category": "Bombs",
     "pack": "",
     "price": 168,
-    "referencePrice": 210,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/HYDRO_BOMB.webp"
+    ],
+    "x4": 260
   },
   {
     "id": "P117",
@@ -1657,13 +1671,14 @@ export const products = [
     "category": "Bombs",
     "pack": "",
     "price": 260,
-    "referencePrice": 325,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/Classic_bomb.webp"
+    ],
+    "x4": 400
   },
   {
     "id": "P118",
@@ -1671,41 +1686,41 @@ export const products = [
     "category": "Bombs",
     "pack": "",
     "price": 440,
-    "referencePrice": 550,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/555_BOMB.webp"
+    ],
+    "x4": 440
   },
-  {
-    "id": "P119",
-    "name": "[VERIFY PRODUCT NAME - ROW 80]",
-    "category": "Others",
-    "pack": "",
-    "price": 720,
-    "referencePrice": 900,
-    "discount": 20,
-    "description": "Product details available at the stall.",
-    "featured": false,
-    "stockStatus": "available",
-    "active": true,
-    "images": []
-  },
+  // {
+  //   "id": "P119",
+  //   "name": "[VERIFY PRODUCT NAME - ROW 80]",
+  //   "category": "Others",
+  //   "pack": "",
+  //   "price": 720,
+  //   "description": "Product details available at the stall.",
+  //   "featured": false,
+  //   "stockStatus": "available",
+  //   "active": true,
+  //   "images": []
+  // },
   {
     "id": "P120",
     "name": "TARZAN BOMB N6",
     "category": "Bombs",
     "pack": "",
     "price": 792,
-    "referencePrice": 990,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/TARZAN_BOMB_N6.webp"
+    ],
+    "x4": 640
   },
   {
     "id": "P121",
@@ -1713,13 +1728,14 @@ export const products = [
     "category": "Bombs",
     "pack": "",
     "price": 272,
-    "referencePrice": 340,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/TARZAN_BOMB_N7.webp"
+    ],
+    "x4": 720
   },
   {
     "id": "P122",
@@ -1727,13 +1743,12 @@ export const products = [
     "category": "Bombs",
     "pack": "",
     "price": 480,
-    "referencePrice": 600,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 544
   },
   {
     "id": "P123",
@@ -1741,27 +1756,28 @@ export const products = [
     "category": "Bombs",
     "pack": "",
     "price": 180,
-    "referencePrice": 225,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/LAL_MIRCHI_BOMB.webp"
+    ],
+    "x4": 272
   },
   {
     "id": "P124",
-    "name": "GANGA JAMUNA",
+    "name": "GANGA JAMUNA AJN",
     "category": "Others",
     "pack": "",
-    "price": 320,
-    "referencePrice": 400,
-    "discount": 20,
+    "price":400,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/GANGA_JAMUNA_AJN.webp"
+    ]
   },
   {
     "id": "P125",
@@ -1769,13 +1785,14 @@ export const products = [
     "category": "Rockets & Shots",
     "pack": "",
     "price": 400,
-    "referencePrice": 500,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/ROCKET_BOMB.webp"
+    ],
+    "x4": 120
   },
   {
     "id": "P126",
@@ -1783,13 +1800,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 300,
-    "referencePrice": 375,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/SHOWER_MIX.webp"
+    ],
+    "x4": 400
   },
   {
     "id": "P127",
@@ -1797,13 +1815,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 252,
-    "referencePrice": 315,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/ASHRAFI_MIX.webp"
+    ],
+    "x4": 400
   },
   {
     "id": "P128",
@@ -1811,13 +1830,12 @@ export const products = [
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 300,
-    "referencePrice": 375,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 300
   },
   {
     "id": "P129",
@@ -1825,13 +1843,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 300,
-    "referencePrice": 375,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/PHOTO_CAPTURE.webp"
+    ],
+    "x4": 252
   },
   {
     "id": "P130",
@@ -1839,13 +1858,14 @@ export const products = [
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 260,
-    "referencePrice": 325,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/TIN_SERIES.webp"
+    ],
+    "x4": 300
   },
   {
     "id": "P131",
@@ -1853,13 +1873,14 @@ export const products = [
     "category": "Novelty",
     "pack": "",
     "price": 300,
-    "referencePrice": 375,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/HELICOPTER.webp"
+    ],
+    "x4": 252
   },
   {
     "id": "P132",
@@ -1867,13 +1888,14 @@ export const products = [
     "category": "Novelty",
     "pack": "",
     "price": 560,
-    "referencePrice": 700,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/DARLING_DANCER.webp"
+    ],
+    "x4": 300
   },
   {
     "id": "P133",
@@ -1881,13 +1903,14 @@ export const products = [
     "category": "Novelty",
     "pack": "",
     "price": 420,
-    "referencePrice": 525,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/Musical_torch.webp"
+    ],
+    "x4": 300
   },
   {
     "id": "P134",
@@ -1895,13 +1918,14 @@ export const products = [
     "category": "Chakkars & Wheels",
     "pack": "",
     "price": 500,
-    "referencePrice": 625,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/WHIZZ_WHEEL.webp"
+    ],
+    "x4": 300
   },
   {
     "id": "P135",
@@ -1909,13 +1933,14 @@ export const products = [
     "category": "Novelty",
     "pack": "",
     "price": 600,
-    "referencePrice": 750,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/DRONE.webp"
+    ],
+    "x4": 500
   },
   {
     "id": "P136",
@@ -1923,13 +1948,14 @@ export const products = [
     "category": "Novelty",
     "pack": "",
     "price": 540,
-    "referencePrice": 675,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/SIREN.webp"
+    ],
+    "x4": 600
   },
   {
     "id": "P137",
@@ -1937,13 +1963,14 @@ export const products = [
     "category": "Novelty",
     "pack": "",
     "price": 320,
-    "referencePrice": 400,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/SPINNER_DLX.webp"
+    ],
+    "x4": 500
   },
   {
     "id": "P138",
@@ -1951,13 +1978,14 @@ export const products = [
     "category": "Novelty",
     "pack": "",
     "price": 700,
-    "referencePrice": 875,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/SPINNER_SPL.webp"
+    ],
+    "x4": 400
   },
   {
     "id": "P139",
@@ -1965,13 +1993,14 @@ export const products = [
     "category": "Others",
     "pack": "",
     "price": 800,
-    "referencePrice": 1000,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/THANIGAI_EXPRESS.webp"
+    ],
+    "x4": 500
   },
   {
     "id": "P140",
@@ -1979,306 +2008,315 @@ export const products = [
     "category": "Novelty",
     "pack": "",
     "price": 1400,
-    "referencePrice": 1750,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/MAGIC_SHOW.webp"
+    ],
+    "x4": 600
   },
   {
     "id": "P141",
-    "name": "PEACOCK BIG",
+    "name": "PEACOCK",
     "category": "Others",
     "pack": "",
     "price": 480,
-    "referencePrice": 600,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/PEACOCK.webp"
+    ],
+    "x4": 500
   },
   {
     "id": "P142",
+    "name": "PEACOCK GAINT",
+    "category": "Others",
+    "pack": "",
+    "price": 1400,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/peacock-gaint.webp"
+    ],
+    "x4": 1400
+  },
+  {
+    "id": "P143",
     "name": "WARRIOR SWARD",
     "category": "Others",
     "pack": "",
     "price": 320,
-    "referencePrice": 400,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/WARRIOR_SWARD.webp"
+    ],
+    "x4": 320
   },
   {
-    "id": "P143",
+    "id": "P144",
     "name": "12 SHOTS RIDER",
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 480,
-    "referencePrice": 600,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 480
   },
   {
-    "id": "P144",
+    "id": "P145",
     "name": "15 Shot",
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 1000,
-    "referencePrice": 1250,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/leo-15-shots.webp"
+    ],
+    "x4": 1000
   },
   {
-    "id": "P145",
+    "id": "P146",
     "name": "25 SHOTS",
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 1500,
-    "referencePrice": 1875,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 1500
   },
   {
-    "id": "P146",
+    "id": "P147",
     "name": "30 shots",
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 1700,
-    "referencePrice": 2125,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/leo-30-shots.webp"
+    ],
+    "x4": 1700
   },
   {
-    "id": "P147",
+    "id": "P148",
     "name": "60 shots",
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 3400,
-    "referencePrice": 4250,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/leo-60-shots.webp"
+    ],
+    "x4": 3400
   },
   {
-    "id": "P148",
+    "id": "P149",
     "name": "120 shots",
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 6800,
-    "referencePrice": 8500,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/leo-120-shots.webp"
+    ],
+    "x4": 6800
   },
   {
-    "id": "P149",
+    "id": "P150",
     "name": "240 shots",
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 13600,
-    "referencePrice": 17000,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [
+      "/images/products/images-mobile-webp/leo-240-shots.webp"
+    ],
+    "x4": 13600
   },
   {
-    "id": "P150",
+    "id": "P151",
     "name": "CHOTA SHOT",
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 120,
-    "referencePrice": 150,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 120
   },
   {
-    "id": "P151",
+    "id": "P152",
     "name": "SINGLE SHOT 2'",
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 300,
-    "referencePrice": 375,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 300
   },
   {
-    "id": "P152",
+    "id": "P153",
     "name": "SINGLE SHOT (3PCS) SET",
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 800,
-    "referencePrice": 1000,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 800
   },
   {
-    "id": "P153",
+    "id": "P154",
     "name": "Nayagara falls",
     "category": "Others",
     "pack": "",
     "price": 1200,
-    "referencePrice": 1500,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 1200
   },
   {
-    "id": "P154",
+    "id": "P155",
     "name": "SINGLE SHOT 3.5",
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 1000,
-    "referencePrice": 1250,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 1000
   },
   {
-    "id": "P155",
+    "id": "P156",
     "name": "SINGLE SHOT 7steps",
     "category": "Fancy / Multi-Shots",
     "pack": "",
     "price": 800,
-    "referencePrice": 1000,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 800
   },
   {
-    "id": "P156",
+    "id": "P157",
     "name": "RING GUNS SP 56 B",
     "category": "Others",
     "pack": "",
     "price": 528,
-    "referencePrice": 660,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 528
   },
   {
-    "id": "P157",
+    "id": "P158",
     "name": "RING GUN 0088 C",
     "category": "Others",
     "pack": "",
     "price": 264,
-    "referencePrice": 330,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 264
   },
   {
-    "id": "P158",
+    "id": "P159",
     "name": "RING GUNS 0011 C",
     "category": "Others",
     "pack": "",
     "price": 91,
-    "referencePrice": 114,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 91.2
   },
   {
-    "id": "P159",
+    "id": "P160",
     "name": "RING CAPS",
     "category": "Others",
     "pack": "",
     "price": 24,
-    "referencePrice": 30,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 24
   },
   {
-    "id": "P160",
+    "id": "P161",
     "name": "POP POP NO 1",
     "category": "Others",
     "pack": "",
     "price": 933,
-    "referencePrice": 1167,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 933.36
   },
   {
-    "id": "P161",
+    "id": "P162",
     "name": "LANTHERS",
     "category": "Others",
     "pack": "",
     "price": 52,
-    "referencePrice": 65,
-    "discount": 20,
     "description": "Product details available at the stall.",
     "featured": false,
     "stockStatus": "available",
     "active": true,
-    "images": []
+    "images": [],
+    "x4": 52
   }
-]
+ ]

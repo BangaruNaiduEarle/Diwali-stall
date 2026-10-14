@@ -1,0 +1,2322 @@
+/**
+ * Customer-facing catalogue (161 products).
+ * Generated from diwali_product_master_final.csv — do not add supplier/internal fields.
+ */
+
+export const products = [
+  {
+    "id": "P001",
+    "name": "EMERALD GIFT BOX",
+    "category": "Gift Boxes",
+    "pack": "",
+    "price": 1694,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/EMERALD_GIFT_BOX_1.webp",
+      "/images/products/images-mobile-webp/EMERALD_GIFT_BOX_2.webp"
+    ],
+    "x4": 1694
+  },
+  {
+    "id": "P002",
+    "name": "SILVER GIFT BOX",
+    "category": "Gift Boxes",
+    "pack": "",
+    "price": 2292,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/SILVER_GIFT_BOX_1.webp",
+      "/images/products/images-mobile-webp/SILVER_GIFT_BOX_2.webp"
+    ],
+    "x4": 2292.4
+  },
+  {
+    "id": "P003",
+    "name": "GOLD GIFT BOX",
+    "category": "Gift Boxes",
+    "pack": "",
+    "price": 2807,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/GOLD_GIFT_BOX_1.webp",
+      "/images/products/images-mobile-webp/GOLD_GIFT_BOX_2.webp"
+    ],
+    "x4": 2807.2
+  },
+  {
+    "id": "P004",
+    "name": "DIAMOND GIFT BOX",
+    "category": "Gift Boxes",
+    "pack": "",
+    "price": 4382,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/DIAMOND_GIFT_BOX_1.webp",
+      "/images/products/images-mobile-webp/DIAMOND_GIFT_BOX_2.webp"
+    ],
+    "x4": 4382.4
+  },
+  {
+    "id": "P005",
+    "name": "GC BIG 10P",
+    "category": "Others",
+    "pack": "",
+    "price": 120,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/GC_BIG_10p_LEO.webp"
+    ]
+  },
+  {
+    "id": "P006",
+    "name": "GC SPECIAL",
+    "category": "Others",
+    "pack": "",
+    "price": 300,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/GC_SPECIAL_AJN.webp"
+    ]
+  },
+  {
+    "id": "P007",
+    "name": "GC DELUXE",
+    "category": "Others",
+    "pack": "",
+    "price": 400,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/GC_DELUXE.webp"
+    ]
+  },
+  {
+    "id": "P008",
+    "name": "FP SPECIAL",
+    "category": "Flower Pots & Fountains",
+    "pack": "",
+    "price": 320,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/FP_SPECIAL.webp"
+    ]
+  },
+  {
+    "id": "P009",
+    "name": "FP ASHOKA",
+    "category": "Flower Pots & Fountains",
+    "pack": "",
+    "price":400,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/FP_ASHOKA.webp"
+    ]
+  },
+  {
+    "id": "P010",
+    "name": "COLOUR KOTI DLX",
+    "category": "Others",
+    "pack": "",
+    "price": 1408,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/COLOUR_KOTI_DLX.webp"
+    ],
+    "x4": 1000
+  },
+  {
+    "id": "P011",
+    "name": "4 TWINKLING",
+    "category": "Chakkars & Wheels",
+    "pack": "",
+    "price": 250,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/4_TWINKLING.webp"
+    ]
+  },
+  {
+    "id": "P012",
+    "name": "Magic pencil dlx",
+    "category": "Others",
+    "pack": "",
+    "price": 352,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/Magic_pencil_dlx.webp"
+    ],
+    "x4": 300
+  },
+  {
+    "id": "P013",
+    "name": "ITALIAN TORCHERS",
+    "category": "Novelty",
+    "pack": "",
+    "price": 629,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/ITALIAN_TORCHERS.webp"
+    ],
+    "x4": 400
+  },
+  {
+    "id": "P014",
+    "name": "JURASSIC BOMB",
+    "category": "Bombs",
+    "pack": "",
+    "price": 634,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/JURASSIC_BOMB.webp"
+    ],
+    "x4": 640
+  },
+  {
+    "id": "P015",
+    "name": "MIGHTY BOMB",
+    "category": "Bombs",
+    "pack": "",
+    "price": 757,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/MIGHTY_BOMB.webp"
+    ],
+    "x4": 800
+  },
+  {
+    "id": "P016",
+    "name": "Ganga jamuna",
+    "category": "Others",
+    "pack": "",
+    "price": 200,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/GANGA_JAMUNA.webp"
+    ]
+  },
+  {
+    "id": "P017",
+    "name": "SIGNAL BOMB (7 SHOTS)",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 502,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/SIGNAL_BOMB( 7_SHOTS).webp"
+    ],
+    "x4": 501.6
+  },
+  {
+    "id": "P018",
+    "name": "MEGA STAR",
+    "category": "Others",
+    "pack": "",
+    "price": 682,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 682
+  },
+  {
+    "id": "P019",
+    "name": "flintstones 10 shot",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 682,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 682
+  },
+  {
+    "id": "P020",
+    "name": "Mottu pattu",
+    "category": "Others",
+    "pack": "",
+    "price": 1338,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 1337.6
+  },
+  {
+    "id": "P021",
+    "name": "Swat cats",
+    "category": "Others",
+    "pack": "",
+    "price": 1338,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 1337.6
+  },
+  {
+    "id": "P022",
+    "name": "Kur kure",
+    "category": "Others",
+    "pack": "",
+    "price": 409,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 409.2
+  },
+  {
+    "id": "P023",
+    "name": "SPARSA GREEN 2PC",
+    "category": "Others",
+    "pack": "",
+    "price": 409,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 409.2
+  },
+  {
+    "id": "P024",
+    "name": "Scooby doo",
+    "category": "Others",
+    "pack": "",
+    "price": 295,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/Scooby_doo.webp"
+    ],
+    "x4": 300
+  },
+  {
+    "id": "P025",
+    "name": "CLASSIC WHEEL",
+    "category": "Chakkars & Wheels",
+    "pack": "",
+    "price": 277,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/CLASSIC_WHEEL.webp"
+    ],
+    "x4": 200
+  },
+  {
+    "id": "P026",
+    "name": "BLOSSOM",
+    "category": "Others",
+    "pack": "",
+    "price": 488,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/BLOSSOM.webp"
+    ],
+    "x4": 500
+  },
+  {
+    "id": "P027",
+    "name": "PINKIE PIE",
+    "category": "Others",
+    "pack": "",
+    "price": 488,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/PINKIE_PIE.webp"
+    ],
+    "x4": 500
+  },
+  {
+    "id": "P028",
+    "name": "minions",
+    "category": "Others",
+    "pack": "",
+    "price": 1197,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 1196.8
+  },
+  {
+    "id": "P029",
+    "name": "OSCAR",
+    "category": "Others",
+    "pack": "",
+    "price": 1355,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/OSCAR.webp"
+    ],
+    "x4": 1200
+  },
+  {
+    "id": "P030",
+    "name": "Mario",
+    "category": "Others",
+    "pack": "",
+    "price": 612,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/Mario.webp"
+    ],
+    "x4": 600
+  },
+  {
+    "id": "P031",
+    "name": "Tuity fruity",
+    "category": "Others",
+    "pack": "",
+    "price": 774,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/Tuity_fruity.webp"
+    ],
+    "x4": 800
+  },
+  {
+    "id": "P032",
+    "name": "JOY WHEEL",
+    "category": "Chakkars & Wheels",
+    "pack": "",
+    "price": 550,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 550
+  },
+  {
+    "id": "P033",
+    "name": "MAGICAL SWORD",
+    "category": "Novelty",
+    "pack": "",
+    "price": 810,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 500
+  },
+  {
+    "id": "P034",
+    "name": "PARTY APPLE",
+    "category": "Others",
+    "pack": "",
+    "price": 788,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 787.6
+  },
+  {
+    "id": "P035",
+    "name": "Pinto Box 9 SHOTS",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 1390,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 1390.4
+  },
+  {
+    "id": "P036",
+    "name": "P 50 COLOUR FOLDER",
+    "category": "Others",
+    "pack": "",
+    "price": 74,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 74.4
+  },
+  {
+    "id": "P037",
+    "name": "ROLL CAPS",
+    "category": "Others",
+    "pack": "",
+    "price": 200,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 200
+  },
+  {
+    "id": "P038",
+    "name": "GB WONDERFULL 40 ITEMS",
+    "category": "Gift Boxes",
+    "pack": "",
+    "price": 2480,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/GB-WONDERFULL-40-ITEMS-1.webp",
+      "/images/products/images-mobile-webp/GB-WONDERFULL-40-ITEMS.webp",
+      "/images/products/images-mobile-webp/GB-WONDERFULL-40-ITEMS-2.webp"
+    ],
+    "x4": 2480
+  },
+  {
+    "id": "P039",
+    "name": "45 ITEMS NATCHIYAR",
+    "category": "Gift Boxes",
+    "pack": "",
+    "price": 3560,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/nachiyar-gift-box-1.webp",
+      "/images/products/nachiyar-gift-box-2.webp",
+      "/images/products/nachiyar-gift-box.webp"
+    ],
+    "x4": 3560
+  },
+  {
+    "id": "P040",
+    "name": "5 GANESH BOMB",
+    "category": "Bombs",
+    "pack": "",
+    "price": 152,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 152
+  },
+  {
+    "id": "P041",
+    "name": "4 DLX GANESH",
+    "category": "Bombs",
+    "pack": "",
+    "price": 108,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/4_DLX_GANESH.webp"
+    ],
+    "x4": 120
+  },
+  {
+    "id": "P042",
+    "name": "3.5 LAXMI",
+    "category": "Bombs",
+    "pack": "",
+    "price": 48,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/3.5_LAXMI.webp"
+    ],
+    "x4": 60
+  },
+  {
+    "id": "P043",
+    "name": "4 LAXMI",
+    "category": "Bombs",
+    "pack": "",
+    "price": 64,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/4_LAXMI.webp"
+    ],
+    "x4": 80
+  },
+  {
+    "id": "P044",
+    "name": "4 GOLD LAXMI DLX",
+    "category": "Bombs",
+    "pack": "",
+    "price": 80,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/4_GOLD_LAXMI_DLX.webp"
+    ],
+    "x4": 80
+  },
+  {
+    "id": "P045",
+    "name": "2 SOUND BOMB",
+    "category": "Bombs",
+    "pack": "",
+    "price": 112,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/2_SOUND_BOMB.webp"
+    ],
+    "x4": 120
+  },
+  {
+    "id": "P046",
+    "name": "3 SOUND BOMB",
+    "category": "Bombs",
+    "pack": "",
+    "price": 120,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/3_SOUND_BOMB.webp"
+    ],
+    "x4": 120
+  },
+  {
+    "id": "P047",
+    "name": "28 WALA PIN",
+    "category": "Others",
+    "pack": "",
+    "price": 48,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/28_WALA_PIN.webp"
+    ],
+    "x4": 48
+  },
+  {
+    "id": "P048",
+    "name": "28 GAINT",
+    "category": "Others",
+    "pack": "",
+    "price": 72,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/28_GAINT.webp"
+    ],
+    "x4": 52
+  },
+  {
+    "id": "P049",
+    "name": "24 DLX",
+    "category": "Others",
+    "pack": "",
+    "price": 120,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/24_DLX.webp"
+    ],
+    "x4": 80
+  },
+  {
+    "id": "P050",
+    "name": "50 DLX",
+    "category": "Others",
+    "pack": "",
+    "price": 300,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/50_DLX.webp"
+    ],
+    "x4": 200
+  },
+  {
+    "id": "P051",
+    "name": "100 DLX",
+    "category": "Others",
+    "pack": "",
+    "price": 600,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/100_DLX.webp"
+    ],
+    "x4": 600
+  },
+  {
+    "id": "P052",
+    "name": "100 MEGA DLX",
+    "category": "Others",
+    "pack": "",
+    "price": 1200,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/100_MEGA_DLX.webp"
+    ],
+    "x4": 1200
+  },
+  {
+    "id": "P053",
+    "name": "RED BIJILI 100P",
+    "category": "Bijili",
+    "pack": "",
+    "price": 88,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 100
+  },
+  {
+    "id": "P054",
+    "name": "100 WALA",
+    "category": "Others",
+    "pack": "",
+    "price": 100,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/100_WALA.webp"
+    ],
+    "x4": 100
+  },
+  {
+    "id": "P055",
+    "name": "1K BIJILI",
+    "category": "Bijili",
+    "pack": "",
+    "price": 540,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/1K_BIJILI_May.webp"
+    ]
+  },
+  {
+    "id": "P056",
+    "name": "1K BIJILI",
+    "category": "Bijili",
+    "pack": "",
+    "price": 800,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/1K_BIJILI_Dragon.webp"
+    ]
+  },
+  {
+    "id": "P057",
+    "name": "2K BIJILI",
+    "category": "Bijili",
+    "pack": "",
+    "price": 1080,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/2K_BIJILI_May.webp"
+    ],
+    "x4": 1080
+  },
+  {
+    "id": "P058",
+    "name": "5K BIJILI",
+    "category": "Bijili",
+    "pack": "",
+    "price": 2700,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/5K_BIJILI_May.webp"
+    ]
+  },
+  {
+    "id": "P059",
+    "name": "5K BIJILI",
+    "category": "Bijili",
+    "pack": "",
+    "price": 4000,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/5K_BIJILI_DRA_Dragon.webp"
+    ]
+  },
+  {
+    "id": "P060",
+    "name": "10K BIJILI",
+    "category": "Bijili",
+    "pack": "",
+    "price": 5400,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/10K_BIJILI_May.webp"
+    ]
+  },
+  {
+    "id": "P061",
+    "name": "10K BIJILI",
+    "category": "Bijili",
+    "pack": "",
+    "price": 8000,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/10K_BIJILI_Dragon.webp"
+    ]
+  },
+  {
+    "id": "P062",
+    "name": "GC BIG 10p",
+    "category": "Others",
+    "pack": "",
+    "price": 160,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/GC_BIG_10p_AJN.webp"
+    ]
+  },
+  {
+    "id": "P063",
+    "name": "GC SPECIAL LEO",
+    "category": "Others",
+    "pack": "",
+    "price": 200,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/GC_SPECIAL_AJN.webp"
+    ]
+  },
+  {
+    "id": "P064",
+    "name": "GC DELUXE AJN",
+    "category": "Others",
+    "pack": "",
+    "price": 600,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/GC_DELUXE_AJN.webp"
+    ]
+  },
+  {
+    "id": "P065",
+    "name": "WIRE SPECIAL",
+    "category": "Others",
+    "pack": "",
+    "price": 384,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/WIRE_SPECIAL.webp"
+    ],
+    "x4": 400
+  },
+  {
+    "id": "P066",
+    "name": "FP BIG",
+    "category": "Flower Pots & Fountains",
+    "pack": "",
+    "price": 232,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/FP_BIG.webp"
+    ],
+    "x4": 240
+  },
+  {
+    "id": "P067",
+    "name": "FP SPECIAL AJN",
+    "category": "Flower Pots & Fountains",
+    "pack": "",
+    "price": 400,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/FP_SPECIAL_AJN.webp"
+    ]
+  },
+  {
+    "id": "P068",
+    "name": "FP ASHOKA AJN",
+    "category": "Flower Pots & Fountains",
+    "pack": "",
+    "price": 600,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/FP_ASHOKA_AJN.webp"
+    ]
+  },
+  {
+    "id": "P069",
+    "name": "FP GAINT",
+    "category": "Flower Pots & Fountains",
+    "pack": "",
+    "price": 520,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/FP_GAINT.webp"
+    ],
+    "x4": 500
+  },
+  {
+    "id": "P070",
+    "name": "COLOURKOTI DLX 5PC",
+    "category": "Others",
+    "pack": "",
+    "price": 480,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 480
+  },
+  {
+    "id": "P071",
+    "name": "COLOUR KOTI LB",
+    "category": "Others",
+    "pack": "",
+    "price": 640,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/COLOUR_KOTI_LB.webp"
+    ],
+    "x4": 640
+  },
+  {
+    "id": "P072",
+    "name": "MAZA COLOUR KOTI RED & GREEN",
+    "category": "Others",
+    "pack": "",
+    "price": 600,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/MAZA_COLOUR_KOTI_RED_&_GREEN.webp"
+    ],
+    "x4": 600
+  },
+  {
+    "id": "P073",
+    "name": "Z BEAST FLOWER POTS 45C",
+    "category": "Flower Pots & Fountains",
+    "pack": "",
+    "price": 660,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/Z_BEAST_FLOWER_POTS_45C.webp"
+    ],
+    "x4": 700
+  },
+  {
+    "id": "P074",
+    "name": "MASTI COLOUR KOTI R&Gi MEGA",
+    "category": "Others",
+    "pack": "",
+    "price": 1000,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/MASTI_COLOUR_KOTI_R&G_MEGA.webp"
+    ],
+    "x4": 1000
+  },
+  {
+    "id": "P075",
+    "name": "COLOUR KOTI DLX LB",
+    "category": "Others",
+    "pack": "",
+    "price": 1024,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/COLOUR_KOTI_DLX_LB.webp"
+    ],
+    "x4": 1000
+  },
+  {
+    "id": "P076",
+    "name": "TINY 5 COLOUR FOUNTAIN",
+    "category": "Flower Pots & Fountains",
+    "pack": "",
+    "price": 580,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/TINY_5_COLOUR_FOUNTAIN.webp"
+    ],
+    "x4": 500
+  },
+  {
+    "id": "P077",
+    "name": "TRI COLOUR FOUNTAIN",
+    "category": "Flower Pots & Fountains",
+    "pack": "",
+    "price": 960,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 960
+  },
+  {
+    "id": "P078",
+    "name": "TIM LOOSE",
+    "category": "Others",
+    "pack": "",
+    "price": 80,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 80
+  },
+  {
+    "id": "P079",
+    "name": "BONANZA SD",
+    "category": "Others",
+    "pack": "",
+    "price": 1580,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/BONANZA_SD.webp"
+    ],
+    "x4": 1200
+  },
+  {
+    "id": "P080",
+    "name": "TIM little star",
+    "category": "Others",
+    "pack": "",
+    "price": 760,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/TIM_little_star.webp"
+    ],
+    "x4": 800
+  },
+  {
+    "id": "P081",
+    "name": "DLX",
+    "category": "Others",
+    "pack": "",
+    "price": 1480,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 1600
+  },
+  {
+    "id": "P082",
+    "name": "GB",
+    "category": "Others",
+    "pack": "",
+    "price": 2000,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 2000
+  },
+  {
+    "id": "P083",
+    "name": "1.5 TWINKLING",
+    "category": "Chakkars & Wheels",
+    "pack": "",
+    "price": 80,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/1.5_TWINKLING.webp"
+    ]
+  },
+  {
+    "id": "P084",
+    "name": "4 TWINKLING AJN",
+    "category": "Chakkars & Wheels",
+    "pack": "",
+    "price": 260,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/4_TWINKLING_AJN.webp"
+    ]
+  },
+  {
+    "id": "P085",
+    "name": "4 TWINKLING MAR",
+    "category": "Chakkars & Wheels",
+    "pack": "",
+    "price": 216,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/MAR_4_TWINKLING.webp"
+    ]
+  },
+  {
+    "id": "P086",
+    "name": "ANACONDA",
+    "category": "Chakkars & Wheels",
+    "pack": "",
+    "price": 220,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/ANACONDA.webp"
+    ],
+    "x4": 200
+  },
+  {
+    "id": "P087",
+    "name": "SNAKE BIG",
+    "category": "Chakkars & Wheels",
+    "pack": "",
+    "price": 600,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 600
+  },
+  {
+    "id": "P088",
+    "name": "Sub matches",
+    "category": "Others",
+    "pack": "",
+    "price": 1600,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 1600
+  },
+  {
+    "id": "P089",
+    "name": "POPS",
+    "category": "Novelty",
+    "pack": "",
+    "price": 200,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/POPS.webp"
+    ],
+    "x4": 200
+  },
+  {
+    "id": "P090",
+    "name": "JOSH",
+    "category": "Novelty",
+    "pack": "",
+    "price": 272,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 272
+  },
+  {
+    "id": "P091",
+    "name": "NINJA",
+    "category": "Novelty",
+    "pack": "",
+    "price": 348,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 348
+  },
+  {
+    "id": "P092",
+    "name": "DASARA",
+    "category": "Novelty",
+    "pack": "",
+    "price": 540,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/DASARA.webp"
+    ],
+    "x4": 540
+  },
+  {
+    "id": "P093",
+    "name": "VIP 10 1 matches",
+    "category": "Others",
+    "pack": "",
+    "price": 480,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/VIP_10_IN_1_matches.webp"
+    ],
+    "x4": 440
+  },
+  {
+    "id": "P094",
+    "name": "10 PENCIL",
+    "category": "Others",
+    "pack": "",
+    "price": 120,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/10_PENCIL.webp"
+    ],
+    "x4": 120
+  },
+  {
+    "id": "P095",
+    "name": "18 PENCIL DLX UV",
+    "category": "Others",
+    "pack": "",
+    "price": 320,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/18_PENCIL_DLX_UV.webp"
+    ],
+    "x4": 320
+  },
+  {
+    "id": "P096",
+    "name": "10 CM ELECTRIC",
+    "category": "Others",
+    "pack": "",
+    "price": 48,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/10_CM_ELECTRIC.webp"
+    ],
+    "x4": 60
+  },
+  {
+    "id": "P097",
+    "name": "10 CM COLOUR",
+    "category": "Others",
+    "pack": "",
+    "price": 54,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/10_CM_COLOUR.webp"
+    ],
+    "x4": 60
+  },
+  {
+    "id": "P098",
+    "name": "10 CM GREEN",
+    "category": "Others",
+    "pack": "",
+    "price": 54,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/10_CM_GREEN.webp"
+    ],
+    "x4": 60
+  },
+  {
+    "id": "P099",
+    "name": "10 CM RED",
+    "category": "Others",
+    "pack": "",
+    "price": 60,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 60
+  },
+  {
+    "id": "P100",
+    "name": "15 CM ELECTRIC",
+    "category": "Others",
+    "pack": "",
+    "price": 88,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/15_CM_ELECTRIC.webp"
+    ],
+    "x4": 100
+  },
+  {
+    "id": "P101",
+    "name": "15 CM COLOUR",
+    "category": "Others",
+    "pack": "",
+    "price": 96,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/15_CM_COLOUR.webp"
+    ],
+    "x4": 100
+  },
+  {
+    "id": "P102",
+    "name": "15 CM GREEN",
+    "category": "Others",
+    "pack": "",
+    "price": 100,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 100
+  },
+  {
+    "id": "P103",
+    "name": "15 CM RED",
+    "category": "Others",
+    "pack": "",
+    "price": 108,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/15_CM_RED.webp"
+    ],
+    "x4": 100
+  },
+  {
+    "id": "P104",
+    "name": "30 CM ELECTRICAL",
+    "category": "Others",
+    "pack": "",
+    "price": 88,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/30_CM_ELECTRICAL.webp"
+    ],
+    "x4": 100
+  },
+  {
+    "id": "P105",
+    "name": "30 CM COLOUR",
+    "category": "Others",
+    "pack": "",
+    "price": 96,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/30_CM_COLOUR.webp"
+    ],
+    "x4": 120
+  },
+  {
+    "id": "P106",
+    "name": "30 CM GREEN",
+    "category": "Others",
+    "pack": "",
+    "price": 100,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 120
+  },
+  {
+    "id": "P107",
+    "name": "30 CM RED",
+    "category": "Others",
+    "pack": "",
+    "price": 108,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/30_CM_RED.webp"
+    ],
+    "x4": 120
+  },
+  {
+    "id": "P108",
+    "name": "50 CM ELECTRIC ROLL",
+    "category": "Others",
+    "pack": "",
+    "price": 368,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 368
+  },
+  {
+    "id": "P109",
+    "name": "50 CM CRACKLING ROLL",
+    "category": "Others",
+    "pack": "",
+    "price": 408,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 408
+  },
+  {
+    "id": "P110",
+    "name": "75 CM ELECTRIC ROLL",
+    "category": "Others",
+    "pack": "",
+    "price": 552,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 408
+  },
+  {
+    "id": "P111",
+    "name": "75 CM CRACKLING ROLL",
+    "category": "Others",
+    "pack": "",
+    "price": 640,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 552
+  },
+  {
+    "id": "P112",
+    "name": "30 CM 5IN1 SPARKLERS",
+    "category": "Sparklers",
+    "pack": "",
+    "price": 160,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/30_CM_5IN1_SPARKLERS.webp"
+    ],
+    "x4": 640
+  },
+  {
+    "id": "P113",
+    "name": "KIT KAT",
+    "category": "Others",
+    "pack": "",
+    "price": 600,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/KIT_KAT.webp"
+    ],
+    "x4": 100
+  },
+  {
+    "id": "P114",
+    "name": "DORA DORA",
+    "category": "Novelty",
+    "pack": "",
+    "price": 76,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 76
+  },
+  {
+    "id": "P115",
+    "name": "NAVARANGA STONES",
+    "category": "Others",
+    "pack": "",
+    "price": 96,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 96
+  },
+  {
+    "id": "P116",
+    "name": "HYDRO BOMB",
+    "category": "Bombs",
+    "pack": "",
+    "price": 168,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/HYDRO_BOMB.webp"
+    ],
+    "x4": 260
+  },
+  {
+    "id": "P117",
+    "name": "Classic bomb",
+    "category": "Bombs",
+    "pack": "",
+    "price": 260,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/Classic_bomb.webp"
+    ],
+    "x4": 400
+  },
+  {
+    "id": "P118",
+    "name": "555 BOMB",
+    "category": "Bombs",
+    "pack": "",
+    "price": 440,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/555_BOMB.webp"
+    ],
+    "x4": 440
+  },
+  // {
+  //   "id": "P119",
+  //   "name": "[VERIFY PRODUCT NAME - ROW 80]",
+  //   "category": "Others",
+  //   "pack": "",
+  //   "price": 720,
+  //   "description": "Product details available at the stall.",
+  //   "featured": false,
+  //   "stockStatus": "available",
+  //   "active": true,
+  //   "images": []
+  // },
+  {
+    "id": "P120",
+    "name": "TARZAN BOMB N6",
+    "category": "Bombs",
+    "pack": "",
+    "price": 792,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/TARZAN_BOMB_N6.webp"
+    ],
+    "x4": 640
+  },
+  {
+    "id": "P121",
+    "name": "TARZAN BOMB N7",
+    "category": "Bombs",
+    "pack": "",
+    "price": 272,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/TARZAN_BOMB_N7.webp"
+    ],
+    "x4": 720
+  },
+  {
+    "id": "P122",
+    "name": "SS DIGITAL BOMB",
+    "category": "Bombs",
+    "pack": "",
+    "price": 480,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 544
+  },
+  {
+    "id": "P123",
+    "name": "LAL MIRCHI BOMB",
+    "category": "Bombs",
+    "pack": "",
+    "price": 180,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/LAL_MIRCHI_BOMB.webp"
+    ],
+    "x4": 272
+  },
+  {
+    "id": "P124",
+    "name": "GANGA JAMUNA AJN",
+    "category": "Others",
+    "pack": "",
+    "price":400,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/GANGA_JAMUNA_AJN.webp"
+    ]
+  },
+  {
+    "id": "P125",
+    "name": "ROCKET BOMB",
+    "category": "Rockets & Shots",
+    "pack": "",
+    "price": 400,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/ROCKET_BOMB.webp"
+    ],
+    "x4": 120
+  },
+  {
+    "id": "P126",
+    "name": "SHOWER MIX",
+    "category": "Others",
+    "pack": "",
+    "price": 300,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/SHOWER_MIX.webp"
+    ],
+    "x4": 400
+  },
+  {
+    "id": "P127",
+    "name": "ASHRAFI MIX",
+    "category": "Others",
+    "pack": "",
+    "price": 252,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/ASHRAFI_MIX.webp"
+    ],
+    "x4": 400
+  },
+  {
+    "id": "P128",
+    "name": "7 SHOTS (5PCS)",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 300,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 300
+  },
+  {
+    "id": "P129",
+    "name": "PHOTO CAPTURE",
+    "category": "Others",
+    "pack": "",
+    "price": 300,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/PHOTO_CAPTURE.webp"
+    ],
+    "x4": 252
+  },
+  {
+    "id": "P130",
+    "name": "TIN SERIES",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 260,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/TIN_SERIES.webp"
+    ],
+    "x4": 300
+  },
+  {
+    "id": "P131",
+    "name": "HELICOPTER",
+    "category": "Novelty",
+    "pack": "",
+    "price": 300,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/HELICOPTER.webp"
+    ],
+    "x4": 252
+  },
+  {
+    "id": "P132",
+    "name": "DARLING DANCER",
+    "category": "Novelty",
+    "pack": "",
+    "price": 560,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/DARLING_DANCER.webp"
+    ],
+    "x4": 300
+  },
+  {
+    "id": "P133",
+    "name": "Musical torch",
+    "category": "Novelty",
+    "pack": "",
+    "price": 420,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/Musical_torch.webp"
+    ],
+    "x4": 300
+  },
+  {
+    "id": "P134",
+    "name": "WHIZZ WHEEL",
+    "category": "Chakkars & Wheels",
+    "pack": "",
+    "price": 500,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/WHIZZ_WHEEL.webp"
+    ],
+    "x4": 300
+  },
+  {
+    "id": "P135",
+    "name": "DRONE",
+    "category": "Novelty",
+    "pack": "",
+    "price": 600,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/DRONE.webp"
+    ],
+    "x4": 500
+  },
+  {
+    "id": "P136",
+    "name": "SIREN",
+    "category": "Novelty",
+    "pack": "",
+    "price": 540,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/SIREN.webp"
+    ],
+    "x4": 600
+  },
+  {
+    "id": "P137",
+    "name": "SPINNER DLX",
+    "category": "Novelty",
+    "pack": "",
+    "price": 320,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/SPINNER_DLX.webp"
+    ],
+    "x4": 500
+  },
+  {
+    "id": "P138",
+    "name": "SPINNER SPL",
+    "category": "Novelty",
+    "pack": "",
+    "price": 700,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/SPINNER_SPL.webp"
+    ],
+    "x4": 400
+  },
+  {
+    "id": "P139",
+    "name": "THANIGAI EXPRESS",
+    "category": "Others",
+    "pack": "",
+    "price": 800,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/THANIGAI_EXPRESS.webp"
+    ],
+    "x4": 500
+  },
+  {
+    "id": "P140",
+    "name": "MAGIC SHOW",
+    "category": "Novelty",
+    "pack": "",
+    "price": 1400,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/MAGIC_SHOW.webp"
+    ],
+    "x4": 600
+  },
+  {
+    "id": "P141",
+    "name": "PEACOCK",
+    "category": "Others",
+    "pack": "",
+    "price": 480,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/PEACOCK.webp"
+    ],
+    "x4": 500
+  },
+  {
+    "id": "P142",
+    "name": "PEACOCK GAINT",
+    "category": "Others",
+    "pack": "",
+    "price": 1400,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/peacock-gaint.webp"
+    ],
+    "x4": 1400
+  },
+  {
+    "id": "P143",
+    "name": "WARRIOR SWARD",
+    "category": "Others",
+    "pack": "",
+    "price": 320,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/WARRIOR_SWARD.webp"
+    ],
+    "x4": 320
+  },
+  {
+    "id": "P144",
+    "name": "12 SHOTS RIDER",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 480,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 480
+  },
+  {
+    "id": "P145",
+    "name": "15 Shot",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 1000,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/leo-15-shots.webp"
+    ],
+    "x4": 1000
+  },
+  {
+    "id": "P146",
+    "name": "25 SHOTS",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 1500,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 1500
+  },
+  {
+    "id": "P147",
+    "name": "30 shots",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 1700,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/leo-30-shots.webp"
+    ],
+    "x4": 1700
+  },
+  {
+    "id": "P148",
+    "name": "60 shots",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 3400,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/leo-60-shots.webp"
+    ],
+    "x4": 3400
+  },
+  {
+    "id": "P149",
+    "name": "120 shots",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 6800,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/leo-120-shots.webp"
+    ],
+    "x4": 6800
+  },
+  {
+    "id": "P150",
+    "name": "240 shots",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 13600,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [
+      "/images/products/images-mobile-webp/leo-240-shots.webp"
+    ],
+    "x4": 13600
+  },
+  {
+    "id": "P151",
+    "name": "CHOTA SHOT",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 120,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 120
+  },
+  {
+    "id": "P152",
+    "name": "SINGLE SHOT 2'",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 300,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 300
+  },
+  {
+    "id": "P153",
+    "name": "SINGLE SHOT (3PCS) SET",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 800,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 800
+  },
+  {
+    "id": "P154",
+    "name": "Nayagara falls",
+    "category": "Others",
+    "pack": "",
+    "price": 1200,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 1200
+  },
+  {
+    "id": "P155",
+    "name": "SINGLE SHOT 3.5",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 1000,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 1000
+  },
+  {
+    "id": "P156",
+    "name": "SINGLE SHOT 7steps",
+    "category": "Fancy / Multi-Shots",
+    "pack": "",
+    "price": 800,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 800
+  },
+  {
+    "id": "P157",
+    "name": "RING GUNS SP 56 B",
+    "category": "Others",
+    "pack": "",
+    "price": 528,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 528
+  },
+  {
+    "id": "P158",
+    "name": "RING GUN 0088 C",
+    "category": "Others",
+    "pack": "",
+    "price": 264,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 264
+  },
+  {
+    "id": "P159",
+    "name": "RING GUNS 0011 C",
+    "category": "Others",
+    "pack": "",
+    "price": 91,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 91.2
+  },
+  {
+    "id": "P160",
+    "name": "RING CAPS",
+    "category": "Others",
+    "pack": "",
+    "price": 24,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 24
+  },
+  {
+    "id": "P161",
+    "name": "POP POP NO 1",
+    "category": "Others",
+    "pack": "",
+    "price": 933,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 933.36
+  },
+  {
+    "id": "P162",
+    "name": "LANTHERS",
+    "category": "Others",
+    "pack": "",
+    "price": 52,
+    "description": "Product details available at the stall.",
+    "featured": false,
+    "stockStatus": "available",
+    "active": true,
+    "images": [],
+    "x4": 52
+  }
+ ]

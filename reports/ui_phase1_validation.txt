@@ -1,0 +1,28 @@
+UI Phase 1 validation — 2026-10-14
+
+Backup: reports/products.js.backup.ui_phase1.20261014T002618Z
+products.js: unchanged (byte-identical to backup)
+
+Integrity checks:
+- price, x4, images, product order, names: PASS (products.js not edited)
+
+npm run build: PASS
+
+Browser preview (127.0.0.1:4174):
+- /crackers: single product count in header; footer Crackers active only (not By category)
+- Missing-image SKUs: skeleton then Photo coming soon (a11y)
+- /crackers/bombs: footer By category active; mobile drawer Crackers active; filtered count 16 of 161 shown
+
+Files changed:
+- src/index.css (--color-image-well, .product-image-well, skeleton animation)
+- src/components/ProductImageCarousel.jsx (well color, skeleton, fallback UI)
+- src/components/CatalogueView.jsx (duplicate count removed above grid)
+- src/components/Header.jsx (mobile Crackers active on /crackers/*)
+- src/components/Footer.jsx (Crackers vs By category active rules, label)
+- src/components/ProductCard.jsx (removed referencePrice/discount UI)
+- src/components/ProductDetailSheet.jsx (removed referencePrice/discount UI)
+
+Products without images in data (49 — no new mappings added):
+P018,P019,P020,P021,P022,P023,P028,P032,P033,P034,P035,P036,P037,P040,P053,P070,P077,P078,P081,P082,P087,P088,P090,P091,P099,P102,P106,P108,P109,P110,P111,P114,P115,P122,P128,P144,P146,P151,P152,P153,P154,P155,P156,P157,P158,P159,P160,P161,P162
+
+UI behaviour for these: ID-based file probe → skeleton → "Photo coming soon" placeholder.

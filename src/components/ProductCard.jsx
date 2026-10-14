@@ -43,47 +43,46 @@ export default function ProductCard({ product }) {
           />
         </div>
 
-        <div className="flex flex-1 flex-col pt-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-red)]">
+        <div className="product-card-body flex min-w-0 flex-1 flex-col pt-1.5 md:pt-3">
+          <p className="text-[10px] font-semibold uppercase leading-tight tracking-[0.14em] text-[var(--color-red)] md:tracking-[0.16em]">
             {product.category}
           </p>
           <button
             type="button"
-            className="focus-ring mt-1 line-clamp-2 min-h-[2.5rem] text-left text-[13px] font-semibold leading-snug text-[var(--color-charcoal)] sm:text-[14px] md:min-h-[2.35rem] md:text-[15px]"
+            className="focus-ring mt-0.5 line-clamp-2 min-h-[2.25rem] text-left text-[13px] font-semibold leading-[1.3] text-[var(--color-charcoal)] md:mt-1 md:min-h-[2.35rem] md:text-[15px] md:leading-snug"
             onClick={openDetails}
           >
             {product.name}
           </button>
           {product.pack?.trim() ? (
-            <p className="mt-0.5 line-clamp-1 text-[11px] text-[var(--color-muted)]">{product.pack.trim()}</p>
+            <p className="mt-0.5 line-clamp-1 text-[10px] text-[var(--color-muted)] md:text-[11px]">
+              {product.pack.trim()}
+            </p>
           ) : null}
 
-          <div className="mt-2 flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-1">
-            <span className="shrink-0 text-[15px] font-bold tracking-tight text-[var(--color-maroon)] sm:text-base">
+          <div className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-1 gap-y-0.5 md:mt-2">
+            <span className="shrink-0 text-[15px] font-bold leading-none tracking-tight text-[var(--color-maroon)] md:text-base">
               {formatINR(product.price)}
             </span>
-            {product.referencePrice > product.price ? (
-              <>
-                <span className="max-w-full truncate text-[10px] text-[var(--color-ref-price)] line-through sm:text-[11px]">
-                  {formatINR(product.referencePrice)}
-                </span>
-                <span className="discount-pill shrink-0 text-[9px] sm:text-[10px]">{product.discount ?? 20}% off</span>
-              </>
-            ) : null}
           </div>
 
           {soldOut ? (
-            <p className="mt-2 text-[11px] text-[var(--color-red)]">Sold out</p>
+            <p className="mt-1 text-[10px] text-[var(--color-red)] md:mt-2 md:text-[11px]">Sold out</p>
           ) : null}
 
-          <div className="mt-auto flex justify-center pt-3 md:pt-4" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="product-card-actions mt-auto w-full min-w-0 pt-2 md:pt-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             {inEstimate && !soldOut ? (
-              <QuantityControl
-                quantity={quantity}
-                productName={product.name}
-                onIncrease={() => increaseQuantity(product.id)}
-                onDecrease={() => decreaseQuantity(product.id)}
-              />
+              <div className="flex w-full justify-center">
+                <QuantityControl
+                  quantity={quantity}
+                  productName={product.name}
+                  onIncrease={() => increaseQuantity(product.id)}
+                  onDecrease={() => decreaseQuantity(product.id)}
+                />
+              </div>
             ) : (
               <Button
                 type="button"
@@ -93,11 +92,11 @@ export default function ProductCard({ product }) {
                 fullWidth
                 disabled={soldOut}
                 aria-label={`Add ${product.name} to estimate`}
-                className="!px-2 !text-xs sm:!px-4 sm:!text-sm"
+                className="product-card-add-btn"
                 onClick={() => addToEstimate(product.id)}
               >
-                <span className="sm:hidden">Add</span>
-                <span className="hidden sm:inline">Add to estimate</span>
+                <span className="md:hidden">Add</span>
+                <span className="hidden md:inline">Add to estimate</span>
               </Button>
             )}
           </div>

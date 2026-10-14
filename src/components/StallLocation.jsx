@@ -1,5 +1,8 @@
 import { Clock, ExternalLink, MapPin } from 'lucide-react'
 import {
+  getLocationHeroLine,
+  getLocationMapUrl,
+  getStallDatesSummary,
   hasLocation,
   hasStallDates,
   siteConfig,
@@ -7,10 +10,10 @@ import {
 import SectionHeading from './SectionHeading'
 
 export default function StallLocation() {
-  const location = siteConfig.location?.trim()
-  const dates = siteConfig.stallDates?.trim()
+  const location = getLocationHeroLine()
+  const dates = getStallDatesSummary()
   const timings = siteConfig.stallTimings?.trim()
-  const mapsUrl = siteConfig.googleMapsUrl?.trim()
+  const mapsUrl = getLocationMapUrl()
 
   return (
     <section

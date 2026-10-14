@@ -1,10 +1,11 @@
 import { MapPin, Sparkles, Star } from 'lucide-react'
 import {
   getBrandDisplayName,
+  getLocationHeroLine,
+  getStallDatesSummary,
   hasLocation,
   hasStallDates,
   hasWhatsApp,
-  siteConfig,
 } from '../data/siteConfig'
 import { getWhatsAppEnquiryUrl } from '../utils/whatsapp'
 
@@ -68,13 +69,13 @@ export default function Hero() {
               {hasLocation() && (
                 <li className="inline-flex items-center gap-1.5">
                   <MapPin className="h-4 w-4 text-diwali-gold" aria-hidden="true" />
-                  <span>{siteConfig.location.trim()}</span>
+                  <span>{getLocationHeroLine()}</span>
                 </li>
               )}
               {hasStallDates() && (
                 <li>
                   <span className="rounded-full border border-diwali-gold/35 px-3 py-0.5 text-diwali-gold">
-                    {siteConfig.stallDates.trim()}
+                    {getStallDatesSummary()}
                   </span>
                 </li>
               )}

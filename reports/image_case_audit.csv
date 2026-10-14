@@ -1,0 +1,170 @@
+product_id,product_name,original_url,actual_filename,issue_type,proposed_correction,status
+P001,EMERALD GIFT BOX,/images/products/images-mobile-webp/EMERALD_GIFT_BOX_1.webp,EMERALD_GIFT_BOX_1.webp,exact_match,,exact_match
+P001,EMERALD GIFT BOX,/images/products/images-mobile-webp/EMERALD_GIFT_BOX_2.webp,EMERALD_GIFT_BOX_2.webp,exact_match,,exact_match
+P002,SILVER GIFT BOX,/images/products/images-mobile-webp/SILVER_GIFT_BOX_1.webp,SILVER_GIFT_BOX_1.webp,exact_match,,exact_match
+P002,SILVER GIFT BOX,/images/products/images-mobile-webp/SILVER_GIFT_BOX_2.webp,SILVER_GIFT_BOX_2.webp,exact_match,,exact_match
+P003,GOLD GIFT BOX,/images/products/images-mobile-webp/GOLD_GIFT_BOX_1.webp,GOLD_GIFT_BOX_1.webp,exact_match,,exact_match
+P003,GOLD GIFT BOX,/images/products/images-mobile-webp/GOLD_GIFT_BOX_2.webp,GOLD_GIFT_BOX_2.webp,exact_match,,exact_match
+P004,DIAMOND GIFT BOX,/images/products/images-mobile-webp/DIAMOND_GIFT_BOX_1.webp,DIAMOND_GIFT_BOX_1.webp,exact_match,,exact_match
+P004,DIAMOND GIFT BOX,/images/products/images-mobile-webp/DIAMOND_GIFT_BOX_2.webp,DIAMOND_GIFT_BOX_2.webp,exact_match,,exact_match
+P005,GC BIG 10P,/images/products/images-mobile-webp/GC_BIG_10p_LEO.webp,GC_BIG_10p_LEO.webp,exact_match,,exact_match
+P006,GC SPECIAL,/images/products/images-mobile-webp/GC_SPECIAL_AJN.webp,,missing_file,,unresolved
+P007,GC DELUXE,/images/products/images-mobile-webp/GC_DELUXE.webp,GC_DELUXE.webp,exact_match,,exact_match
+P008,FP SPECIAL,/images/products/images-mobile-webp/FP_SPECIAL.webp,FP_SPECIAL.webp,exact_match,,exact_match
+P009,FP ASHOKA,/images/products/images-mobile-webp/FP_ASHOKA.webp,FP_ASHOKA.webp,exact_match,,exact_match
+P010,COLOUR KOTI DLX,/images/products/images-mobile-webp/COLOUR_KOTI_DLX.webp,,missing_file,,unresolved
+P011,4 TWINKLING,/images/products/images-mobile-webp/4_TWINKLING.webp,4_TWINKLING.webp,exact_match,,exact_match
+P012,Magic pencil dlx,/images/products/images-mobile-webp/Magic_pencil_dlx.webp,Magic_pencil_dlx.webp,exact_match,,exact_match
+P013,ITALIAN TORCHERS,/images/products/images-mobile-webp/ITALIAN_TORCHERS.webp,ITALIAN_TORCHERS.webp,exact_match,,exact_match
+P014,JURASSIC BOMB,/images/products/images-mobile-webp/JURASSIC_BOMB.webp,JURASSIC_BOMB.webp,exact_match,,exact_match
+P015,MIGHTY BOMB,/images/products/images-mobile-webp/MIGHTY_BOMB.webp,MIGHTY_BOMB.webp,exact_match,,exact_match
+P016,Ganga jamuna,/images/products/images-mobile-webp/GANGA_JAMUNA.webp,GANGA_JAMUNA.webp,exact_match,,exact_match
+P017,SIGNAL BOMB (7 SHOTS),/images/products/images-mobile-webp/SIGNAL_BOMB( 7_SHOTS).webp,SIGNAL_BOMB( 7_SHOTS).webp,exact_match,,exact_match
+P018,MEGA STAR,,,no_image_reference,,info
+P019,flintstones 10 shot,,,no_image_reference,,info
+P020,Mottu pattu,,,no_image_reference,,info
+P021,Swat cats,,,no_image_reference,,info
+P022,Kur kure,,,no_image_reference,,info
+P023,SPARSA GREEN 2PC,,,no_image_reference,,info
+P024,Scooby doo,/images/products/images-mobile-webp/Scooby_doo.webp,Scooby_doo.webp,exact_match,,exact_match
+P025,CLASSIC WHEEL,/images/products/images-mobile-webp/CLASSIC_WHEEL.webp,CLASSIC_WHEEL.webp,exact_match,,exact_match
+P026,BLOSSOM,/images/products/images-mobile-webp/BLOSSOM.webp,BLOSSOM.webp,exact_match,,exact_match
+P027,PINKIE PIE,/images/products/images-mobile-webp/PINKIE_PIE.webp,PINKIE_PIE.webp,exact_match,,exact_match
+P028,minions,,,no_image_reference,,info
+P029,OSCAR,/images/products/images-mobile-webp/OSCAR.webp,OSCAR.webp,exact_match,,exact_match
+P030,Mario,/images/products/images-mobile-webp/Mario.webp,Mario.webp,exact_match,,exact_match
+P031,Tuity fruity,/images/products/images-mobile-webp/Tuity_fruity.webp,Tuity_fruity.webp,exact_match,,exact_match
+P032,JOY WHEEL,,,no_image_reference,,info
+P033,MAGICAL SWORD,,,no_image_reference,,info
+P034,PARTY APPLE,,,no_image_reference,,info
+P035,Pinto Box 9 SHOTS,,,no_image_reference,,info
+P036,P 50 COLOUR FOLDER,,,no_image_reference,,info
+P037,ROLL CAPS,,,no_image_reference,,info
+P038,GB WONDERFULL 40 ITEMS,/images/products/images-mobile-webp/GB-WONDERFULL-40-ITEMS-1.webp,,missing_file,,unresolved
+P038,GB WONDERFULL 40 ITEMS,/images/products/images-mobile-webp/GB-WONDERFULL-40-ITEMS.webp,GB-WONDERFULL-40-ITEMS.webp,exact_match,,exact_match
+P038,GB WONDERFULL 40 ITEMS,/images/products/images-mobile-webp/GB-WONDERFULL-40-ITEMS-2.webp,,missing_file,,unresolved
+P039,45 ITEMS NATCHIYAR,/images/products/nachiyar-gift-box-1.webp,,path_outside_webp_dir,,manual_review
+P039,45 ITEMS NATCHIYAR,/images/products/nachiyar-gift-box-2.webp,,path_outside_webp_dir,,manual_review
+P039,45 ITEMS NATCHIYAR,/images/products/nachiyar-gift-box.webp,,path_outside_webp_dir,,manual_review
+P040,5 GANESH BOMB,,,no_image_reference,,info
+P041,4 DLX GANESH,/images/products/images-mobile-webp/4_DLX_GANESH.webp,4_DLX_GANESH.webp,exact_match,,exact_match
+P042,3.5 LAXMI,/images/products/images-mobile-webp/3.5_LAXMI.webp,3.5_LAXMI.webp,exact_match,,exact_match
+P043,4 LAXMI,/images/products/images-mobile-webp/4_LAXMI.webp,4_LAXMI.webp,exact_match,,exact_match
+P044,4 GOLD LAXMI DLX,/images/products/images-mobile-webp/4_GOLD_LAXMI_DLX.webp,4_GOLD_LAXMI_DLX.webp,exact_match,,exact_match
+P045,2 SOUND BOMB,/images/products/images-mobile-webp/2_SOUND_BOMB.webp,2_SOUND_BOMB.webp,exact_match,,exact_match
+P046,3 SOUND BOMB,/images/products/images-mobile-webp/3_SOUND_BOMB.webp,3_SOUND_BOMB.webp,exact_match,,exact_match
+P047,28 WALA PIN,/images/products/images-mobile-webp/28_WALA_PIN.webp,28_WALA_PIN.webp,exact_match,,exact_match
+P048,28 GAINT,/images/products/images-mobile-webp/28_GAINT.webp,28_GAINT.webp,exact_match,,exact_match
+P049,24 DLX,/images/products/images-mobile-webp/24_DLX.webp,24_DLX.webp,exact_match,,exact_match
+P050,50 DLX,/images/products/images-mobile-webp/50_DLX.webp,50_DLX.webp,exact_match,,exact_match
+P051,100 DLX,/images/products/images-mobile-webp/100_DLX.webp,100_DLX.webp,exact_match,,exact_match
+P052,100 MEGA DLX,/images/products/images-mobile-webp/100_MEGA_DLX.webp,100_MEGA_DLX.webp,exact_match,,exact_match
+P053,RED BIJILI 100P,,,no_image_reference,,info
+P054,100 WALA,/images/products/images-mobile-webp/100_WALA.webp,100_WALA.webp,exact_match,,exact_match
+P055,1K BIJILI,/images/products/images-mobile-webp/1K_BIJILI_May.webp,,missing_file,,unresolved
+P056,1K BIJILI,/images/products/images-mobile-webp/1K_BIJILI_Dragon.webp,,missing_file,,unresolved
+P057,2K BIJILI,/images/products/images-mobile-webp/2K_BIJILI_May.webp,2K_BIJILI_May.webp,exact_match,,exact_match
+P058,5K BIJILI,/images/products/images-mobile-webp/5K_BIJILI_May.webp,,missing_file,,unresolved
+P059,5K BIJILI,/images/products/images-mobile-webp/5K_BIJILI_DRA_Dragon.webp,5K_BIJILI_DRA_Dragon.webp,exact_match,,exact_match
+P060,10K BIJILI,/images/products/images-mobile-webp/10K_BIJILI_May.webp,,missing_file,,unresolved
+P061,10K BIJILI,/images/products/images-mobile-webp/10K_BIJILI_Dragon.webp,,missing_file,,unresolved
+P062,GC BIG 10p,/images/products/images-mobile-webp/GC_BIG_10p_AJN.webp,GC_BIG_10p_AJN.webp,exact_match,,exact_match
+P063,GC SPECIAL LEO,/images/products/images-mobile-webp/GC_SPECIAL_AJN.webp,,missing_file,,unresolved
+P064,GC DELUXE AJN,/images/products/images-mobile-webp/GC_DELUXE_AJN.webp,GC_DELUXE_AJN.webp,exact_match,,exact_match
+P065,WIRE SPECIAL,/images/products/images-mobile-webp/WIRE_SPECIAL.webp,WIRE_SPECIAL.webp,exact_match,,exact_match
+P066,FP BIG,/images/products/images-mobile-webp/FP_BIG.webp,FP_BIG.webp,exact_match,,exact_match
+P067,FP SPECIAL AJN,/images/products/images-mobile-webp/FP_SPECIAL_AJN.webp,FP_SPECIAL_AJN.webp,exact_match,,exact_match
+P068,FP ASHOKA AJN,/images/products/images-mobile-webp/FP_ASHOKA_AJN.webp,FP_ASHOKA_AJN.webp,exact_match,,exact_match
+P069,FP GAINT,/images/products/images-mobile-webp/FP_GAINT.webp,FP_GAINT.webp,exact_match,,exact_match
+P070,COLOURKOTI DLX 5PC,,,no_image_reference,,info
+P071,COLOUR KOTI LB,/images/products/images-mobile-webp/COLOUR_KOTI_LB.webp,COLOUR_KOTI_LB.webp,exact_match,,exact_match
+P072,MAZA COLOUR KOTI RED & GREEN,/images/products/images-mobile-webp/MAZA_COLOUR_KOTI_RED_&_GREEN.webp,MAZA_COLOUR_KOTI_RED_&_GREEN.webp,exact_match,,exact_match
+P073,Z BEAST FLOWER POTS 45C,/images/products/images-mobile-webp/Z_BEAST_FLOWER_POTS_45C.webp,Z_BEAST_FLOWER_POTS_45C.webp,exact_match,,exact_match
+P074,MASTI COLOUR KOTI R&Gi MEGA,/images/products/images-mobile-webp/MASTI_COLOUR_KOTI_R&G_MEGA.webp,MASTI_COLOUR_KOTI_R&G_MEGA.webp,exact_match,,exact_match
+P075,COLOUR KOTI DLX LB,/images/products/images-mobile-webp/COLOUR_KOTI_DLX_LB.webp,COLOUR_KOTI_DLX_LB.webp,exact_match,,exact_match
+P076,TINY 5 COLOUR FOUNTAIN,/images/products/images-mobile-webp/TINY_5_COLOUR_FOUNTAIN.webp,TINY_5_COLOUR_FOUNTAIN.webp,exact_match,,exact_match
+P077,TRI COLOUR FOUNTAIN,,,no_image_reference,,info
+P078,TIM LOOSE,,,no_image_reference,,info
+P079,BONANZA SD,/images/products/images-mobile-webp/BONANZA_SD.webp,BONANZA_SD.webp,exact_match,,exact_match
+P080,TIM little star,/images/products/images-mobile-webp/TIM_little_star.webp,TIM_little_star.webp,exact_match,,exact_match
+P081,DLX,,,no_image_reference,,info
+P082,GB,,,no_image_reference,,info
+P083,1.5 TWINKLING,/images/products/images-mobile-webp/1.5_TWINKLING.webp,1.5_TWINKLING.webp,exact_match,,exact_match
+P084,4 TWINKLING AJN,/images/products/images-mobile-webp/4_TWINKLING_AJN.webp,4_TWINKLING_AJN.webp,exact_match,,exact_match
+P085,4 TWINKLING MAR,/images/products/images-mobile-webp/MAR_4_TWINKLING.webp,MAR_4_TWINKLING.webp,exact_match,,exact_match
+P086,ANACONDA,/images/products/images-mobile-webp/ANACONDA.webp,ANACONDA.webp,exact_match,,exact_match
+P087,SNAKE BIG,,,no_image_reference,,info
+P088,Sub matches,,,no_image_reference,,info
+P089,POPS,/images/products/images-mobile-webp/POPS.webp,POPS.webp,exact_match,,exact_match
+P090,JOSH,,,no_image_reference,,info
+P091,NINJA,,,no_image_reference,,info
+P092,DASARA,/images/products/images-mobile-webp/DASARA.webp,DASARA.webp,exact_match,,exact_match
+P093,VIP 10 1 matches,/images/products/images-mobile-webp/VIP_10_IN_1_matches.webp,VIP_10_IN_1_matches.webp,exact_match,,exact_match
+P094,10 PENCIL,/images/products/images-mobile-webp/10_PENCIL.webp,10_PENCIL.webp,exact_match,,exact_match
+P095,18 PENCIL DLX UV,/images/products/images-mobile-webp/18_PENCIL_DLX_UV.webp,18_PENCIL_DLX_UV.webp,exact_match,,exact_match
+P096,10 CM ELECTRIC,/images/products/images-mobile-webp/10_CM_ELECTRIC.webp,10_CM_ELECTRIC.webp,exact_match,,exact_match
+P097,10 CM COLOUR,/images/products/images-mobile-webp/10_CM_COLOUR.webp,10_CM_COLOUR.webp,exact_match,,exact_match
+P098,10 CM GREEN,/images/products/images-mobile-webp/10_CM_GREEN.webp,10_CM_GREEN.webp,exact_match,,exact_match
+P099,10 CM RED,,,no_image_reference,,info
+P100,15 CM ELECTRIC,/images/products/images-mobile-webp/15_CM_ELECTRIC.webp,15_CM_ELECTRIC.webp,exact_match,,exact_match
+P101,15 CM COLOUR,/images/products/images-mobile-webp/15_CM_COLOUR.webp,15_CM_COLOUR.webp,exact_match,,exact_match
+P102,15 CM GREEN,,,no_image_reference,,info
+P103,15 CM RED,/images/products/images-mobile-webp/15_CM_RED.webp,15_CM_RED.webp,exact_match,,exact_match
+P104,30 CM ELECTRICAL,/images/products/images-mobile-webp/30_CM_ELECTRICAL.webp,30_CM_ELECTRICAL.webp,exact_match,,exact_match
+P105,30 CM COLOUR,/images/products/images-mobile-webp/30_CM_COLOUR.webp,30_CM_COLOUR.webp,exact_match,,exact_match
+P106,30 CM GREEN,,,no_image_reference,,info
+P107,30 CM RED,/images/products/images-mobile-webp/30_CM_RED.webp,30_CM_RED.webp,exact_match,,exact_match
+P108,50 CM ELECTRIC ROLL,,,no_image_reference,,info
+P109,50 CM CRACKLING ROLL,,,no_image_reference,,info
+P110,75 CM ELECTRIC ROLL,,,no_image_reference,,info
+P111,75 CM CRACKLING ROLL,,,no_image_reference,,info
+P112,30 CM 5IN1 SPARKLERS,/images/products/images-mobile-webp/30_CM_5IN1_SPARKLERS.webp,30_CM_5IN1_SPARKLERS.webp,exact_match,,exact_match
+P113,KIT KAT,/images/products/images-mobile-webp/KIT_KAT.webp,KIT_KAT.webp,exact_match,,exact_match
+P114,DORA DORA,,,no_image_reference,,info
+P115,NAVARANGA STONES,,,no_image_reference,,info
+P116,HYDRO BOMB,/images/products/images-mobile-webp/HYDRO_BOMB.webp,HYDRO_BOMB.webp,exact_match,,exact_match
+P117,Classic bomb,/images/products/images-mobile-webp/Classic_bomb.webp,Classic_bomb.webp,exact_match,,exact_match
+P118,555 BOMB,/images/products/images-mobile-webp/555_BOMB.webp,555_BOMB.webp,exact_match,,exact_match
+P120,TARZAN BOMB N6,/images/products/images-mobile-webp/TARZAN_BOMB_N6.webp,TARZAN_BOMB_N6.webp,exact_match,,exact_match
+P121,TARZAN BOMB N7,/images/products/images-mobile-webp/TARZAN_BOMB_N7.webp,TARZAN_BOMB_N7.webp,exact_match,,exact_match
+P122,SS DIGITAL BOMB,,,no_image_reference,,info
+P123,LAL MIRCHI BOMB,/images/products/images-mobile-webp/LAL_MIRCHI_BOMB.webp,LAL_MIRCHI_BOMB.webp,exact_match,,exact_match
+P124,GANGA JAMUNA AJN,/images/products/images-mobile-webp/GANGA_JAMUNA_AJN.webp,,missing_file,,unresolved
+P125,ROCKET BOMB,/images/products/images-mobile-webp/ROCKET_BOMB.webp,ROCKET_BOMB.webp,exact_match,,exact_match
+P126,SHOWER MIX,/images/products/images-mobile-webp/SHOWER_MIX.webp,SHOWER_MIX.webp,exact_match,,exact_match
+P127,ASHRAFI MIX,/images/products/images-mobile-webp/ASHRAFI_MIX.webp,ASHRAFI_MIX.webp,exact_match,,exact_match
+P128,7 SHOTS (5PCS),,,no_image_reference,,info
+P129,PHOTO CAPTURE,/images/products/images-mobile-webp/PHOTO_CAPTURE.webp,PHOTO_CAPTURE.webp,exact_match,,exact_match
+P130,TIN SERIES,/images/products/images-mobile-webp/TIN_SERIES.webp,TIN_SERIES.webp,exact_match,,exact_match
+P131,HELICOPTER,/images/products/images-mobile-webp/HELICOPTER.webp,HELICOPTER.webp,exact_match,,exact_match
+P132,DARLING DANCER,/images/products/images-mobile-webp/DARLING_DANCER.webp,DARLING_DANCER.webp,exact_match,,exact_match
+P133,Musical torch,/images/products/images-mobile-webp/Musical_torch.webp,Musical_torch.webp,exact_match,,exact_match
+P134,WHIZZ WHEEL,/images/products/images-mobile-webp/WHIZZ_WHEEL.webp,WHIZZ_WHEEL.webp,exact_match,,exact_match
+P135,DRONE,/images/products/images-mobile-webp/DRONE.webp,DRONE.webp,exact_match,,exact_match
+P136,SIREN,/images/products/images-mobile-webp/SIREN.webp,SIREN.webp,exact_match,,exact_match
+P137,SPINNER DLX,/images/products/images-mobile-webp/SPINNER_DLX.webp,SPINNER_DLX.webp,exact_match,,exact_match
+P138,SPINNER SPL,/images/products/images-mobile-webp/SPINNER_SPL.webp,SPINNER_SPL.webp,exact_match,,exact_match
+P139,THANIGAI EXPRESS,/images/products/images-mobile-webp/THANIGAI_EXPRESS.webp,THANIGAI_EXPRESS.webp,exact_match,,exact_match
+P140,MAGIC SHOW,/images/products/images-mobile-webp/MAGIC_SHOW.webp,MAGIC_SHOW.webp,exact_match,,exact_match
+P141,PEACOCK,/images/products/images-mobile-webp/PEACOCK.webp,PEACOCK.webp,exact_match,,exact_match
+P142,PEACOCK GAINT,/images/products/peacock-gaint.webp,,path_outside_webp_dir,,manual_review
+P143,WARRIOR SWARD,/images/products/images-mobile-webp/WARRIOR_SWARD.webp,WARRIOR_SWARD.webp,exact_match,,exact_match
+P144,12 SHOTS RIDER,,,no_image_reference,,info
+P145,15 Shot,/images/products/images-mobile-webp/leo-15-shots.webp,leo-15-shots.webp,exact_match,,exact_match
+P146,25 SHOTS,,,no_image_reference,,info
+P147,30 shots,/images/products/images-mobile-webp/leo-30-shots.webp,leo-30-shots.webp,exact_match,,exact_match
+P148,60 shots,/images/products/images-mobile-webp/leo-60-shots.webp,leo-60-shots.webp,exact_match,,exact_match
+P149,120 shots,/images/products/images-mobile-webp/leo-120-shots.webp,leo-120-shots.webp,exact_match,,exact_match
+P150,240 shots,/images/products/images-mobile-webp/leo-240-shots.webp,leo-240-shots.webp,exact_match,,exact_match
+P151,CHOTA SHOT,,,no_image_reference,,info
+P152,SINGLE SHOT 2',,,no_image_reference,,info
+P153,SINGLE SHOT (3PCS) SET,,,no_image_reference,,info
+P154,Nayagara falls,,,no_image_reference,,info
+P155,SINGLE SHOT 3.5,,,no_image_reference,,info
+P156,SINGLE SHOT 7steps,,,no_image_reference,,info
+P157,RING GUNS SP 56 B,,,no_image_reference,,info
+P158,RING GUN 0088 C,,,no_image_reference,,info
+P159,RING GUNS 0011 C,,,no_image_reference,,info
+P160,RING CAPS,,,no_image_reference,,info
+P161,POP POP NO 1,,,no_image_reference,,info
+P162,LANTHERS,,,no_image_reference,,info

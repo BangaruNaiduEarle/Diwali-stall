@@ -1,0 +1,29 @@
+Implementation summary (2026-10-13T17:09:51.991967+00:00)
+Source workbooks: CRACKERS_ajn.xlsx (carckers_ajn), CRACKERS_all.xlsx (carckers_all)
+Image directory: C:\naidu\Diwali\public\images\products\images-mobile-webp
+
+Total unique product records in carckers_ajn: 150
+Total unique product records in carckers_all: 150
+Total unique products across both sheets (union): 150
+Total Excel data rows (both workbooks, all sheets): 322
+
+Total images discovered: 117
+Total unique image base names (variant suffixes stripped): 108
+
+Total existing products.js products: 162
+Total products.js rows with confident image match: 110
+Total products.js rows without image: 52
+Total ambiguous image matches: 0
+
+Total products updated successfully: 0
+Total products ready_to_update (dry-run): 109
+Total products skipped: 53
+
+Total primary images assigned (matched rows): 110
+Total products with additional images: 5
+Total X4 values mapped to an Excel row: 160
+Total manual_review.csv rows: 13
+Total unmatched image files: 9
+
+Backup file: (none — run with --apply to update products.js)
+Reports: C:\naidu\Diwali\reports

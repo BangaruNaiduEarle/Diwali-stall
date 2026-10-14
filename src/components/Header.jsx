@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import {
@@ -20,6 +20,9 @@ import { CATALOG_CATEGORIES } from '../data/categories'
 import { getBrandDisplayName, getWhatsAppDisplayNumber, hasWhatsApp } from '../data/siteConfig'
 
 const ICON = { strokeWidth: 1.8 }
+const HOVER_OPEN_MS = 75
+const HOVER_CLOSE_MS = 100
+const PANEL_ANIM_MS = 180
 
 const DESKTOP_NAV = [
   { to: '/', label: 'Home', end: true },
@@ -35,29 +38,202 @@ const MOBILE_NAV = [
     label: 'Crackers',
     end: false,
     icon: Sparkles,
-    activeWhen: (pathname) => pathname === '/crackers',
-  },
-  {
-    to: '/crackers',
-    label: 'Categories',
-    end: false,
-    icon: LayoutGrid,
-    activeWhen: (pathname) => /^\/crackers\/.+/.test(pathname),
+    activeWhen: (pathname) => pathname === '/crackers' || pathname.startsWith('/crackers/'),
   },
   { to: '/location', label: 'Location', end: true, icon: MapPin },
   { to: '/faq', label: 'FAQ', end: true, icon: CircleHelp },
 ]
 
-function mobileNavLinkClass({ isActive }) {
-  return [
-    'focus-ring flex min-h-[52px] items-center gap-4 rounded-xl px-4 text-base font-medium transition-colors',
-    isActive
-      ? 'bg-[var(--color-ivory)] text-[var(--color-brand-text)] [&_.mobile-nav-icon]:text-[var(--color-red)]'
-      : 'text-[var(--color-charcoal)] hover:bg-[#f7f2e9]',
-  ].join(' ')
+function DesktopCategoriesNav({ open, setOpen, categoryLinks, categoriesNavActive, pathname }) {
+  const rootRef = useRef(null)
+  const menuRef = useRef(null)
+  const openTimer = useRef(null)
+  const closeTimer = useRef(null)
+  const menuId = useId()
+  const [panelMounted, setPanelMounted] = useState(false)
+  const [panelVisible, setPanelVisible] = useState(false)
+
+  const clearHoverTimers = () => {
+    clearTimeout(openTimer.current)
+    clearTimeout(closeTimer.current)
+  }
+
+  const scheduleOpen = () => {
+    clearHoverTimers()
+    openTimer.current = setTimeout(() => setOpen(true), HOVER_OPEN_MS)
+  }
+
+  const scheduleClose = () => {
+    clearHoverTimers()
+    closeTimer.current = setTimeout(() => setOpen(false), HOVER_CLOSE_MS)
+  }
+
+  useEffect(() => {
+    if (open) {
+      setPanelMounted(true)
+      const frame = requestAnimationFrame(() => setPanelVisible(true))
+      return () => cancelAnimationFrame(frame)
+    }
+    setPanelVisible(false)
+    const t = setTimeout(() => setPanelMounted(false), PANEL_ANIM_MS)
+    return () => clearTimeout(t)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return undefined
+
+    const onPointerDown = (e) => {
+      if (rootRef.current && !rootRef.current.contains(e.target)) {
+        setOpen(false)
+      }
+    }
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open, setOpen])
+
+  useEffect(() => () => clearHoverTimers(), [])
+
+  const focusFirstItem = () => {
+    requestAnimationFrame(() => {
+      menuRef.current?.querySelector('a')?.focus()
+    })
+  }
+
+  return (
+    <div ref={rootRef} className="relative" onMouseEnter={scheduleOpen} onMouseLeave={scheduleClose}>
+      <button
+        type="button"
+        className={`nav-link ${categoriesNavActive ? 'nav-link--active' : ''} ${open ? 'nav-categories-trigger--open' : ''}`}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-controls={menuId}
+        onClick={() => setOpen((prev) => !prev)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setOpen((prev) => {
+              const next = !prev
+              if (next) focusFirstItem()
+              return next
+            })
+          }
+          if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            setOpen(true)
+            focusFirstItem()
+          }
+          if (e.key === 'Escape') {
+            setOpen(false)
+          }
+        }}
+      >
+        Categories
+        <ChevronDown
+          className={`nav-categories-chevron h-4 w-4 shrink-0 ${open ? 'nav-categories-chevron--open' : ''}`}
+          {...ICON}
+          aria-hidden="true"
+        />
+      </button>
+
+      {panelMounted ? (
+        <div className="absolute left-0 top-full z-[60] pt-1" onMouseEnter={scheduleOpen} onMouseLeave={scheduleClose}>
+          <ul
+            ref={menuRef}
+            id={menuId}
+            role="menu"
+            className={`nav-categories-panel list-none p-0 ${panelVisible ? 'nav-categories-panel--visible' : ''}`}
+          >
+            {categoryLinks.map(({ slug, label }) => {
+              const href = `/crackers/${slug}`
+              const active = pathname === href
+              return (
+                <li key={slug} role="none">
+                  <Link
+                    to={href}
+                    role="menuitem"
+                    className={`nav-categories-item focus-ring ${active ? 'nav-categories-item--active' : ''}`}
+                    onClick={() => setOpen(false)}
+                  >
+                    {label}
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  )
 }
 
-function MobileNavDrawer({ open, onClose, brandName, estimateCount }) {
+function MobileCategoriesAccordion({ categoryLinks, pathname, categoriesNavActive, onClose }) {
+  const [expanded, setExpanded] = useState(categoriesNavActive)
+  const panelId = useId()
+
+  useEffect(() => {
+    if (categoriesNavActive) setExpanded(true)
+  }, [categoriesNavActive, pathname])
+
+  return (
+    <li>
+      <button
+        type="button"
+        className={[
+          'nav-drawer-link focus-ring w-full justify-between',
+          categoriesNavActive ? 'nav-drawer-link--current' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        aria-expanded={expanded}
+        aria-controls={panelId}
+        onClick={() => setExpanded((prev) => !prev)}
+      >
+        <span className="inline-flex items-center gap-4">
+          <LayoutGrid className="nav-drawer-icon h-5 w-5 shrink-0" {...ICON} aria-hidden="true" />
+          <span>Categories</span>
+        </span>
+        <ChevronDown
+          className={`nav-categories-chevron h-4 w-4 shrink-0 ${expanded ? 'nav-categories-chevron--open' : ''}`}
+          {...ICON}
+          aria-hidden="true"
+        />
+      </button>
+      <div
+        id={panelId}
+        className={`nav-drawer-categories-panel ${expanded ? 'nav-drawer-categories-panel--open' : 'nav-drawer-categories-panel--closed'}`}
+      >
+        <ul className="min-h-0 overflow-hidden pb-1">
+          {categoryLinks.map(({ slug, label }) => {
+            const href = `/crackers/${slug}`
+            const active = pathname === href
+            return (
+              <li key={slug}>
+                <Link
+                  to={href}
+                  className={`nav-drawer-category-link focus-ring ${active ? 'nav-drawer-category-link--active' : ''}`}
+                  onClick={onClose}
+                >
+                  {label}
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+    </li>
+  )
+}
+
+function MobileNavDrawer({ open, onClose, brandName, estimateCount, categoryLinks, categoriesNavActive }) {
   const { pathname } = useLocation()
   const waDisplay = getWhatsAppDisplayNumber()
 
@@ -96,10 +272,39 @@ function MobileNavDrawer({ open, onClose, brandName, estimateCount }) {
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-3">
           <nav aria-label="Mobile primary">
-            <ul className="flex flex-col gap-1">
-              {MOBILE_NAV.map((item) => {
+            <ul className="flex flex-col gap-0.5">
+              {MOBILE_NAV.slice(0, 2).map((item) => {
+                const ItemIcon = item.icon
+                return (
+                  <li key={`${item.to}-${item.label}`}>
+                    <NavLink
+                      to={item.to}
+                      end={item.end}
+                      className={({ isActive }) => {
+                        const active = item.activeWhen ? item.activeWhen(pathname) : isActive
+                        return ['nav-drawer-link focus-ring', active ? 'nav-drawer-link--current' : '']
+                          .filter(Boolean)
+                          .join(' ')
+                      }}
+                      onClick={onClose}
+                    >
+                      <ItemIcon className="nav-drawer-icon h-5 w-5 shrink-0" {...ICON} aria-hidden="true" />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  </li>
+                )
+              })}
+
+              <MobileCategoriesAccordion
+                categoryLinks={categoryLinks}
+                pathname={pathname}
+                categoriesNavActive={categoriesNavActive}
+                onClose={onClose}
+              />
+
+              {MOBILE_NAV.slice(2).map((item) => {
                 const ItemIcon = item.icon
                 return (
                   <li key={`${item.to}-${item.label}`}>
@@ -107,34 +312,33 @@ function MobileNavDrawer({ open, onClose, brandName, estimateCount }) {
                       to={item.to}
                       end={item.end}
                       className={({ isActive }) =>
-                        mobileNavLinkClass({
-                          isActive: item.activeWhen ? item.activeWhen(pathname) : isActive,
-                        })
+                        ['nav-drawer-link focus-ring', isActive ? 'nav-drawer-link--current' : '']
+                          .filter(Boolean)
+                          .join(' ')
                       }
                       onClick={onClose}
                     >
-                      <ItemIcon
-                        className="mobile-nav-icon h-5 w-5 shrink-0 text-[var(--color-gold)]"
-                        {...ICON}
-                        aria-hidden="true"
-                      />
+                      <ItemIcon className="nav-drawer-icon h-5 w-5 shrink-0" {...ICON} aria-hidden="true" />
                       <span>{item.label}</span>
                     </NavLink>
                   </li>
                 )
               })}
+
+              <li className="my-2 border-t border-[var(--color-border)] pt-2" aria-hidden="true" />
               <li>
                 <NavLink
                   to="/estimate"
-                  className={({ isActive }) => `${mobileNavLinkClass({ isActive })} justify-between`}
+                  className={({ isActive }) =>
+                    ['nav-drawer-link focus-ring justify-between', isActive ? 'nav-drawer-link--current' : '']
+                      .filter(Boolean)
+                      .join(' ')
+                  }
+                  end
                   onClick={onClose}
                 >
                   <span className="inline-flex items-center gap-4">
-                    <ReceiptText
-                      className="mobile-nav-icon h-5 w-5 shrink-0 text-[var(--color-gold)]"
-                      {...ICON}
-                      aria-hidden="true"
-                    />
+                    <ReceiptText className="nav-drawer-icon h-5 w-5 shrink-0" {...ICON} aria-hidden="true" />
                     <span>My estimate</span>
                   </span>
                   <EstimateCountBadge count={estimateCount} />
@@ -171,6 +375,7 @@ export default function Header() {
 
   useEffect(() => {
     closeMobileMenu()
+    setCategoriesOpen(false)
   }, [pathname])
 
   useEffect(() => {
@@ -195,6 +400,7 @@ export default function Header() {
   }, [menuOpen])
 
   const categoryLinks = CATALOG_CATEGORIES.filter((c) => c.slug !== 'all')
+  const categoriesNavActive = /^\/crackers\/.+/.test(pathname)
   const estimateAria = `My estimate, ${estimateCount} items`
 
   const mobileDrawer =
@@ -205,6 +411,8 @@ export default function Header() {
             onClose={closeMobileMenu}
             brandName={brandName}
             estimateCount={estimateCount}
+            categoryLinks={categoryLinks}
+            categoriesNavActive={categoriesNavActive}
           />,
           document.body,
         )
@@ -226,56 +434,25 @@ export default function Header() {
 
         <Link
           to="/"
-          className="header-brand focus-ring col-start-2 min-w-0 justify-self-center truncate whitespace-nowrap text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-charcoal)] min-[360px]:text-[12px] min-[360px]:tracking-[0.1em] sm:text-[13px] sm:tracking-[0.12em] lg:col-start-auto lg:shrink-0 lg:justify-self-start lg:text-left lg:text-sm"
+          className="header-brand focus-ring col-start-2 flex min-w-0 items-center justify-self-center truncate whitespace-nowrap text-center text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--color-charcoal)] min-[360px]:text-[12px] min-[360px]:tracking-[0.1em] sm:text-[13px] sm:tracking-[0.12em] lg:col-start-auto lg:shrink-0 lg:justify-self-start lg:text-left lg:text-sm"
         >
           {brandName}
         </Link>
 
-        <nav className="col-span-3 hidden items-center gap-0.5 lg:col-span-1 lg:flex lg:flex-1 lg:justify-center" aria-label="Main">
+        <nav className="col-span-3 hidden items-center gap-1 lg:col-span-1 lg:flex lg:flex-1 lg:justify-center" aria-label="Main">
           {DESKTOP_NAV.slice(0, 2).map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} className="nav-link">
               {item.label}
             </NavLink>
           ))}
 
-          <div className="relative">
-            <button
-              type="button"
-              className="nav-link inline-flex items-center gap-0.5"
-              aria-expanded={categoriesOpen}
-              onClick={() => setCategoriesOpen((o) => !o)}
-            >
-              Categories
-              <ChevronDown
-                className={`h-3.5 w-3.5 transition-ui ${categoriesOpen ? 'rotate-180' : ''}`}
-                {...ICON}
-                aria-hidden="true"
-              />
-            </button>
-            {categoriesOpen ? (
-              <>
-                <button
-                  type="button"
-                  className="fixed inset-0 z-40 cursor-default bg-[var(--color-charcoal)]/15"
-                  aria-label="Close categories menu"
-                  onClick={() => setCategoriesOpen(false)}
-                />
-                <ul className="absolute left-0 top-full z-50 mt-3 max-h-80 w-56 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-white)] py-2 shadow-[var(--shadow-hover)]">
-                  {categoryLinks.map(({ slug, label }) => (
-                    <li key={slug}>
-                      <Link
-                        to={`/crackers/${slug}`}
-                        className="focus-ring block px-4 py-2.5 text-sm text-[var(--color-charcoal)] transition-ui hover:bg-[var(--color-ivory)] hover:text-[var(--color-maroon)]"
-                        onClick={() => setCategoriesOpen(false)}
-                      >
-                        {label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : null}
-          </div>
+          <DesktopCategoriesNav
+            open={categoriesOpen}
+            setOpen={setCategoriesOpen}
+            categoryLinks={categoryLinks}
+            categoriesNavActive={categoriesNavActive}
+            pathname={pathname}
+          />
 
           {DESKTOP_NAV.slice(2).map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} className="nav-link">

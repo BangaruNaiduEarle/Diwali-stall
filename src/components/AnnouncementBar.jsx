@@ -1,8 +1,8 @@
 import { CalendarDays } from 'lucide-react'
-import { hasStallDates, siteConfig } from '../data/siteConfig'
+import { getStallDatesSummary, hasStallDates } from '../data/siteConfig'
 
 export default function AnnouncementBar() {
-  const dates = siteConfig.stallDates?.trim()
+  const dates = getStallDatesSummary()
 
   return (
     <div

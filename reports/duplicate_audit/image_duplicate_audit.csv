@@ -1,0 +1,118 @@
+current_filename,normalized_base_name,matching_excel_product_names,candidate_company_names,matching_javascript_product_ids,number_of_related_image_files,duplicate_category,confidence,review_notes
+1.5_TWINKLING.webp,1.5_twinkling,,,,1,no_excel_name_match,review,
+100_DLX.webp,100_dlx,100 DLX,GRM,P051,1,single_file,high,
+100_MEGA_DLX.webp,100_mega_dlx,100 MEGA DLX,SWA,P052,2,multi_photo_same_product_group,high,
+100_MEGA_DLX_IN.webp,100_mega_dlx,100 MEGA DLX,SWA,P052,2,multi_photo_same_product_group,high,
+100_WALA.webp,100_wala,100 WALA,MAY,P054,1,single_file,high,
+10K_BIJILI_Dragon.webp,10k_bijili,10K BIJILI,DRA;MAY,P061,2,excel_name_duplicate_mapping,review,variant_or_extra_photo_suffix
+10K_BIJILI_May.webp,10k_bijili,10K BIJILI,DRA;MAY,P060,2,excel_name_duplicate_mapping,review,variant_or_extra_photo_suffix
+10_CM_COLOUR.webp,10_cm_colour,10 CM COLOUR,DUR,P097,1,single_file,high,
+10_CM_ELECTRIC.webp,10_cm_electric,10 CM ELECTRIC,DUR,P096,1,single_file,high,
+10_CM_GREEN.webp,10_cm_green,10 CM GREEN,DUR,P098,1,single_file,high,
+10_PENCIL.webp,10_pencil,10 PENCIL,SUK,P094,1,single_file,high,
+15_CM_COLOUR.webp,15_cm_colour,15 CM COLOUR,SRG,P101,1,single_file,high,
+15_CM_ELECTRIC.webp,15_cm_electric,15 CM ELECTRIC,SRG,P100,1,single_file,high,
+15_CM_RED.webp,15_cm_red,15 CM RED,CLA,P103,1,single_file,high,
+18_PENCIL_DLX_UV.webp,18_pencil_dlx_uv,18 PENCIL DLX UV,SUK,P095,1,single_file,high,
+1K_BIJILI_Dragon.webp,1k_bijili,1K BIJILI,DRA;MAY,P056,2,excel_name_duplicate_mapping,review,variant_or_extra_photo_suffix
+1K_BIJILI_May.webp,1k_bijili,1K BIJILI,DRA;MAY,P055,2,excel_name_duplicate_mapping,review,variant_or_extra_photo_suffix
+24_DLX.webp,24_dlx,24 DLX,GRM,P049,1,single_file,high,
+28_GAINT.webp,28_gaint,28 GAINT,GLM,P048,1,single_file,high,
+28_WALA_PIN.webp,28_wala_pin,28 WALA PIN,ISW,P047,1,single_file,high,
+2K_BIJILI_May.webp,2k_bijili,2K BIJILI,MAY,P057,1,single_file,high,variant_or_extra_photo_suffix
+2_SOUND_BOMB.webp,2_sound_bomb,2 SOUND BOMB,YUV,P045,2,multi_photo_same_product_group,high,
+2_SOUND_BOMB_DETAIL.webp,2_sound_bomb,2 SOUND BOMB,YUV,P045,2,multi_photo_same_product_group,high,variant_or_extra_photo_suffix
+3.5_LAXMI.webp,3.5_laxmi,3.5 LAXMI,LEO,P042,2,multi_photo_same_product_group,high,
+3.5_LAXMI_front.webp,3.5_laxmi,3.5 LAXMI,LEO,P042,2,multi_photo_same_product_group,high,variant_or_extra_photo_suffix
+30_CM_5IN1_SPARKLERS.webp,30_cm_5in1_sparklers,30 CM 5IN1 SPARKLERS,DUR,P112,1,single_file,high,variant_or_extra_photo_suffix
+30_CM_COLOUR.webp,30_cm_colour,30 CM COLOUR,SRG,P105,1,single_file,high,
+30_CM_ELECTRICAL.webp,30_cm_electrical,30 CM ELECTRICAL,SRG,P104,1,single_file,high,
+30_CM_RED.webp,30_cm_red,30 CM RED,CLA,P107,1,single_file,high,
+3_SOUND_BOMB.webp,3_sound_bomb,3 SOUND BOMB,YUV,P046,1,single_file,high,
+4_DLX_GANESH.webp,4_dlx_ganesh,4 DLX GANESH,AGS,P041,1,single_file,high,
+4_GOLD_LAXMI_DLX.webp,4_gold_laxmi_dlx,4 GOLD LAXMI DLX,ABI,P044,1,single_file,high,
+4_LAXMI.webp,4_laxmi,4 LAXMI,LEO,P043,1,single_file,high,
+4_TWINKLING.webp,4_twinkling,4 TWINKLING,AJN;MAR;VEL,P011;P084;P085,1,multiple_js_ids_same_image_or_name,review,
+50_DLX.webp,50_dlx,50 DLX,GRM,P050,1,single_file,high,
+555_BOMB.webp,555_bomb,555 BOMB,TPS,P118,1,single_file,high,
+5K_BIJILI_Dragon.webp,5k_bijili,5K BIJILI,DRA;MAY,P059,2,excel_name_duplicate_mapping,review,variant_or_extra_photo_suffix
+5K_BIJILI_May.webp,5k_bijili,5K BIJILI,DRA;MAY,P058,2,excel_name_duplicate_mapping,review,variant_or_extra_photo_suffix
+ANACONDA.webp,anaconda,ANACONDA,PAN,P086,1,single_file,high,
+ASHRAFI_MIX.webp,ashrafi_mix,ASHRAFI MIX,YUV,P127,1,single_file,high,
+BLOSSOM.webp,blossom,BLOSSOM,AJN,P026,1,single_file,high,
+BONANZA_SD.webp,bonanza_sd,BONANZA SD,VTM,P079,1,single_file,high,
+CLASSIC_WHEEL.webp,classic_wheel,CLASSIC WHEEL,AND,P025,1,single_file,high,
+COLOUR_KOTI_DLX.webp,colour_koti_dlx,COLOUR KOTI DLX,AJN,P010;P075,2,multiple_js_ids_same_image_or_name,review,
+COLOUR_KOTI_DLX_LB.webp,colour_koti_dlx,COLOUR KOTI DLX,AJN,P075,2,multi_photo_same_product_group,high,
+COLOUR_KOTI_LB.webp,colour_koti,COLOUR KOTI LB,LEO,P071,1,single_file,high,
+Classic_bomb.webp,classic_bomb,Classic bomb,GLM,P117,1,single_file,high,
+DARLING_DANCER.webp,darling_dancer,DARLING DANCER,TNG,P132,1,single_file,high,
+DASARA.webp,dasara,DASARA,DUR,P092,1,single_file,high,
+DIAMOND_GIFT_BOX_1.webp,diamond_gift_box,DIAMOND GIFT BOX,AJN,P004,2,multi_photo_same_product_group,high,variant_or_extra_photo_suffix
+DIAMOND_GIFT_BOX_2.webp,diamond_gift_box,DIAMOND GIFT BOX,AJN,P004,2,multi_photo_same_product_group,high,variant_or_extra_photo_suffix
+DRONE.webp,drone,DRONE,SS,P135,1,single_file,high,
+EMERALD_GIFT_BOX_1.webp,emerald_gift_box,EMERALD GIFT BOX,AJN,P001,2,multi_photo_same_product_group,high,variant_or_extra_photo_suffix
+EMERALD_GIFT_BOX_2.webp,emerald_gift_box,EMERALD GIFT BOX,AJN,P001,2,multi_photo_same_product_group,high,variant_or_extra_photo_suffix
+FP_ASHOKA.webp,fp_ashoka,FP ASHOKA,AJN;LEO,P009;P068,1,multiple_js_ids_same_image_or_name,review,
+FP_BIG.webp,fp_big,FP BIG,LEO,P066,1,single_file,high,
+FP_GAINT.webp,fp_gaint,FP GAINT,ASK,P069,1,single_file,high,
+FP_SPECIAL.webp,fp_special,FP SPECIAL,AJN;LEO,P008;P067,1,multiple_js_ids_same_image_or_name,review,
+GANGA_JAMUNA.webp,ganga_jamuna,GANGA JAMUNA;Ganga jamuna,AJN;ASK,P016;P124,1,multiple_js_ids_same_image_or_name,review,
+GB-WONDERFULL-40-ITEMS-1.webp,gb-wonderfull-40-items-1,,,P038,1,no_excel_name_match,review,
+GB-WONDERFULL-40-ITEMS-2.webp,gb-wonderfull-40-items-2,,,P038,1,no_excel_name_match,review,
+GB-WONDERFULL-40-ITEMS.webp,gb-wonderfull-40-items,GB WONDERFULL 40 ITEMS,ASK,P038,1,single_file,high,
+GC_BIG_10p.webp,gc_big_10p,GC BIG 10P;GC BIG 10p,AJN;LEO,P005;P062,1,multiple_js_ids_same_image_or_name,review,variant_or_extra_photo_suffix
+GC_DELUXE.webp,gc_deluxe,GC DELUXE,AJN;LEO,P007;P064,1,multiple_js_ids_same_image_or_name,review,
+GC_SPECIAL.webp,gc_special,GC SPECIAL,AJN;LEO,P006;P063,1,multiple_js_ids_same_image_or_name,review,
+GOLD_GIFT_BOX_1.webp,gold_gift_box,GOLD GIFT BOX,AJN,P003,2,multi_photo_same_product_group,high,variant_or_extra_photo_suffix
+GOLD_GIFT_BOX_2.webp,gold_gift_box,GOLD GIFT BOX,AJN,P003,2,multi_photo_same_product_group,high,variant_or_extra_photo_suffix
+HELICOPTER.webp,helicopter,HELICOPTER,SVK,P131,1,single_file,high,
+HYDRO_BOMB.webp,hydro_bomb,HYDRO BOMB,JER,P116,1,single_file,high,
+ITALIAN_TORCHERS.webp,italian_torchers,ITALIAN TORCHERS,AJN,P013,1,single_file,high,
+JURASSIC_BOMB.webp,jurassic_bomb,JURASSIC BOMB,AJN,P014,1,single_file,high,
+KIT_KAT.webp,kit_kat,KIT KAT,NMJ,P113,1,single_file,high,
+LAL_MIRCHI_BOMB.webp,lal_mirchi_bomb,LAL MIRCHI BOMB,TPS,P123,1,single_file,high,
+MAGIC_SHOW.webp,magic_show,MAGIC SHOW,SUC,P140,1,single_file,high,
+MAR_4_TWINKLING.webp,mar_4_twinkling,,,,1,no_excel_name_match,review,variant_or_extra_photo_suffix
+MASTI_COLOUR_KOTI_R&G_MEGA.webp,masti_colour_koti_r&g_mega,MASTI COLOUR KOTI R&G MEGA,VTM,P074,1,single_file,high,
+MAZA_COLOUR_KOTI_RED_&_GREEN.webp,maza_colour_koti_red_&_green,MAZA COLOUR KOTI RED & GREEN,VTM,P072,1,single_file,high,
+MIGHTY_BOMB.webp,mighty_bomb,MIGHTY BOMB,AJN,P015,1,single_file,high,
+MMS_DLX.webp,mms_dlx,,,,1,no_excel_name_match,review,
+MMS_GB.webp,mms_gb,,,,2,no_excel_name_match,review,
+MMS_GB_IN.webp,mms_gb,,,,2,no_excel_name_match,review,
+Magic_pencil_dlx.webp,magic_pencil_dlx,Magic pencil dlx,AJN,P012,1,single_file,high,
+Mario.webp,mario,Mario,AJN,P030,1,single_file,high,
+Musical_torch.webp,musical_torch,Musical torch,RAV,P133,1,single_file,high,
+OSCAR.webp,oscar,OSCAR,AJN,P029,1,single_file,high,
+PEACOCK.webp,peacock,PEACOCK,ANB,P141,1,single_file,high,
+PHOTO_CAPTURE.webp,photo_capture,PHOTO CAPTURE,TNG,P129,1,single_file,high,
+PINKIE_PIE.webp,pinkie_pie,PINKIE PIE,AJN,P027,1,single_file,high,
+POPS.webp,pops,POPS,CAM,P089,1,single_file,high,
+ROCKET_BOMB.webp,rocket_bomb,ROCKET BOMB,TNG,P125,1,single_file,high,
+SHOWER_MIX.webp,shower_mix,SHOWER MIX,YUV,P126,1,single_file,high,
+SIGNAL_BOMB( 7_SHOTS).webp,signal_bomb(_7_shots),SIGNAL BOMB( 7 SHOTS),AND,P017,1,single_file,high,
+SILVER_GIFT_BOX_1.webp,silver_gift_box,SILVER GIFT BOX,AJN,P002,2,multi_photo_same_product_group,high,variant_or_extra_photo_suffix
+SILVER_GIFT_BOX_2.webp,silver_gift_box,SILVER GIFT BOX,AJN,P002,2,multi_photo_same_product_group,high,variant_or_extra_photo_suffix
+SIREN.webp,siren,SIREN,TNG,P136,1,single_file,high,
+SPINNER_DLX.webp,spinner_dlx,SPINNER DLX,ASK,P137,1,single_file,high,
+SPINNER_SPL.webp,spinner_spl,SPINNER SPL,ASK,P138,1,single_file,high,
+Scooby_doo.webp,scooby_doo,Scooby doo,AJN,P024,1,single_file,high,
+TARZAN_BOMB_N6.webp,tarzan_bomb_n6,TARZAN BOMB N6,TZN,P120,1,single_file,high,
+TARZAN_BOMB_N7.webp,tarzan_bomb_n7,TARZAN BOMB N7,TZN,P121,1,single_file,high,
+THANIGAI_EXPRESS.webp,thanigai_express,THANIGAI EXPRESS,TNG,P139,1,single_file,high,
+TIM_little_star.webp,tim_little_star,TIM little star,TIM,P080,1,single_file,high,
+TINY_5_COLOUR_FOUNTAIN.webp,tiny_5_colour_fountain,TINY 5 COLOUR FOUNTAIN,VTM,P076,1,single_file,high,variant_or_extra_photo_suffix
+TIN_SERIES.webp,tin_series,TIN SERIES,VLM,P130,1,single_file,high,
+Tuity_fruity.webp,tuity_fruity,Tuity fruity,AJN,P031,1,single_file,high,
+VIP_10_IN_1_matches.webp,vip_10_in_1_matches,VIP 10 IN 1 matches,ROB,P093,1,single_file,high,variant_or_extra_photo_suffix
+WARRIOR_SWARD.webp,warrior_sward,WARRIOR SWARD,SUC,P143,1,single_file,high,
+WHIZZ_WHEEL.webp,whizz_wheel,WHIZZ WHEEL,RAV,P134,1,single_file,high,
+WIRE_SPECIAL.webp,wire_special,WIRE SPECIAL,YUV,P065,1,single_file,high,
+Z_BEAST_FLOWER_POTS_45C.webp,z_beast_flower_pots_45c,Z BEAST FLOWER POTS 45C,VTM,P073,1,single_file,high,variant_or_extra_photo_suffix
+leo-120-shots.webp,leo-120-shots,,,P149,1,no_excel_name_match,review,
+leo-15-shots.webp,leo-15-shots,,,P145,1,no_excel_name_match,review,
+leo-240-shots.webp,leo-240-shots,,,P150,1,no_excel_name_match,review,
+leo-30-shots.webp,leo-30-shots,,,P147,1,no_excel_name_match,review,
+leo-60-shots.webp,leo-60-shots,,,P148,1,no_excel_name_match,review,
+nachiyar-gift-box-1.webp,nachiyar-gift-box-1,,,P039,1,no_excel_name_match,review,
+nachiyar-gift-box.webp,nachiyar-gift-box,,,P039,1,no_excel_name_match,review,

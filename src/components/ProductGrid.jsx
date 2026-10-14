@@ -23,7 +23,7 @@ export default function ProductGrid({
   }
 
   return (
-    <ul className="grid grid-cols-2 gap-3 gap-y-6 sm:gap-x-3 md:grid-cols-3 md:gap-4 md:gap-y-8 lg:grid-cols-4">
+    <ul className="grid grid-cols-2 gap-3 gap-y-4 sm:gap-x-3 md:grid-cols-3 md:gap-4 md:gap-y-6 lg:grid-cols-4">
       {products.map((product) => (
         <li key={product.id} className="min-w-0">
           <ProductCard product={product} />

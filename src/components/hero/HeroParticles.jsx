@@ -3,7 +3,7 @@ const PARTICLES = [
   { top: '22%', left: '82%', size: 3, color: '#fff4d6', delay: '1.2s' },
   { top: '38%', left: '58%', size: 5, color: '#f2c14e', delay: '0.6s' },
   { top: '55%', left: '72%', size: 3, color: '#c9a45c', delay: '2s' },
-  { top: '18%', left: '52%', size: 2, color: '#fff9f0', delay: '1.8s' },
+  { top: '18%', left: '52%', size: 2, color: '#f2f6fc', delay: '1.8s' },
   { top: '70%', left: '48%', size: 4, color: '#e5a13a', delay: '0.3s' },
   { top: '8%', left: '38%', size: 3, color: '#c9a45c', delay: '2.4s' },
   { top: '48%', left: '88%', size: 2, color: '#fff4d6', delay: '1s' },

@@ -1,0 +1,37 @@
+current_image_filename,proposed_new_filename,original_product_name,excel_comp_value,source_workbook,source_sheet,excel_row_number,matching_javascript_product_ids,reason_for_proposed_rename,collision_check,approval_status
+1.5_TWINKLING.webp,1.5_TWINKLING_UNKNOWN.webp,,,,,,,no_excel_match_comp_unknown,ok,pending_review
+10K_BIJILI_Dragon.webp,10K_BIJILI_DRA_Dragon.webp,10K BIJILI,DRA,carckers_all,Bill 20261040,26,P061,single_resolved_excel_row_after_price_or_comp_rules,ok,pending_review
+10K_BIJILI_May.webp,10K_BIJILI_MAY_May.webp,10K BIJILI,MAY,carckers_all,Bill 20261040,25,P060,single_resolved_excel_row_after_price_or_comp_rules,ok,pending_review
+1K_BIJILI_Dragon.webp,1K_BIJILI_DRA_Dragon.webp,1K BIJILI,DRA,carckers_all,Bill 20261040,21,P056,single_resolved_excel_row_after_price_or_comp_rules,ok,pending_review
+1K_BIJILI_May.webp,1K_BIJILI_MAY_May.webp,1K BIJILI,MAY,carckers_all,Bill 20261040,20,P055,single_resolved_excel_row_after_price_or_comp_rules,ok,pending_review
+4_TWINKLING.webp,4_TWINKLING_AJN_B261049.webp,4 TWINKLING,AJN,carckers_all,Bill 20261049,15,P011;P084;P085,duplicate_name_multiple_excel_rows_comp=AJN,ok,pending_review
+4_TWINKLING.webp,4_TWINKLING_VEL_B261040.webp,4 TWINKLING,VEL,carckers_all,Bill 20261040,49,P011;P084;P085,duplicate_name_multiple_excel_rows_comp=VEL,ok,pending_review
+4_TWINKLING.webp,4_TWINKLING_MAR_B261040.webp,4 TWINKLING,MAR,carckers_all,Bill 20261040,50,P011;P084;P085,duplicate_name_multiple_excel_rows_comp=MAR,ok,pending_review
+5K_BIJILI_Dragon.webp,5K_BIJILI_DRA_Dragon.webp,5K BIJILI,DRA,carckers_all,Bill 20261040,24,P059,single_resolved_excel_row_after_price_or_comp_rules,ok,pending_review
+5K_BIJILI_May.webp,5K_BIJILI_MAY_May.webp,5K BIJILI,MAY,carckers_all,Bill 20261040,23,P058,single_resolved_excel_row_after_price_or_comp_rules,ok,pending_review
+COLOUR_KOTI_DLX.webp,COLOUR_KOTI_DLX_AJN.webp,COLOUR KOTI DLX,AJN,carckers_all,Bill 20261049,14,P010;P075,single_resolved_excel_row_after_price_or_comp_rules,ok,pending_review
+FP_ASHOKA.webp,FP_ASHOKA_AJN_B261049.webp,FP ASHOKA,AJN,carckers_all,Bill 20261049,13,P009;P068,duplicate_name_multiple_excel_rows_comp=AJN,ok,pending_review
+FP_ASHOKA.webp,FP_ASHOKA_LEO_B261040.webp,FP ASHOKA,LEO,carckers_all,Bill 20261040,33,P009;P068,duplicate_name_multiple_excel_rows_comp=LEO,ok,pending_review
+FP_SPECIAL.webp,FP_SPECIAL_AJN_B261049.webp,FP SPECIAL,AJN,carckers_all,Bill 20261049,12,P008;P067,duplicate_name_multiple_excel_rows_comp=AJN,ok,pending_review
+FP_SPECIAL.webp,FP_SPECIAL_LEO_B261040.webp,FP SPECIAL,LEO,carckers_all,Bill 20261040,32,P008;P067,duplicate_name_multiple_excel_rows_comp=LEO,ok,pending_review
+GANGA_JAMUNA.webp,GANGA_JAMUNA_AJN_B261049.webp,Ganga jamuna,AJN,carckers_all,Bill 20261049,20,P016;P124,duplicate_name_multiple_excel_rows_comp=AJN,ok,pending_review
+GANGA_JAMUNA.webp,GANGA_JAMUNA_ASK_B261040.webp,GANGA JAMUNA,ASK,carckers_all,Bill 20261040,88,P016;P124,duplicate_name_multiple_excel_rows_comp=ASK,ok,pending_review
+GB-WONDERFULL-40-ITEMS-1.webp,GB-WONDERFULL-40-ITEMS-1_UNKNOWN.webp,,,,,,P038,no_excel_match_comp_unknown,ok,pending_review
+GB-WONDERFULL-40-ITEMS-2.webp,GB-WONDERFULL-40-ITEMS-2_UNKNOWN.webp,,,,,,P038,no_excel_match_comp_unknown,ok,pending_review
+GC_BIG_10p.webp,GC_BIG_10p_AJN_B261049.webp,GC BIG 10P,AJN,carckers_all,Bill 20261049,9,P005;P062,duplicate_name_multiple_excel_rows_comp=AJN,ok,pending_review
+GC_BIG_10p.webp,GC_BIG_10p_LEO_B261040.webp,GC BIG 10p,LEO,carckers_all,Bill 20261040,27,P005;P062,duplicate_name_multiple_excel_rows_comp=LEO,ok,pending_review
+GC_DELUXE.webp,GC_DELUXE_AJN_B261049.webp,GC DELUXE,AJN,carckers_all,Bill 20261049,11,P007;P064,duplicate_name_multiple_excel_rows_comp=AJN,ok,pending_review
+GC_DELUXE.webp,GC_DELUXE_LEO_B261040.webp,GC DELUXE,LEO,carckers_all,Bill 20261040,29,P007;P064,duplicate_name_multiple_excel_rows_comp=LEO,ok,pending_review
+GC_SPECIAL.webp,GC_SPECIAL_AJN_B261049.webp,GC SPECIAL,AJN,carckers_all,Bill 20261049,10,P006;P063,duplicate_name_multiple_excel_rows_comp=AJN,ok,pending_review
+GC_SPECIAL.webp,GC_SPECIAL_LEO_B261040.webp,GC SPECIAL,LEO,carckers_all,Bill 20261040,28,P006;P063,duplicate_name_multiple_excel_rows_comp=LEO,ok,pending_review
+MAR_4_TWINKLING.webp,MAR_4_TWINKLING_UNKNOWN.webp,,,,,,,no_excel_match_comp_unknown,ok,pending_review
+MMS_DLX.webp,MMS_DLX_UNKNOWN.webp,,,,,,,no_excel_match_comp_unknown,ok,pending_review
+MMS_GB.webp,MMS_GB_UNKNOWN.webp,,,,,,,no_excel_match_comp_unknown,ok,pending_review
+MMS_GB_IN.webp,MMS_GB_IN_UNKNOWN.webp,,,,,,,no_excel_match_comp_unknown,ok,pending_review
+leo-120-shots.webp,leo-120-shots_UNKNOWN.webp,,,,,,P149,no_excel_match_comp_unknown,ok,pending_review
+leo-15-shots.webp,leo-15-shots_UNKNOWN.webp,,,,,,P145,no_excel_match_comp_unknown,ok,pending_review
+leo-240-shots.webp,leo-240-shots_UNKNOWN.webp,,,,,,P150,no_excel_match_comp_unknown,ok,pending_review
+leo-30-shots.webp,leo-30-shots_UNKNOWN.webp,,,,,,P147,no_excel_match_comp_unknown,ok,pending_review
+leo-60-shots.webp,leo-60-shots_UNKNOWN.webp,,,,,,P148,no_excel_match_comp_unknown,ok,pending_review
+nachiyar-gift-box-1.webp,nachiyar-gift-box-1_UNKNOWN.webp,,,,,,P039,no_excel_match_comp_unknown,ok,pending_review
+nachiyar-gift-box.webp,nachiyar-gift-box_UNKNOWN.webp,,,,,,P039,no_excel_match_comp_unknown,ok,pending_review

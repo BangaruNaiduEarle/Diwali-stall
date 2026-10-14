@@ -14,6 +14,39 @@ import 'swiper/css/pagination'
 
 const ICON = { strokeWidth: 1.8 }
 
+function wellShellClass(aspectClass) {
+  return `product-image-carousel product-image-well relative w-full overflow-hidden rounded-[calc(var(--radius-lg)-2px)] ${aspectClass}`
+}
+
+function ImageUnavailableFallback({ label, isDetail }) {
+  return (
+    <div
+      className="flex h-full w-full flex-col items-center justify-center gap-2 px-3"
+      role="img"
+      aria-label={`${label} — photo not available`}
+    >
+      <span
+        className={`flex items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-white)]/80 ${isDetail ? 'h-14 w-14' : 'h-11 w-11'}`}
+        aria-hidden="true"
+      >
+        <Package className={`${isDetail ? 'h-7 w-7' : 'h-5 w-5'} text-[var(--color-gold)]`} {...ICON} />
+      </span>
+      <span className={`${isDetail ? 'text-xs' : 'text-[10px]'} font-medium text-[var(--color-muted)]`}>
+        Photo coming soon
+      </span>
+    </div>
+  )
+}
+
+function ImageLoadingSkeleton({ label }) {
+  return (
+    <>
+      <div className="product-image-skeleton" aria-hidden="true" />
+      <span className="sr-only">Loading image for {label}</span>
+    </>
+  )
+}
+
 function buildExplicitUrls(images, legacyImage) {
   const fromData = normalizeProductImages(images)
   if (fromData.length) return fromData
@@ -81,8 +114,10 @@ export default function ProductImageCarousel({
       ? fallbackSlots.length === 0 || exhaustedFallbackSlots >= fallbackSlots.length
       : true)
 
-  const aspectClass = isDetail ? 'aspect-[4/3] sm:aspect-[5/4]' : 'aspect-[4/3]'
-  const padClass = isDetail ? 'p-3 sm:p-4' : 'p-2'
+  const aspectClass = isDetail
+    ? 'aspect-[4/3] sm:aspect-[5/4]'
+    : 'product-card-carousel-well md:aspect-[4/3]'
+  const padClass = isDetail ? 'p-3 sm:p-4' : 'p-0.5 md:p-2'
 
   const goPrevious = (event) => {
     event.preventDefault()
@@ -139,28 +174,15 @@ export default function ProductImageCarousel({
 
   if (showComingSoon) {
     return (
-      <div
-        className={`product-image-carousel relative w-full overflow-hidden rounded-[calc(var(--radius-lg)-2px)] bg-[var(--color-ivory)] ${aspectClass}`}
-      >
-        <div
-          className="flex h-full w-full flex-col items-center justify-center gap-2"
-          role="img"
-          aria-label={`${label} — image not available`}
-        >
-          <Package className={`${isDetail ? 'h-8 w-8' : 'h-6 w-6'} text-[var(--color-gold)]`} {...ICON} />
-          <span className={`${isDetail ? 'text-xs' : 'text-[10px]'} font-medium text-[var(--color-muted)]`}>
-            Image coming soon
-          </span>
-        </div>
+      <div className={wellShellClass(aspectClass)}>
+        <ImageUnavailableFallback label={label} isDetail={isDetail} />
       </div>
     )
   }
 
   if (awaitingFallback) {
     return (
-      <div
-        className={`product-image-carousel relative w-full overflow-hidden rounded-[calc(var(--radius-lg)-2px)] bg-[var(--color-ivory)] ${aspectClass}`}
-      >
+      <div className={wellShellClass(aspectClass)}>
         <div className="pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0" aria-hidden="true">
           {fallbackSlots.map((candidates, slotIndex) => (
             <FallbackSlotProbe
@@ -173,18 +195,13 @@ export default function ProductImageCarousel({
             />
           ))}
         </div>
-        <div className="flex h-full w-full items-center justify-center">
-          <span className="sr-only">Loading product image</span>
-        </div>
+        <ImageLoadingSkeleton label={label} />
       </div>
     )
   }
 
   return (
-    <div
-      className={`product-image-carousel group/carousel relative w-full overflow-hidden rounded-[calc(var(--radius-lg)-2px)] bg-[var(--color-ivory)] ${aspectClass}`}
-      data-carousel-id={uid}
-    >
+    <div className={`${wellShellClass(aspectClass)} group/carousel`} data-carousel-id={uid}>
       <Swiper
         className="product-image-swiper !absolute inset-0 h-full w-full"
         modules={[Navigation, Pagination]}
@@ -218,18 +235,14 @@ export default function ProductImageCarousel({
       >
         {slideUrls.map((url, index) => (
           <SwiperSlide key={`${uid}-${url}`} className="!flex h-full items-center justify-center">
-            <div className={`flex h-full w-full items-center justify-center ${padClass}`}>
-              <img
-                src={url}
-                alt={`${label} - image ${index + 1}`}
-                loading={index === 0 ? (isDetail ? 'eager' : 'lazy') : 'lazy'}
-                decoding="async"
-                draggable={false}
-                className="max-h-full max-w-full object-contain"
-                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                onError={() => onImageError(url)}
-              />
-            </div>
+            <CarouselSlideImage
+              url={url}
+              label={label}
+              index={index}
+              padClass={padClass}
+              isDetail={isDetail}
+              onError={() => onImageError(url)}
+            />
           </SwiperSlide>
         ))}
       </Swiper>
@@ -269,6 +282,31 @@ export default function ProductImageCarousel({
           ) : null}
         </>
       ) : null}
+    </div>
+  )
+}
+
+function CarouselSlideImage({ url, label, index, padClass, isDetail, onError }) {
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    setLoaded(false)
+  }, [url])
+
+  return (
+    <div className={`relative flex h-full w-full items-center justify-center ${padClass}`}>
+      {!loaded ? <div className="product-image-skeleton rounded-[calc(var(--radius-lg)-4px)]" aria-hidden="true" /> : null}
+      <img
+        src={url}
+        alt={`${label} - image ${index + 1}`}
+        loading={index === 0 ? (isDetail ? 'eager' : 'lazy') : 'lazy'}
+        decoding="async"
+        draggable={false}
+        className={`max-h-full max-w-full object-contain transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+        onLoad={() => setLoaded(true)}
+        onError={onError}
+      />
     </div>
   )
 }

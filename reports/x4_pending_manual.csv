@@ -1,0 +1,24 @@
+product_id,product_name,current_selling_price,reason_skipped,possible_excel_matches
+P005,GC BIG 10P,154,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261049|row9|Comp=AJN|X4=160|Bill=20261049 || CRACKERS_all.xlsx|Bill 20261040|row27|Comp=LEO|X4=120|Bill=20261040
+P006,GC SPECIAL,326,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261049|row10|Comp=AJN|X4=300|Bill=20261049 || CRACKERS_all.xlsx|Bill 20261040|row28|Comp=LEO|X4=200|Bill=20261040
+P007,GC DELUXE,607,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261049|row11|Comp=AJN|X4=600|Bill=20261049 || CRACKERS_all.xlsx|Bill 20261040|row29|Comp=LEO|X4=400|Bill=20261040
+P008,FP SPECIAL,449,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261049|row12|Comp=AJN|X4=400|Bill=20261049 || CRACKERS_all.xlsx|Bill 20261040|row32|Comp=LEO|X4=320|Bill=20261040
+P009,FP ASHOKA,708,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261049|row13|Comp=AJN|X4=600|Bill=20261049 || CRACKERS_all.xlsx|Bill 20261040|row33|Comp=LEO|X4=400|Bill=20261040
+P011,4 TWINKLING,326,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261049|row15|Comp=AJN|X4=252|Bill=20261049 || CRACKERS_all.xlsx|Bill 20261040|row49|Comp=VEL|X4=252|Bill=20261040 || CRACKERS_all.xlsx|Bill 20261040|row50|Comp=MAR|X4=216|Bill=20261040
+P016,Ganga jamuna,348,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261049|row20|Comp=AJN|X4=400|Bill=20261049 || CRACKERS_all.xlsx|Bill 20261040|row88|Comp=ASK|X4=200|Bill=20261040
+P055,1K BIJILI,540,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261040|row20|Comp=MAY|X4=540|Bill=20261040 || CRACKERS_all.xlsx|Bill 20261040|row21|Comp=DRA|X4=800|Bill=20261040
+P056,1K BIJILI,800,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261040|row20|Comp=MAY|X4=540|Bill=20261040 || CRACKERS_all.xlsx|Bill 20261040|row21|Comp=DRA|X4=800|Bill=20261040
+P058,5K BIJILI,2700,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261040|row23|Comp=MAY|X4=2700|Bill=20261040 || CRACKERS_all.xlsx|Bill 20261040|row24|Comp=DRA|X4=4000|Bill=20261040
+P059,5K BIJILI,4000,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261040|row23|Comp=MAY|X4=2700|Bill=20261040 || CRACKERS_all.xlsx|Bill 20261040|row24|Comp=DRA|X4=4000|Bill=20261040
+P060,10K BIJILI,5400,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261040|row25|Comp=MAY|X4=5400|Bill=20261040 || CRACKERS_all.xlsx|Bill 20261040|row26|Comp=DRA|X4=8000|Bill=20261040
+P061,10K BIJILI,8000,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261040|row25|Comp=MAY|X4=5400|Bill=20261040 || CRACKERS_all.xlsx|Bill 20261040|row26|Comp=DRA|X4=8000|Bill=20261040
+P062,GC BIG 10p,120,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261049|row9|Comp=AJN|X4=160|Bill=20261049 || CRACKERS_all.xlsx|Bill 20261040|row27|Comp=LEO|X4=120|Bill=20261040
+P063,GC SPECIAL,200,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261049|row10|Comp=AJN|X4=300|Bill=20261049 || CRACKERS_all.xlsx|Bill 20261040|row28|Comp=LEO|X4=200|Bill=20261040
+P064,GC DELUXE,396,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261049|row11|Comp=AJN|X4=600|Bill=20261049 || CRACKERS_all.xlsx|Bill 20261040|row29|Comp=LEO|X4=400|Bill=20261040
+P067,FP SPECIAL,312,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261049|row12|Comp=AJN|X4=400|Bill=20261049 || CRACKERS_all.xlsx|Bill 20261040|row32|Comp=LEO|X4=320|Bill=20261040
+P068,FP ASHOKA,380,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261049|row13|Comp=AJN|X4=600|Bill=20261049 || CRACKERS_all.xlsx|Bill 20261040|row33|Comp=LEO|X4=400|Bill=20261040
+P083,1.5 TWINKLING,84,no_excel_particulars_match,
+P084,4 TWINKLING,260,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261049|row15|Comp=AJN|X4=252|Bill=20261049 || CRACKERS_all.xlsx|Bill 20261040|row49|Comp=VEL|X4=252|Bill=20261040 || CRACKERS_all.xlsx|Bill 20261040|row50|Comp=MAR|X4=216|Bill=20261040
+P085,4 TWINKLING,216,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261049|row15|Comp=AJN|X4=252|Bill=20261049 || CRACKERS_all.xlsx|Bill 20261040|row49|Comp=VEL|X4=252|Bill=20261040 || CRACKERS_all.xlsx|Bill 20261040|row50|Comp=MAR|X4=216|Bill=20261040
+P119,[VERIFY PRODUCT NAME - ROW 80],720,no_excel_particulars_match,
+P124,GANGA JAMUNA,320,duplicate_javascript_product_name,CRACKERS_all.xlsx|Bill 20261049|row20|Comp=AJN|X4=400|Bill=20261049 || CRACKERS_all.xlsx|Bill 20261040|row88|Comp=ASK|X4=200|Bill=20261040

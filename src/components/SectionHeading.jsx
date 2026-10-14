@@ -19,7 +19,7 @@ export default function SectionHeading({
         {title}
       </h2>
       {description ? (
-        <p className={`editorial-lead mt-3 ${isDark ? 'text-[var(--color-paper)]/70' : ''}`}>
+        <p className={`editorial-lead mt-3 leading-relaxed ${isDark ? 'text-[var(--color-paper)]/70' : ''}`}>
           {description}
         </p>
       ) : null}

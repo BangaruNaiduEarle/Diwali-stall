@@ -1,0 +1,31 @@
+Image case audit summary (2026-10-13T19:16:45.233081+00:00)
+
+Total image URL references audited: 120
+Products with no image reference: 49
+Exact matches (case-sensitive): 105
+Case mismatches (correctable): 0
+Extension mismatches (correctable): 0
+Missing files (no matching basename): 11
+Path / external URL issues: 4
+Fixed references applied: 0
+Unresolved / manual review: 15
+Post-fix exact matches (re-audit): 105
+
+Reports:
+- C:\naidu\Diwali\reports\image_case_audit.csv
+- C:\naidu\Diwali\reports\image_case_audit_summary.txt
+
+Backup: C:\naidu\Diwali\reports\products.js.backup.image_case.20261013T191645Z
+Non-image integrity: PASS
+
+Unresolved references (manual review — not auto-fixed):
+- P006, P063: GC_SPECIAL_AJN.webp — on disk: GC_SPECIAL_AJN.jpg; same URL on two products
+- P010: COLOUR_KOTI_DLX.webp — on disk: COLOUR_KOTI_DLX_AJN.webp
+- P038: GB-WONDERFULL-40-ITEMS-*.webp — verify GB_WONDERFULL / hyphen naming on disk
+- P055–P061: *_BIJILI_May.webp / *_Dragon.webp — on disk: *_MAY_May.webp / *_DRA_Dragon.webp
+- P124: GANGA_JAMUNA_AJN.webp — verify GANGA_JAMUNA*.webp variants
+- P039: /images/products/nachiyar-gift-box*.webp (outside images-mobile-webp)
+- P142: /images/products/peacock-gaint.webp (outside images-mobile-webp)
+- 49 products: empty images[] (no URL to audit)
+
+Re-run: py -3 scripts/image_case_audit_fix.py

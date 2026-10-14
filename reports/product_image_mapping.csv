@@ -1,0 +1,163 @@
+source_workbook,source_sheet,excel_row_number,original_excel_product_name,normalized_product_name,x4_value,existing_product_id,existing_selling_price,primary_matched_image,additional_matched_images,match_status,implementation_status,notes
+carckers_all,Bill 20261049,5,EMERALD GIFT BOX,EMERALD_GIFT_BOX,1694.0,P001,1694,EMERALD_GIFT_BOX_1.webp,EMERALD_GIFT_BOX_2.webp,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,6,SILVER GIFT BOX,SILVER_GIFT_BOX,2292.4,P002,2292,SILVER_GIFT_BOX_1.webp,SILVER_GIFT_BOX_2.webp,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,7,GOLD GIFT BOX,GOLD_GIFT_BOX,2807.2,P003,2807,GOLD_GIFT_BOX_1.webp,GOLD_GIFT_BOX_2.webp,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,8,DIAMOND GIFT BOX,DIAMOND_GIFT_BOX,4382.4,P004,4382,DIAMOND_GIFT_BOX_1.webp,DIAMOND_GIFT_BOX_2.webp,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,9,GC BIG 10P,GC_BIG_10P,160.0,P005,154,GC_BIG_10p.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,10,GC SPECIAL,GC_SPECIAL,300.0,P006,326,GC_SPECIAL.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,11,GC DELUXE,GC_DELUXE,600.0,P007,607,GC_DELUXE.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,12,FP SPECIAL,FP_SPECIAL,400.0,P008,449,FP_SPECIAL.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,13,FP ASHOKA,FP_ASHOKA,600.0,P009,708,FP_ASHOKA.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,14,COLOUR KOTI DLX,COLOUR_KOTI_DLX,1000.0,P010,1408,COLOUR_KOTI_DLX.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,15,4 TWINKLING,4_TWINKLING,252.0,P011,326,4_TWINKLING.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,16,Magic pencil dlx,Magic_pencil_dlx,300.0,P012,352,Magic_pencil_dlx.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,17,ITALIAN TORCHERS,ITALIAN_TORCHERS,400.0,P013,629,ITALIAN_TORCHERS.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,18,JURASSIC BOMB,JURASSIC_BOMB,640.0,P014,634,JURASSIC_BOMB.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,19,MIGHTY BOMB,MIGHTY_BOMB,800.0,P015,757,MIGHTY_BOMB.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,20,Ganga jamuna,Ganga_jamuna,400.0,P016,348,GANGA_JAMUNA.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,21,SIGNAL BOMB( 7 SHOTS),SIGNAL_BOMB_(7_SHOTS),501.6,P017,502,SIGNAL_BOMB( 7_SHOTS).webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,22,MEGA STAR 12,MEGA_STAR,682.0,P018,682,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261049,23,flintstones 10 shot,flintstones_10_shot,682.0,P019,682,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261049,24,Mottu patlu,Mottu_pattu,1337.6,P020,1338,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261049,25,Swat cats,Swat_cats,1337.6,P021,1338,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261049,26,Kur kure,Kur_kure,409.2,P022,409,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261049,27,SPARSA GREEN 2PC,SPARSA_GREEN_2PC,409.2,P023,409,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261049,28,Scooby doo,Scooby_doo,300.0,P024,295,Scooby_doo.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,29,CLASSIC WHEEL,CLASSIC_WHEEL,200.0,P025,277,CLASSIC_WHEEL.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,30,BLOSSOM,BLOSSOM,500.0,P026,488,BLOSSOM.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,31,PINKIE PIE,PINKIE_PIE,500.0,P027,488,PINKIE_PIE.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,32,minions,minions,1196.8,P028,1197,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261049,33,OSCAR,OSCAR,1200.0,P029,1355,OSCAR.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,34,Mario,Mario,600.0,P030,612,Mario.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,35,Tuity fruity,Tuity_fruity,800.0,P031,774,Tuity_fruity.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,36,JOY WHEEL,JOY_WHEEL,550.0,P032,550,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261049,37,MAGICAL SWORD,MAGICAL_SWORD,500.0,P033,810,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261049,38,PARTY APPLE,PARTY_APPLE,787.6,P034,788,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261049,39,Pinto Box 9 SHOTS,Pinto_Box_9_SHOTS,1390.4,P035,1390,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261049,40,P 50 COLOUR FOLDER,P_50_COLOUR_FOLDER,74.4,P036,74,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261049,41,ROLL CAPS,ROLL_CAPS,200.0,P037,200,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261049,42,GB WONDERFULL 40 ITEMS,GB_WONDERFULL_40_ITEMS,2480.0,P038,2480,GB-WONDERFULL-40-ITEMS-1.webp,GB-WONDERFULL-40-ITEMS.webp;GB-WONDERFULL-40-ITEMS-2.webp,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,43,45 ITEMS NATCHIYAR,45_ITEMS_NATCHIYAR,3560.0,P039,3560,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,5,5 GANESH BOMB,5_GANESH_BOMB,152.0,P040,152,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,6,4 DLX GANESH,4_DLX_GANESH,120.0,P041,108,4_DLX_GANESH.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,7,3.5 LAXMI,3.5_LAXMI,60.0,P042,48,3.5_LAXMI.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,8,4 LAXMI,4_LAXMI,80.0,P043,64,4_LAXMI.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,9,4 GOLD LAXMI DLX,4_GOLD_LAXMI_DLX,80.0,P044,80,4_GOLD_LAXMI_DLX.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,10,2 SOUND BOMB,2_SOUND_BOMB,120.0,P045,112,2_SOUND_BOMB.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,11,3 SOUND BOMB,3_SOUND_BOMB,120.0,P046,120,3_SOUND_BOMB.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,12,28 WALA PIN,28_WALA_PIN,48.0,P047,48,28_WALA_PIN.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,13,28 GAINT,28_GAINT,52.0,P048,72,28_GAINT.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,14,24 DLX,24_DLX,80.0,P049,120,24_DLX.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,15,50 DLX,50_DLX,200.0,P050,300,50_DLX.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,16,100 DLX,100_DLX,600.0,P051,600,100_DLX.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,17,100 MEGA DLX,100_MEGA_DLX,1200.0,P052,1200,100_MEGA_DLX.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,18,RED BIJILI 100P,RED_BIJILI_100P,100.0,P053,88,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,19,100 WALA,100_WALA,100.0,P054,100,100_WALA.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,20,1K BIJILI,1K_BIJILI,540.0,P055,540,1K_BIJILI_May.webp,,matched,ready_to_update,ok_x4_equals_selling_price; confident
+carckers_all,Bill 20261040,21,1K BIJILI,1K_BIJILI,800.0,P056,800,1K_BIJILI_Dragon.webp,,matched,ready_to_update,ok_x4_equals_selling_price; confident
+carckers_all,Bill 20261040,22,2K BIJILI,2K_BIJILI,1080.0,P057,1080,2K_BIJILI_May.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,23,5K BIJILI,5K_BIJILI,2700.0,P058,2700,5K_BIJILI_May.webp,,matched,ready_to_update,ok_x4_equals_selling_price; confident
+carckers_all,Bill 20261040,24,5K BIJILI,5K_BIJILI,4000.0,P059,4000,5K_BIJILI_Dragon.webp,,matched,ready_to_update,ok_x4_equals_selling_price; confident
+carckers_all,Bill 20261040,25,10K BIJILI,10K_BIJILI,5400.0,P060,5400,10K_BIJILI_May.webp,,matched,ready_to_update,ok_x4_equals_selling_price; confident
+carckers_all,Bill 20261040,26,10K BIJILI,10K_BIJILI,8000.0,P061,8000,10K_BIJILI_Dragon.webp,,matched,ready_to_update,ok_x4_equals_selling_price; confident
+carckers_all,Bill 20261049,9,GC BIG 10P,GC_BIG_10p,160.0,P062,120,GC_BIG_10p.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,10,GC SPECIAL,GC_SPECIAL,300.0,P063,200,GC_SPECIAL.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,11,GC DELUXE,GC_DELUXE,600.0,P064,396,GC_DELUXE.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,30,WIRE SPECIAL,WIRE_SPECIAL,400.0,P065,384,WIRE_SPECIAL.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,31,FP BIG,FP_BIG,240.0,P066,232,FP_BIG.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,12,FP SPECIAL,FP_SPECIAL,400.0,P067,312,FP_SPECIAL.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,13,FP ASHOKA,FP_ASHOKA,600.0,P068,380,FP_ASHOKA.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,34,FP GAINT,FP_GAINT,500.0,P069,520,FP_GAINT.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,35,COLOURKOTI DLX 5PC,COLOURKOTI_DLX_5PC,480.0,P070,480,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,36,COLOUR KOTI LB,COLOUR_KOTI_LB,640.0,P071,640,COLOUR_KOTI_LB.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,37,MAZA COLOUR KOTI RED & GREEN,MAZA_COLOUR_KOTI_RED_&_GREEN,600.0,P072,600,MAZA_COLOUR_KOTI_RED_&_GREEN.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,38,Z BEAST FLOWER POTS 45C,Z_BEAST_FLOWER_POTS_45C,700.0,P073,660,Z_BEAST_FLOWER_POTS_45C.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,39,MASTI COLOUR KOTI R&G MEGA,MASTI_COLOUR_KOTI_R&Gi_MEGA,1000.0,P074,1000,MASTI_COLOUR_KOTI_R&G_MEGA.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,40,COLOUR KOTI DLX LB,COLOUR_KOTI_DLX_LB,1000.0,P075,1024,COLOUR_KOTI_DLX_LB.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,41,TINY 5 COLOUR FOUNTAIN,TINY_5_COLOUR_FOUNTAIN,500.0,P076,580,TINY_5_COLOUR_FOUNTAIN.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,42,TRI COLOUR FOUNTAIN,TRI_COLOUR_FOUNTAIN,960.0,P077,960,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,43,TIM Loose,TIM_LOOSE,80.0,P078,80,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,44,BONANZA SD,BONANZA_SD,1200.0,P079,1580,BONANZA_SD.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,45,TIM little star,TIM_little_star,800.0,P080,760,TIM_little_star.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,46,DLX,DLX,1600.0,P081,1480,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,47,GB,GB,2000.0,P082,2000,,,no_image,skipped_no_image,ok; no_files
+,,,,1.5_TWINKLING,,P083,84,1.5_TWINKLING.webp,,matched,skipped_excel,no_excel_match; confident
+carckers_all,Bill 20261049,15,4 TWINKLING,4_TWINKLING,252.0,P084,260,4_TWINKLING.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,15,4 TWINKLING,4_TWINKLING,252.0,P085,216,4_TWINKLING.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,51,ANACONDA,ANACONDA,200.0,P086,220,ANACONDA.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,52,SNAKE BIG,SNAKE_BIG,600.0,P087,600,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,53,Sub matches,Sub_matches,1600.0,P088,1600,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,54,POPS,POPS,200.0,P089,200,POPS.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,55,JOSH,JOSH,272.0,P090,272,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,56,NINJA,NINJA,348.0,P091,348,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,57,DASARA,DASARA,540.0,P092,540,DASARA.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,58,VIP 10 IN 1 matches,VIP_10_1_matches,440.0,P093,480,VIP_10_IN_1_matches.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,59,10 PENCIL,10_PENCIL,120.0,P094,120,10_PENCIL.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,60,18 PENCIL DLX UV,18_PENCIL_DLX_UV,320.0,P095,320,18_PENCIL_DLX_UV.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,61,10 CM ELECTRIC,10_CM_ELECTRIC,60.0,P096,48,10_CM_ELECTRIC.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,62,10 CM COLOUR,10_CM_COLOUR,60.0,P097,54,10_CM_COLOUR.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,63,10 CM GREEN,10_CM_GREEN,60.0,P098,54,10_CM_GREEN.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,64,10 CM RED,10_CM_RED,60.0,P099,60,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,65,15 CM ELECTRIC,15_CM_ELECTRIC,100.0,P100,88,15_CM_ELECTRIC.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,66,15 CM COLOUR,15_CM_COLOUR,100.0,P101,96,15_CM_COLOUR.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,67,15 CM GREEN,15_CM_GREEN,100.0,P102,100,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,68,15 CM RED,15_CM_RED,100.0,P103,108,15_CM_RED.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,69,30 CM ELECTRICAL,30_CM_ELECTRICAL,100.0,P104,88,30_CM_ELECTRICAL.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,70,30 CM COLOUR,30_CM_COLOUR,120.0,P105,96,30_CM_COLOUR.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,71,30 CM GREEN,30_CM_GREEN,120.0,P106,100,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,72,30 CM RED,30_CM_RED,120.0,P107,108,30_CM_RED.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,73,50 CM ELECTRIC ROLL,50_CM_ELECTRIC_ROLL,368.0,P108,368,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,74,50 CM CRACKLING ROLL,50_CM_CRACKLING_ROLL,408.0,P109,408,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,75,75 CM ELECTRIC ROLL,75_CM_ELECTRIC_ROLL,408.0,P110,552,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,76,75 CM CRACKLING ROLL,75_CM_CRACKLING_ROLL,552.0,P111,640,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,77,30 CM 5IN1 SPARKLERS,30_CM_5IN1_SPARKLERS,640.0,P112,160,30_CM_5IN1_SPARKLERS.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,78,KIT KAT,KIT_KAT,100.0,P113,600,KIT_KAT.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,79,DORA DORA,DORA_DORA,76.0,P114,76,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,80,NAVARANGA STONES,NAVARANGA_STONES,96.0,P115,96,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,81,HYDRO BOMB,HYDRO_BOMB,260.0,P116,168,HYDRO_BOMB.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,82,Classic bomb,Classic_bomb,400.0,P117,260,Classic_bomb.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,83,555 BOMB,555_BOMB,440.0,P118,440,555_BOMB.webp,,matched,ready_to_update,ok; confident
+,,,,[VERIFY_PRODUCT_NAME_-_ROW_80],,P119,720,,,no_image,skipped_no_image,no_excel_match; no_files
+carckers_all,Bill 20261040,84,TARZAN BOMB N6,TARZAN_BOMB_N6,640.0,P120,792,TARZAN_BOMB_N6.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,85,TARZAN BOMB N7,TARZAN_BOMB_N7,720.0,P121,272,TARZAN_BOMB_N7.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,86,SS DIGITAL BOMB,SS_DIGITAL_BOMB,544.0,P122,480,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,87,LAL MIRCHI BOMB,LAL_MIRCHI_BOMB,272.0,P123,180,LAL_MIRCHI_BOMB.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261049,20,Ganga jamuna,GANGA_JAMUNA,400.0,P124,320,GANGA_JAMUNA.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,89,ROCKET BOMB,ROCKET_BOMB,120.0,P125,400,ROCKET_BOMB.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,90,SHOWER MIX,SHOWER_MIX,400.0,P126,300,SHOWER_MIX.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,91,ASHRAFI MIX,ASHRAFI_MIX,400.0,P127,252,ASHRAFI_MIX.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,92,7 SHOTS (5PCS),7_SHOTS_(5PCS),300.0,P128,300,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,93,PHOTO CAPTURE,PHOTO_CAPTURE,252.0,P129,300,PHOTO_CAPTURE.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,94,TIN SERIES,TIN_SERIES,300.0,P130,260,TIN_SERIES.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,95,HELICOPTER,HELICOPTER,252.0,P131,300,HELICOPTER.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,96,DARLING DANCER,DARLING_DANCER,300.0,P132,560,DARLING_DANCER.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,97,Musical torch,Musical_torch,300.0,P133,420,Musical_torch.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,98,WHIZZ WHEEL,WHIZZ_WHEEL,300.0,P134,500,WHIZZ_WHEEL.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,99,DRONE,DRONE,500.0,P135,600,DRONE.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,100,SIREN,SIREN,600.0,P136,540,SIREN.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,101,SPINNER DLX,SPINNER_DLX,500.0,P137,320,SPINNER_DLX.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,102,SPINNER SPL,SPINNER_SPL,400.0,P138,700,SPINNER_SPL.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,103,THANIGAI EXPRESS,THANIGAI_EXPRESS,500.0,P139,800,THANIGAI_EXPRESS.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,104,MAGIC SHOW,MAGIC_SHOW,600.0,P140,1400,MAGIC_SHOW.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,106,PEACOCK,PEACOCK,500.0,P141,480,PEACOCK.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,105,PEACOCK BIG,PEACOCK_GAINT,1400.0,P142,1400,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,107,WARRIOR SWARD,WARRIOR_SWARD,320.0,P143,320,WARRIOR_SWARD.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,108,12 SHOTS RIDER,12_SHOTS_RIDER,480.0,P144,480,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,109,15 Shot,15_Shot,1000.0,P145,1000,leo-15-shots.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,110,25 SHOTS,25_SHOTS,1500.0,P146,1500,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,111,30 shots,30_shots,1700.0,P147,1700,leo-30-shots.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,112,60 shots,60_shots,3400.0,P148,3400,leo-60-shots.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,113,120 shots,120_shots,6800.0,P149,6800,leo-120-shots.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,114,240 shots,240_shots,13600.0,P150,13600,leo-240-shots.webp,,matched,ready_to_update,ok; confident
+carckers_all,Bill 20261040,115,CHOTA SHOT,CHOTA_SHOT,120.0,P151,120,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,116,SINGLE SHOT 2',SINGLE_SHOT_2',300.0,P152,300,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,117,SINGLE SHOT (3PCS) SET,SINGLE_SHOT_(3PCS)_SET,800.0,P153,800,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,118,Nayagara falls,Nayagara_falls,1200.0,P154,1200,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,119,SINGLE SHOT 3.5,SINGLE_SHOT_3.5,1000.0,P155,1000,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,120,SINGLE SHOT 7steps,SINGLE_SHOT_7steps,800.0,P156,800,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,121,RING GUNS SP 56 B,RING_GUNS_SP_56_B,528.0,P157,528,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,122,RING GUN 0088 C,RING_GUN_0088_C,264.0,P158,264,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,123,RING GUNS 0011 C,RING_GUNS_0011_C,91.2,P159,91,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,124,RING CAPS,RING_CAPS,24.0,P160,24,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,125,POP POP NO 1,POP_POP_NO_1,933.36,P161,933,,,no_image,skipped_no_image,ok; no_files
+carckers_all,Bill 20261040,126,LANTHERS,LANTHERS,52.0,P162,52,,,no_image,skipped_no_image,ok; no_files

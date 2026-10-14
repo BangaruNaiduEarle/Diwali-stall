@@ -1,5 +1,7 @@
 import { CalendarClock, MapPin, Sparkles } from 'lucide-react'
 import {
+  getLocationHeroLine,
+  getStallDatesSummary,
   hasLocation,
   hasStallDates,
   siteConfig,
@@ -12,9 +14,9 @@ function ConfigPlaceholder({ children }) {
 }
 
 export default function SaleAnnouncement() {
-  const dates = siteConfig.stallDates?.trim()
+  const dates = getStallDatesSummary()
   const timings = siteConfig.stallTimings?.trim()
-  const location = siteConfig.location?.trim()
+  const location = getLocationHeroLine()
 
   return (
     <section

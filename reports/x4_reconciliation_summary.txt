@@ -1,0 +1,17 @@
+X4 reconciliation summary (2026-10-13T17:50:07.307880+00:00)
+
+Total products: 162
+X4 implemented (confident unique Excel match): 139
+Skipped / pending manual: 23
+  - duplicate_javascript_product_name: 21
+  - no_excel_particulars_match: 2
+  - ambiguous_excel_multiple_rows_same_name: 0
+  - missing_or_invalid_x4_in_excel: 0
+
+Products with x4 field in products.js: 139
+referencePrice/discount remaining: 0 ids []
+Price integrity: PASS
+Image paths unchanged: PASS
+
+Backup: C:\naidu\Diwali\reports\products.js.backup.20261013T175006Z
+Reports: C:\naidu\Diwali\reports\x4_implemented.csv, C:\naidu\Diwali\reports\x4_pending_manual.csv

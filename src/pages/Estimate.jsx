@@ -1,163 +1,120 @@
-import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowRight, MessageCircle, Pencil, ReceiptText, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, ArrowRight, MessageCircle, ReceiptText } from 'lucide-react'
 import CustomerDetailsForm from '../components/CustomerDetailsForm'
 import EmptyState from '../components/EmptyState'
+import EstimateItem from '../components/estimate/EstimateItem'
+import EstimateProgress from '../components/estimate/EstimateProgress'
+import EstimateSummaryPanel from '../components/estimate/EstimateSummaryPanel'
 import PageContainer from '../components/PageContainer'
-import QuantityControl from '../components/QuantityControl'
 import Button from '../components/ui/Button'
 import { useCustomerDetails } from '../context/CustomerDetailsContext'
 import { useEstimate } from '../context/EstimateContext'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { formatINR } from '../utils/currency'
+import { getMobileDigits, validateCustomerDetails } from '../utils/customerDetailsHelpers'
 import { getEstimateProducts } from '../utils/estimateHelpers'
 import { getWhatsAppEstimateUrl } from '../utils/whatsapp'
 
-const ICON = { strokeWidth: 1.8 }
-
-function EstimateLineRow({ row, onIncrease, onDecrease, onRemove }) {
-  const { product, quantity, lineTotal } = row
+function ReviewSection({ rows, subtotal, details, onEditDetails, whatsAppUrl, onSendAttempt, canSend }) {
+  const mobileDisplay = details.mobile
+    ? `+91 ${getMobileDigits(details.mobile).replace(/(\d{5})(\d{5})/, '$1 $2')}`
+    : '—'
 
   return (
-    <article className="estimate-line-card surface-card mb-3 p-4 md:mb-0 md:rounded-none md:border-0 md:border-b md:bg-transparent md:p-0 md:shadow-none md:py-6">
-      <h2 className="text-base font-semibold leading-snug text-[var(--color-charcoal)]">{product.name}</h2>
-      <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-red)]">
-        {product.category}
-      </p>
-      {product.pack?.trim() ? (
-        <p className="mt-1 text-xs text-[var(--color-muted)]">{product.pack.trim()}</p>
-      ) : null}
-      <p className="mt-2 text-[15px] font-bold text-[var(--color-maroon)]">{formatINR(product.price)} each</p>
-
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <QuantityControl
-          quantity={quantity}
-          productName={product.name}
-          onIncrease={() => onIncrease(product.id)}
-          onDecrease={() => onDecrease(product.id)}
-        />
-        <p className="text-lg font-semibold tabular-nums text-[var(--color-maroon)]">{formatINR(lineTotal)}</p>
-      </div>
-
-      <button
-        type="button"
-        className="focus-ring mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-[var(--color-muted)] transition-ui hover:text-[var(--color-red)]"
-        onClick={() => onRemove(product.id)}
+    <div className="space-y-6">
+      <section
+        className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-white)] p-5 sm:p-6"
+        aria-labelledby="review-estimate-heading"
       >
-        <Trash2 className="h-4 w-4" {...ICON} aria-hidden="true" />
-        Remove
-      </button>
-    </article>
-  )
-}
-
-function EstimateReview({ rows, subtotal, details, canSend, whatsAppUrl, onSendAttempt }) {
-  return (
-    <section className="surface-card p-5 md:p-6" aria-labelledby="estimate-review-heading">
-      <h2 id="estimate-review-heading" className="text-base font-semibold text-[var(--color-charcoal)]">
-        Review before WhatsApp
-      </h2>
-      <p className="mt-1 text-sm text-[var(--color-muted)]">
-        This is a request for confirmation — not a confirmed order or payment.
-      </p>
-
-      <div className="mt-5">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Your estimate</h3>
-        <ul className="mt-3 space-y-2 text-sm text-[var(--color-charcoal)]">
+        <h2 id="review-estimate-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">
+          Your estimate
+        </h2>
+        <ul className="mt-4 space-y-2 text-sm text-[var(--color-charcoal)]">
           {rows.map(({ product, quantity, lineTotal }) => (
             <li key={product.id} className="flex justify-between gap-3">
               <span>
                 {quantity} × {product.name}
               </span>
-              <span className="shrink-0 tabular-nums">{formatINR(lineTotal)}</span>
+              <span className="shrink-0 tabular-nums font-medium">{formatINR(lineTotal)}</span>
             </li>
           ))}
         </ul>
-        <p className="mt-4 text-sm font-semibold text-[var(--color-charcoal)]">
-          Estimated total:{' '}
+        <p className="mt-4 flex justify-between gap-3 border-t border-[var(--color-border)] pt-4 text-sm font-semibold">
+          <span>Estimated total</span>
           <span className="text-lg tabular-nums text-[var(--color-maroon)]">{formatINR(subtotal)}</span>
         </p>
-      </div>
+      </section>
 
-      <div className="mt-5 hairline-t pt-5">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Customer</h3>
-        <dl className="mt-2 space-y-1 text-sm text-[var(--color-charcoal)]">
-          <div className="flex gap-2">
+      <section
+        className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-white)] p-5 sm:p-6"
+        aria-labelledby="review-details-heading"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <h2 id="review-details-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">
+            Your details
+          </h2>
+          <button type="button" className="focus-ring text-sm font-medium text-[var(--color-brand)]" onClick={onEditDetails}>
+            Edit details
+          </button>
+        </div>
+        <dl className="mt-4 space-y-3 text-sm">
+          <div>
             <dt className="text-[var(--color-muted)]">Name</dt>
-            <dd>{details.name || '—'}</dd>
+            <dd className="mt-0.5 font-medium">{details.name || '—'}</dd>
           </div>
-          <div className="flex gap-2">
+          <div>
             <dt className="text-[var(--color-muted)]">Mobile</dt>
-            <dd>{details.mobile || '—'}</dd>
+            <dd className="mt-0.5 font-medium">{mobileDisplay}</dd>
           </div>
           {details.area ? (
-            <div className="flex gap-2">
+            <div>
               <dt className="text-[var(--color-muted)]">Area</dt>
-              <dd>{details.area}</dd>
+              <dd className="mt-0.5 font-medium">{details.area}</dd>
             </div>
           ) : null}
           {details.pickupDate ? (
-            <div className="flex gap-2">
-              <dt className="text-[var(--color-muted)]">Pickup</dt>
-              <dd>{details.pickupDate}</dd>
+            <div>
+              <dt className="text-[var(--color-muted)]">Preferred pickup</dt>
+              <dd className="mt-0.5 font-medium">{details.pickupDate}</dd>
             </div>
           ) : null}
           {details.note ? (
-            <div className="gap-2 sm:flex">
-              <dt className="shrink-0 text-[var(--color-muted)]">Note</dt>
-              <dd className="min-w-0 break-words">{details.note}</dd>
+            <div>
+              <dt className="text-[var(--color-muted)]">Note</dt>
+              <dd className="mt-0.5 break-words font-medium">{details.note}</dd>
             </div>
           ) : null}
         </dl>
+      </section>
+
+      <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-ivory)] p-4 text-sm" role="note">
+        <p className="font-semibold text-[var(--color-maroon)]">This is an estimate request, not a confirmed order.</p>
+        <p className="mt-2 text-[var(--color-muted)]">
+          We&apos;ll confirm product availability and final pricing with you on WhatsApp.
+        </p>
       </div>
 
-      <div className="mt-6 flex flex-col gap-3">
-        <Link to="/crackers" className="focus-ring inline-flex min-h-11 items-center gap-2 text-sm font-medium text-[var(--color-brand)]">
-          <Pencil className="h-4 w-4" {...ICON} aria-hidden="true" />
-          Edit estimate (browse catalogue)
-        </Link>
-        <a
-          href="#customer-details"
-          className="focus-ring inline-flex min-h-11 items-center gap-2 text-sm font-medium text-[var(--color-brand)]"
-        >
-          <Pencil className="h-4 w-4" {...ICON} aria-hidden="true" />
-          Edit details
-        </a>
-
+      <div>
         {whatsAppUrl && canSend ? (
-          <Button
-            href={whatsAppUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            variant="primary"
-            size="md"
-            icon={MessageCircle}
-            fullWidth
-          >
+          <Button href={whatsAppUrl} target="_blank" rel="noopener noreferrer" variant="primary" icon={MessageCircle} fullWidth>
             Send request on WhatsApp
           </Button>
         ) : (
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            icon={MessageCircle}
-            fullWidth
-            onClick={onSendAttempt}
-          >
+          <Button type="button" variant="primary" icon={MessageCircle} fullWidth onClick={onSendAttempt}>
             Send request on WhatsApp
           </Button>
         )}
-        {!canSend ? (
-          <p className="text-xs text-[var(--color-muted)]">Enter your name and mobile number above to continue.</p>
-        ) : null}
+        <p className="mt-2 text-center text-xs text-[var(--color-muted)]">
+          Your selected products and details will be shared with our stall team.
+        </p>
       </div>
-    </section>
+    </div>
   )
 }
 
 export default function Estimate() {
   usePageTitle('My estimate')
+  const [step, setStep] = useState('estimate')
   const {
     estimateItems,
     estimateCount,
@@ -176,30 +133,45 @@ export default function Estimate() {
     [estimateItems, details, isValid],
   )
 
-  const handleSendAttempt = () => {
-    markTouched()
-    document.getElementById('customer-details')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [step])
 
   const handleClear = () => {
     if (window.confirm('Clear your entire estimate? This cannot be undone.')) {
       clearEstimate()
+      setStep('estimate')
     }
+  }
+
+  const goToDetails = () => setStep('details')
+  const goToReview = () => {
+    markTouched()
+    if (Object.keys(validateCustomerDetails(details)).length > 0) return
+    setStep('review')
+  }
+
+  const handleSendAttempt = () => {
+    markTouched()
+    if (!isValid) setStep('details')
   }
 
   if (rows.length === 0) {
     return (
       <PageContainer>
-        <header className="mb-4 max-w-xl">
+        <header className="max-w-xl">
           <p className="editorial-label-festive text-[var(--color-maroon)]">My estimate</p>
-          <h1 className="editorial-title mt-3">Your estimate is empty</h1>
+          <h1 className="editorial-title mt-2">Your estimate is empty</h1>
+          <p className="mt-3 text-sm text-[var(--color-muted)]">
+            Start exploring our crackers and add your favourites here.
+          </p>
         </header>
         <EmptyState
           icon={ReceiptText}
           title=""
-          description="Browse the catalogue and add products you are interested in."
+          description=""
           action={
-            <Button to="/crackers" variant="primary" iconRight={ArrowRight} fullWidth className="max-w-[360px] sm:!w-auto">
+            <Button to="/crackers" variant="primary" iconRight={ArrowRight} fullWidth className="max-w-sm sm:!w-auto">
               Browse crackers
             </Button>
           }
@@ -211,54 +183,119 @@ export default function Estimate() {
   const productLabel = uniqueProductCount === 1 ? 'product' : 'products'
   const itemLabel = estimateCount === 1 ? 'item' : 'items'
 
+  const headerEyebrow =
+    step === 'estimate' ? 'My estimate' : step === 'details' ? 'Your details' : 'Review your request'
+  const headerTitle =
+    step === 'estimate' ? 'Your Diwali picks' : step === 'details' ? 'Almost there' : 'Everything looks good?'
+  const headerSupport =
+    step === 'estimate'
+      ? "Review the crackers you've selected before sharing your request with us."
+      : step === 'details'
+        ? 'Tell us where we can reach you.'
+        : 'Check your estimate and contact details before sending your WhatsApp request.'
+
   return (
     <PageContainer>
-      <header className="mb-6 max-w-2xl md:mb-8">
-        <p className="editorial-label-festive text-[var(--color-maroon)]">My estimate</p>
-        <h1 className="editorial-title mt-2">My estimate</h1>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">
-          {uniqueProductCount} {productLabel} · {estimateCount} {itemLabel}
-        </p>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">
-          Review your list, add your contact details, then send a WhatsApp request for the stall to confirm availability
-          and final price.
-        </p>
+      <header className="max-w-2xl">
+        <p className="editorial-label-festive text-[var(--color-maroon)]">{headerEyebrow}</p>
+        <h1 className="editorial-title mt-2">{headerTitle}</h1>
+        {step === 'estimate' ? (
+          <p className="mt-2 text-sm font-medium text-[var(--color-charcoal)]">
+            {uniqueProductCount} {productLabel} · {estimateCount} {itemLabel}
+          </p>
+        ) : null}
+        <p className="mt-2 text-sm text-[var(--color-muted)]">{headerSupport}</p>
+        <EstimateProgress currentStep={step} />
       </header>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_min(340px,100%)] lg:items-start lg:gap-10">
-        <div className="space-y-8">
-          <section aria-labelledby="estimate-items-heading">
+      {step === 'estimate' ? (
+        <div className="mt-6 grid gap-8 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_min(18rem,30%)] lg:items-start lg:gap-10">
+          <section aria-labelledby="estimate-items-heading" className="min-w-0">
             <h2 id="estimate-items-heading" className="sr-only">
-              Estimate items
+              Selected products
             </h2>
-            <div className="min-w-0 md:divide-y md:divide-[var(--color-border)] md:border-y md:border-[var(--color-border)]">
-              {rows.map((row) => (
-                <EstimateLineRow
-                  key={row.productId}
-                  row={row}
-                  onIncrease={increaseQuantity}
-                  onDecrease={decreaseQuantity}
-                  onRemove={removeFromEstimate}
-                />
-              ))}
+
+            <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-white)]">
+              <ul className="divide-y divide-[var(--color-border)]">
+                {rows.map((row) => (
+                  <li key={row.productId}>
+                    <EstimateItem
+                      row={row}
+                      onIncrease={increaseQuantity}
+                      onDecrease={decreaseQuantity}
+                      onRemove={removeFromEstimate}
+                    />
+                  </li>
+                ))}
+              </ul>
             </div>
-            <Button type="button" variant="ghost" size="sm" className="mt-4" onClick={handleClear}>
-              Clear estimate
-            </Button>
+
+            {/* Mobile: scroll to continue — no fixed sidebar */}
+            <div className="mt-6 border-t border-[var(--color-border)] pt-6 lg:hidden">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">Estimated total</p>
+              <p className="mt-1 text-2xl font-bold tabular-nums text-[var(--color-maroon)]">{formatINR(estimateSubtotal)}</p>
+              <p className="mt-2 text-xs text-[var(--color-muted)]">
+                Final availability and price will be confirmed by the stall.
+              </p>
+              <Button type="button" variant="primary" iconRight={ArrowRight} fullWidth className="mt-5" onClick={goToDetails}>
+                Continue to your details
+              </Button>
+              <p className="mt-2 text-xs text-[var(--color-muted)]">
+                We&apos;ll use these details to send your estimate request on WhatsApp.
+              </p>
+              <Button type="button" variant="ghost" size="sm" className="mt-4" onClick={handleClear}>
+                Clear estimate
+              </Button>
+            </div>
+
+            <div className="mt-6 hidden lg:block">
+              <Button type="button" variant="ghost" size="sm" onClick={handleClear}>
+                Clear estimate
+              </Button>
+            </div>
           </section>
 
-          <CustomerDetailsForm />
+          <EstimateSummaryPanel
+            uniqueProductCount={uniqueProductCount}
+            estimateCount={estimateCount}
+            subtotal={estimateSubtotal}
+            primaryLabel="Continue to your details"
+            onPrimary={goToDetails}
+            helperText="We'll use these details to send your estimate request on WhatsApp."
+          />
         </div>
+      ) : null}
 
-        <EstimateReview
-          rows={rows}
-          subtotal={estimateSubtotal}
-          details={details}
-          canSend={isValid}
-          whatsAppUrl={whatsAppUrl}
-          onSendAttempt={handleSendAttempt}
-        />
-      </div>
+      {step === 'details' ? (
+        <div className="mt-6 max-w-2xl space-y-6 lg:mt-8">
+          <CustomerDetailsForm showIntro={false} />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <Button type="button" variant="ghost" icon={ArrowLeft} onClick={() => setStep('estimate')}>
+              Back to estimate
+            </Button>
+            <Button type="button" variant="primary" iconRight={ArrowRight} onClick={goToReview} className="sm:min-w-[12rem]">
+              Continue to review
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {step === 'review' ? (
+        <div className="mt-6 max-w-2xl space-y-6 lg:mt-8">
+          <ReviewSection
+            rows={rows}
+            subtotal={estimateSubtotal}
+            details={details}
+            onEditDetails={() => setStep('details')}
+            whatsAppUrl={whatsAppUrl}
+            canSend={isValid}
+            onSendAttempt={handleSendAttempt}
+          />
+          <Button type="button" variant="ghost" icon={ArrowLeft} onClick={() => setStep('details')}>
+            Edit details
+          </Button>
+        </div>
+      ) : null}
     </PageContainer>
   )
 }

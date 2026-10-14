@@ -1,27 +1,23 @@
-import FestiveOverlay from './FestiveOverlay'
 import HeroContent from './HeroContent'
-import HeroFestivalArt from './HeroFestivalArt'
-import HeroParticles from './HeroParticles'
+
+const HERO_BANNER = '/images/diwali-hero-banner.png'
 
 export default function FestiveHero({ whatsAppUrl }) {
   return (
     <section
-      className="festive-hero relative isolate min-h-[520px] overflow-hidden md:min-h-[560px] lg:min-h-[580px]"
-      aria-label="Diwali celebration hero"
+      className="diwali-hero relative isolate min-h-[500px] overflow-hidden sm:min-h-[540px] md:min-h-[520px] lg:min-h-[560px]"
+      aria-labelledby="hero-heading"
     >
-      <div className="festive-hero-bg pointer-events-none absolute inset-0 z-0" aria-hidden="true" />
-      <FestiveOverlay />
-      <HeroParticles />
+      <div
+        className="diwali-hero-banner absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${HERO_BANNER})` }}
+        role="img"
+        aria-label="Diwali banner with diyas, marigolds, rangoli, lanterns, and crackers"
+      />
+      <div className="diwali-hero-overlay pointer-events-none absolute inset-0 z-[1]" aria-hidden="true" />
 
-      <div className="container-page relative z-10 flex min-h-[520px] flex-col justify-center py-16 md:min-h-[560px] md:py-16 lg:min-h-[580px]">
-        <div className="hero-festival-art--mobile-wrap relative mb-6 md:hidden">
-          <HeroFestivalArt variant="mobile" />
-        </div>
-
-        <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,560px)_1fr] lg:gap-10">
-          <HeroContent whatsAppUrl={whatsAppUrl} />
-          <HeroFestivalArt variant="desktop" />
-        </div>
+      <div className="diwali-hero-inner container-page relative z-10 mx-auto flex min-h-[500px] max-w-[82.5rem] flex-col justify-center py-10 sm:min-h-[540px] sm:py-12 md:min-h-[520px] md:py-14 lg:min-h-[560px] lg:py-16">
+        <HeroContent whatsAppUrl={whatsAppUrl} />
       </div>
     </section>
   )

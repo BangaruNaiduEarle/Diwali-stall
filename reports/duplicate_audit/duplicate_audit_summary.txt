@@ -1,0 +1,29 @@
+Duplicate audit summary (2026-10-13T17:23:48.224623+00:00)
+READ-ONLY Phase 1 — no files renamed, products.js unchanged.
+
+Excel CRACKERS_ajn.xlsx rows examined: 161
+Excel CRACKERS_all.xlsx rows examined: 161
+Total Excel product rows (both): 322
+
+Unique normalized names (ajn): 150
+Unique normalized names (all): 150
+Unique normalized names (union): 150
+
+Duplicate name groups within carckers_all (same Particulars, >1 row): 10
+Excel records in those groups (all workbook only): 21
+Product names mirrored in ajn+all (expected pairs): 140
+Union keys appearing in both workbooks: 150
+
+JavaScript duplicate name groups: 10
+JavaScript products in duplicate groups: 21
+JS duplicate groups with different selling prices: 10
+
+Image files total: 117
+Image base-name groups with multiple files: 12
+Images flagged review confidence: 28
+
+Proposed rename rows (proposed_image_renames.csv): 36
+Proposed rename collisions flagged: 0
+Unresolved / missing comp mappings in proposals: 14
+
+Reports directory: C:\naidu\Diwali\reports\duplicate_audit

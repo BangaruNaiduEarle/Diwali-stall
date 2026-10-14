@@ -98,14 +98,6 @@ export default function ProductDetailSheet({ product, open, onClose, initialImag
 
           <div className="mt-4 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
             <span className="text-xl font-bold text-[var(--color-maroon)]">{formatINR(product.price)}</span>
-            {product.referencePrice > product.price ? (
-              <>
-                <span className="shrink-0 text-sm text-[var(--color-ref-price)] line-through">
-                  {formatINR(product.referencePrice)}
-                </span>
-                <span className="discount-pill shrink-0">{product.discount ?? 20}% off</span>
-              </>
-            ) : null}
           </div>
 
           {soldOut ? (

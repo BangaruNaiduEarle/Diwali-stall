@@ -2,19 +2,12 @@ import { Link } from 'react-router-dom'
 import {
   CalendarDays,
   ChevronRight,
-  ClipboardList,
   Clock3,
-  Grid3x3,
   HelpCircle,
   MapPin,
   MessageCircle,
   Navigation,
-  ReceiptText,
-  Search,
-  Send,
-  Sparkles,
   Store,
-  Tag,
 } from 'lucide-react'
 import { CATALOG_CATEGORIES } from '../data/categories'
 import { BUDGET_RANGES } from '../data/budgetRanges'
@@ -24,47 +17,17 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { getCategoryProductCounts } from '../utils/categoryCounts'
 import { getCategoryIcon } from '../utils/categoryIcons'
 import { cataloguePath } from '../utils/catalogueRoutes'
-import { countActiveProducts } from '../utils/filterProducts'
-import { products } from '../data/products'
-import { hasLocation, hasStallDates, siteConfig } from '../data/siteConfig'
+import {
+  getLocationHeroLine,
+  getLocationMapUrl,
+  getStallDatesSummary,
+  hasLocation,
+  hasStallDates,
+  siteConfig,
+} from '../data/siteConfig'
 import { getWhatsAppEnquiryUrl } from '../utils/whatsapp'
 
 const ICON = { strokeWidth: 1.8 }
-
-const WHY_SHOP = [
-  {
-    icon: Tag,
-    title: 'Festive pricing',
-    text: 'Clear selling prices and reference rates so you can plan before you visit.',
-  },
-  {
-    icon: ReceiptText,
-    title: 'Easy estimate',
-    text: 'Build a list on your phone, review totals, then send a WhatsApp request.',
-  },
-  {
-    icon: Grid3x3,
-    title: 'Wide selection',
-    text: `${countActiveProducts(products)} crackers across gift boxes, sparklers, shots, and more.`,
-  },
-  {
-    icon: CalendarDays,
-    title: '3-day stall',
-    text: 'A focused Diwali pop-up — browse online, collect at the stall.',
-  },
-  {
-    icon: MessageCircle,
-    title: 'WhatsApp assistance',
-    text: 'Questions about products, availability, or directions? Message us anytime.',
-  },
-]
-
-const HOW_IT_WORKS = [
-  { step: '1', title: 'Browse', text: 'Search or filter the catalogue by category and budget.', icon: Search },
-  { step: '2', title: 'Add to estimate', text: 'Tap Add to estimate and adjust quantities.', icon: ClipboardList },
-  { step: '3', title: 'Review', text: 'Check your list and estimated total on My Estimate.', icon: ReceiptText },
-  { step: '4', title: 'Send on WhatsApp', text: 'Share your request — the stall confirms on WhatsApp.', icon: Send },
-]
 
 function stallLine(value, fallback) {
   const text = value?.trim()
@@ -76,49 +39,13 @@ export default function Home() {
   const whatsAppUrl = getWhatsAppEnquiryUrl()
   const counts = getCategoryProductCounts()
   const categories = CATALOG_CATEGORIES.filter((c) => c.slug !== 'all')
-  const mapsUrl = siteConfig.googleMapsUrl?.trim()
+  const mapsUrl = getLocationMapUrl()
 
   return (
     <>
       <FestiveHero whatsAppUrl={whatsAppUrl} />
 
-      <section className="section-y-compact border-b border-[var(--color-border)] bg-[var(--color-white)]">
-        <div className="container-page">
-          <p className="editorial-label">Why shop here</p>
-          <h2 className="editorial-title mt-2 max-w-xl">Plan your Diwali crackers with confidence</h2>
-          <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {WHY_SHOP.map(({ icon: ItemIcon, title, text }) => (
-              <li key={title} className="surface-card p-4">
-                <ItemIcon className="h-5 w-5 text-[var(--color-red)]" {...ICON} aria-hidden="true" />
-                <h3 className="mt-3 text-sm font-semibold text-[var(--color-charcoal)]">{title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-[var(--color-muted)]">{text}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      <section className="section-y-compact hairline-b">
-        <div className="container-page">
-          <p className="editorial-label">How it works</p>
-          <h2 className="editorial-title mt-2">From browsing to WhatsApp in four steps</h2>
-          <ol className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {HOW_IT_WORKS.map(({ step, title, text, icon: StepIcon }) => (
-              <li key={step} className="relative surface-card p-4">
-                <span className="text-xs font-bold tabular-nums text-[var(--color-gold)]">Step {step}</span>
-                <StepIcon className="mt-2 h-5 w-5 text-[var(--color-red)]" {...ICON} aria-hidden="true" />
-                <h3 className="mt-2 text-sm font-semibold text-[var(--color-charcoal)]">{title}</h3>
-                <p className="mt-1 text-sm text-[var(--color-muted)]">{text}</p>
-              </li>
-            ))}
-          </ol>
-          <Button to="/crackers" variant="primary" size="md" icon={Sparkles} className="mt-8 w-full max-w-[360px]">
-            Start browsing crackers
-          </Button>
-        </div>
-      </section>
-
-      <section className="section-y">
+      <section className="section-y-compact hairline-t">
         <div className="container-page">
           <p className="editorial-label">Explore the collection</p>
           <h2 className="editorial-title mt-2 max-w-lg">Shop by category</h2>
@@ -196,7 +123,7 @@ export default function Home() {
                     Location
                   </dt>
                   <dd className="mt-2 text-sm leading-relaxed text-[var(--color-ivory)]/90">
-                    {stallLine(siteConfig.location, 'Address will be shared on the Location page and WhatsApp.')}
+                    {stallLine(getLocationHeroLine(), 'Address will be shared on the Location page and WhatsApp.')}
                   </dd>
                 </div>
                 <div>
@@ -206,7 +133,7 @@ export default function Home() {
                   </dt>
                   <dd className="mt-2 text-sm text-[var(--color-ivory)]/90">
                     {hasStallDates()
-                      ? siteConfig.stallDates.trim()
+                      ? getStallDatesSummary()
                       : 'Dates will be posted on the Location page when confirmed.'}
                   </dd>
                 </div>

@@ -1,0 +1,14 @@
+issue,product_id,product_name,workbook,sheet,row,notes
+js_product_not_in_excel,P083,1.5 TWINKLING,,,,No Excel row with matching Particulars name
+js_product_not_in_excel,P119,[VERIFY PRODUCT NAME - ROW 80],,,,No Excel row with matching Particulars name
+excel_not_in_js,,VEL,carckers_all,Bill 20261040,48,Excel product has no products.js match
+duplicate_js_name,"P005,P062",GC BIG 10P,,,,2 products.js entries share this name
+duplicate_js_name,"P006,P063",GC SPECIAL,,,,2 products.js entries share this name
+duplicate_js_name,"P007,P064",GC DELUXE,,,,2 products.js entries share this name
+duplicate_js_name,"P008,P067",FP SPECIAL,,,,2 products.js entries share this name
+duplicate_js_name,"P009,P068",FP ASHOKA,,,,2 products.js entries share this name
+duplicate_js_name,"P011,P084,P085",4 TWINKLING,,,,3 products.js entries share this name
+duplicate_js_name,"P016,P124",Ganga jamuna,,,,2 products.js entries share this name
+duplicate_js_name,"P055,P056",1K BIJILI,,,,2 products.js entries share this name
+duplicate_js_name,"P058,P059",5K BIJILI,,,,2 products.js entries share this name
+duplicate_js_name,"P060,P061",10K BIJILI,,,,2 products.js entries share this name

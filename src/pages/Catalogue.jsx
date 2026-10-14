@@ -10,7 +10,7 @@ export default function Catalogue() {
   const navigate = useNavigate()
 
   return (
-    <PageContainer>
+    <PageContainer className="py-5 sm:py-10 md:py-12 lg:py-14">
       <CatalogueView
         categorySlug="all"
         onCategoryChange={(slug) => navigate(cataloguePath(slug))}
@@ -18,7 +18,9 @@ export default function Catalogue() {
         pageDescription="The festive collection."
         kicker=""
         breadcrumbs={
-          <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Crackers' }]} editorial />
+          <div className="mb-2 hidden sm:block">
+            <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Crackers' }]} editorial />
+          </div>
         }
       />
     </PageContainer>

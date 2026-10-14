@@ -1,0 +1,35 @@
+Color harmony update — 2026-10-14
+
+Backups:
+- reports/index.css.backup.color_harmony.20261014T003500Z
+- reports/products.js.backup.color_harmony.20261014T003500Z
+
+products.js / image assets: unchanged (hash verified)
+
+Files changed:
+1. src/index.css — shared :root tokens and token-driven utility tweaks
+2. src/components/hero/HeroParticles.jsx — one particle hex aligned to page bg
+3. src/components/estimate/EstimateItem.jsx — thumbnail uses .product-image-well (color class only)
+
+Token mapping (proposed → CSS):
+- Page background #F2F6FC → --color-page, --color-ivory (alias for existing usages)
+- Product cards #FFFFFF → --color-white (unchanged; .product-card-surface)
+- Image containers #E7EFFA → --color-image-well
+- Primary brand/buttons #5A1720 → --color-brand, --color-maroon, --color-brand-deep
+- Gold #C9A45C → --color-gold (unchanged)
+- Primary text #292321 → --color-charcoal
+- Secondary text #62544B → --color-muted
+- Borders #DCE5F0 → --color-border; inputs --color-border-warm #CDD8EA
+
+Pages/components affected (via tokens, no route/layout changes):
+- Global: body, Layout, Header, mobile drawer, filter sheets, product detail sheet
+- Catalogue: ProductCard wells, ProductGrid cards, ProductFilters chips/inputs
+- Home, Location, Estimate, FAQ, Category/Catalogue views
+- Footer/hero: maroon sections unchanged structurally; light text uses --color-ivory (= page tint)
+
+Notes:
+- Hero/footer maroon gradients and banner art unchanged (festive contrast preserved).
+- Focus rings remain gold-tinted for visibility on cool backgrounds.
+- No Python/image processing; no product data edits.
+
+npm run build: see terminal output in session.

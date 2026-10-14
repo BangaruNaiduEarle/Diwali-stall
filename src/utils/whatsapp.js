@@ -26,22 +26,22 @@ export function buildWhatsAppEstimateMessage(estimateItems, customerDetails = nu
 
   const itemLines = rows.map(
     ({ product, quantity, lineTotal }, index) =>
-      `${index + 1}. ${product.name} × ${quantity} — ${formatINR(lineTotal)}`,
+      `${index + 1}. ${quantity} × ${product.name} — ${formatINR(lineTotal)}`,
   )
 
-  const lines = ['Diwali Crackers Estimate', '']
+  const lines = ['DIWALI CRACKERS ESTIMATE REQUEST', '']
 
   if (customer?.name || customer?.mobile) {
-    lines.push('Customer:')
+    lines.push('Customer')
     if (customer.name) lines.push(`Name: ${customer.name}`)
     if (customer.mobile) lines.push(`Mobile: ${customer.mobile}`)
     if (customer.area) lines.push(`Area: ${customer.area}`)
-    if (customer.pickupDate) lines.push(`Pickup date: ${customer.pickupDate}`)
+    if (customer.pickupDate) lines.push(`Preferred pickup: ${customer.pickupDate}`)
     if (customer.note) lines.push(`Note: ${customer.note}`)
     lines.push('')
   }
 
-  lines.push('Items:', ...itemLines, '', `Estimated Total: ${formatINR(subtotal)}`, '')
+  lines.push('Selected Products', ...itemLines, '', `Estimated Total: ${formatINR(subtotal)}`, '')
   lines.push('Please confirm availability and final price.')
 
   return lines.join('\n')

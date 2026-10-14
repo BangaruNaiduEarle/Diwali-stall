@@ -9,16 +9,18 @@ import {
 
 const CustomerDetailsContext = createContext(null)
 
+const FIELD_KEYS = ['name', 'mobile', 'area', 'pickupDate', 'note']
+
 export function CustomerDetailsProvider({ children }) {
   const [details, setDetailsState] = useState(() => loadCustomerDetailsFromStorage())
   const [touched, setTouched] = useState(false)
+  const [fieldTouched, setFieldTouched] = useState({})
 
   useEffect(() => {
     saveCustomerDetailsToStorage(details)
   }, [details])
 
   const setField = useCallback((field, value) => {
-    setTouched(true)
     setDetailsState((prev) => normalizeCustomerDetails({ ...prev, [field]: value }))
   }, [])
 
@@ -29,11 +31,31 @@ export function CustomerDetailsProvider({ children }) {
 
   const clearDetails = useCallback(() => {
     setTouched(false)
+    setFieldTouched({})
     setDetailsState(emptyCustomerDetails())
   }, [])
 
-  const errors = useMemo(() => (touched ? validateCustomerDetails(details) : {}), [details, touched])
-  const isValid = useMemo(() => Object.keys(validateCustomerDetails(details)).length === 0, [details])
+  const markTouched = useCallback(() => {
+    setTouched(true)
+    setFieldTouched(Object.fromEntries(FIELD_KEYS.map((key) => [key, true])))
+  }, [])
+
+  const markFieldTouched = useCallback((field) => {
+    setFieldTouched((prev) => ({ ...prev, [field]: true }))
+  }, [])
+
+  const allErrors = useMemo(() => validateCustomerDetails(details), [details])
+
+  const errors = useMemo(() => {
+    if (touched) return allErrors
+    const partial = {}
+    for (const [key, message] of Object.entries(allErrors)) {
+      if (fieldTouched[key]) partial[key] = message
+    }
+    return partial
+  }, [allErrors, touched, fieldTouched])
+
+  const isValid = useMemo(() => Object.keys(allErrors).length === 0, [allErrors])
 
   const value = useMemo(
     () => ({
@@ -41,12 +63,14 @@ export function CustomerDetailsProvider({ children }) {
       errors,
       isValid,
       touched,
+      fieldTouched,
       setField,
       setDetails,
       clearDetails,
-      markTouched: () => setTouched(true),
+      markTouched,
+      markFieldTouched,
     }),
-    [details, errors, isValid, touched, setField, setDetails, clearDetails],
+    [details, errors, isValid, touched, fieldTouched, setField, setDetails, clearDetails, markTouched, markFieldTouched],
   )
 
   return (

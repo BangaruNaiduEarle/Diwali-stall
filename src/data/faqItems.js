@@ -1,8 +1,14 @@
-import { hasLocation, hasStallDates, siteConfig } from './siteConfig'
+import {
+  getLocationHeroLine,
+  getStallDatesSummary,
+  hasLocation,
+  hasStallDates,
+  siteConfig,
+} from './siteConfig'
 
 function stallDatesAnswer() {
   return hasStallDates()
-    ? `Our stall runs ${siteConfig.stallDates.trim()}. See the Location page for address and timings.`
+    ? `Our stall runs ${getStallDatesSummary()}. See the Location page for address and timings.`
     : 'Stall dates will be posted on the Location page when confirmed. You can also message us on WhatsApp.'
 }
 
@@ -15,7 +21,7 @@ function stallTimingsAnswer() {
 
 function locationAnswer() {
   return hasLocation()
-    ? `Pickup is at our Diwali stall: ${siteConfig.location.trim()}. Open the Location page for maps and directions.`
+    ? `Pickup is at our Diwali stall: ${getLocationHeroLine()}. Open the Location page for maps and directions.`
     : 'Pickup is at our Diwali stall. The address is on the Location page when available, or message us on WhatsApp for directions.'
 }
 

@@ -26,7 +26,7 @@ export default function Category() {
   }
 
   return (
-    <PageContainer>
+    <PageContainer className="py-5 sm:py-10 md:py-12 lg:py-14">
       <CatalogueView
         categorySlug={categorySlug}
         onCategoryChange={handleCategoryChange}
@@ -34,14 +34,16 @@ export default function Category() {
         pageDescription="From our festive collection."
         kicker="Crackers"
         breadcrumbs={
-          <Breadcrumbs
-            editorial
-            items={[
-              { label: 'Home', to: '/' },
-              { label: 'Crackers', to: '/crackers' },
-              { label: label },
-            ]}
-          />
+          <div className="mb-2 hidden sm:block">
+            <Breadcrumbs
+              editorial
+              items={[
+                { label: 'Home', to: '/' },
+                { label: 'Crackers', to: '/crackers' },
+                { label: label },
+              ]}
+            />
+          </div>
         }
       />
     </PageContainer>
