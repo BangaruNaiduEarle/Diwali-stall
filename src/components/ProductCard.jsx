@@ -60,11 +60,11 @@ export default function ProductCard({ product }) {
             </p>
           ) : null}
 
-          <div className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-1 gap-y-0.5 md:mt-2">
+          {/* <div className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-1 gap-y-0.5 md:mt-2">
             <span className="shrink-0 text-[15px] font-bold leading-none tracking-tight text-[var(--color-maroon)] md:text-base">
               {formatINR(product.price)}
             </span>
-          </div>
+          </div> */}
 
           {soldOut ? (
             <p className="mt-1 text-[10px] text-[var(--color-red)] md:mt-2 md:text-[11px]">Sold out</p>
