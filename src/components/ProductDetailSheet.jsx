@@ -96,9 +96,9 @@ export default function ProductDetailSheet({ product, open, onClose, initialImag
             <p className="mt-1 text-sm text-[var(--color-muted)]">{product.pack.trim()}</p>
           ) : null}
 
-          <div className="mt-4 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+          {/* <div className="mt-4 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
             <span className="text-xl font-bold text-[var(--color-maroon)]">{formatINR(product.price)}</span>
-          </div>
+          </div> */}
 
           {soldOut ? (
             <p className="mt-3 text-sm font-medium text-[var(--color-red)]">Sold out at the stall</p>
