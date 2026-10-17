@@ -53,7 +53,7 @@ export function getProductById(productId) {
   return productById.get(productId) ?? null
 }
 
-/** Customer-facing rows: { product, quantity, lineTotal } */
+/** Estimate rows for messaging and internal helpers. Do not show lineTotal in customer UI. */
 export function getEstimateProducts(estimateItems) {
   return estimateItems
     .map(({ productId, quantity }) => {

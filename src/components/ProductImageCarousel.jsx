@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Package } from 'lucide-react'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Navigation, Pagination } from 'swiper/modules'
+import { useProductImageLightbox } from '../context/ProductImageLightboxContext'
 import {
   getProductIdFallbackImageSlots,
   normalizeProductImageUrl,
@@ -62,7 +63,9 @@ export default function ProductImageCarousel({
   variant = 'card',
   initialSlide = 0,
   onSlideChange,
+  enableLightbox = true,
 }) {
+  const { openLightbox } = useProductImageLightbox()
   const uid = useId().replace(/:/g, '')
   const label = productName?.trim() || 'Product'
   const isDetail = variant === 'detail'
@@ -129,6 +132,15 @@ export default function ProductImageCarousel({
     event.preventDefault()
     event.stopPropagation()
     swiperRef.current?.slideNext()
+  }
+
+  const openCurrentInLightbox = (slideIndex) => {
+    if (!enableLightbox || !slideUrls.length) return
+    openLightbox({
+      productName: label,
+      images: slideUrls,
+      startIndex: slideIndex,
+    })
   }
 
   const bindPagination = useCallback(
@@ -241,6 +253,8 @@ export default function ProductImageCarousel({
               index={index}
               padClass={padClass}
               isDetail={isDetail}
+              enableLightbox={enableLightbox}
+              onOpenLightbox={() => openCurrentInLightbox(index)}
               onError={() => onImageError(url)}
             />
           </SwiperSlide>
@@ -286,15 +300,15 @@ export default function ProductImageCarousel({
   )
 }
 
-function CarouselSlideImage({ url, label, index, padClass, isDetail, onError }) {
+function CarouselSlideImage({ url, label, index, padClass, isDetail, enableLightbox, onOpenLightbox, onError }) {
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     setLoaded(false)
   }, [url])
 
-  return (
-    <div className={`relative flex h-full w-full items-center justify-center ${padClass}`}>
+  const image = (
+    <>
       {!loaded ? <div className="product-image-skeleton rounded-[calc(var(--radius-lg)-4px)]" aria-hidden="true" /> : null}
       <img
         src={url}
@@ -307,6 +321,28 @@ function CarouselSlideImage({ url, label, index, padClass, isDetail, onError }) 
         onLoad={() => setLoaded(true)}
         onError={onError}
       />
+    </>
+  )
+
+  return (
+    <div className={`relative flex h-full w-full items-center justify-center ${padClass}`}>
+      {enableLightbox && loaded ? (
+        <button
+          type="button"
+          className="product-image-zoom-trigger focus-ring relative flex h-full w-full cursor-zoom-in items-center justify-center"
+          aria-label={`View larger image of ${label}`}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            onOpenLightbox()
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {image}
+        </button>
+      ) : (
+        image
+      )}
     </div>
   )
 }

@@ -1,10 +1,16 @@
 import { getWhatsAppWaMeDigits } from '../data/siteConfig'
-import { formatINR } from './currency'
 import { normalizeCustomerDetails } from './customerDetailsHelpers'
 import { getEstimateProducts } from './estimateHelpers'
 
 export const WHATSAPP_ENQUIRY_MESSAGE =
   'Hi, I would like to know more about your Diwali crackers collection.'
+
+const GIFT_PROMO_FOOTER = '🎁 A complimentary gift is included with every order.'
+
+function formatEstimateUnit(product) {
+  const pack = product?.pack?.trim()
+  return pack || '—'
+}
 
 export function getWhatsAppUrl(message) {
   const digits = getWhatsAppWaMeDigits()
@@ -22,12 +28,11 @@ export function buildWhatsAppEstimateMessage(estimateItems, customerDetails = nu
   if (!rows.length) return ''
 
   const customer = customerDetails ? normalizeCustomerDetails(customerDetails) : null
-  const subtotal = rows.reduce((sum, r) => sum + r.lineTotal, 0)
 
-  const itemLines = rows.map(
-    ({ product, quantity, lineTotal }, index) =>
-      `${index + 1}. ${quantity} × ${product.name} — ${formatINR(lineTotal)}`,
-  )
+  const itemLines = rows.map(({ product, quantity }, index) => {
+    const unit = formatEstimateUnit(product)
+    return `${index + 1}. ${product.name} — Qty: ${quantity} — Unit: ${unit}`
+  })
 
   const lines = ['DIWALI CRACKERS ESTIMATE REQUEST', '']
 
@@ -41,8 +46,9 @@ export function buildWhatsAppEstimateMessage(estimateItems, customerDetails = nu
     lines.push('')
   }
 
-  lines.push('Selected Products', ...itemLines, '', `Estimated Total: ${formatINR(subtotal)}`, '')
-  lines.push('Please confirm availability and final price.')
+  lines.push('Selected products', ...itemLines, '')
+  lines.push('Please confirm availability and share your quotation.')
+  lines.push(GIFT_PROMO_FOOTER)
 
   return lines.join('\n')
 }

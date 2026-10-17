@@ -12,6 +12,25 @@ dist
 dist-ssr
 *.local
 
+# Cloudflare Workers (server/)
+server/.env
+server/.dev.vars
+server/.wrangler/
+server/dist-worker/
+*.sqlite
+*.sqlite3
+*.db
+.wrangler/
+
+# Backend secrets / credentials (never commit)
+.env
+.env.*
+!.env.example
+server/.env.*
+!server/.env.example
+**/credentials.json
+**/*service-account*.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

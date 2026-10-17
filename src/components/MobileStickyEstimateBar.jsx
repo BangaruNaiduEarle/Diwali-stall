@@ -1,13 +1,12 @@
 import { Link, useLocation } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { useEstimate } from '../context/EstimateContext'
-import { formatINR } from '../utils/currency'
 
 const ICON = { strokeWidth: 1.8 }
 
 export default function MobileStickyEstimateBar() {
   const { pathname } = useLocation()
-  const { estimateCount, estimateSubtotal } = useEstimate()
+  const { estimateCount } = useEstimate()
 
   if (estimateCount <= 0 || pathname === '/estimate') return null
 
@@ -23,11 +22,8 @@ export default function MobileStickyEstimateBar() {
         to="/estimate"
         className="focus-ring container-page flex min-h-[52px] items-center justify-between gap-3 py-2 text-sm font-medium text-[var(--color-charcoal)]"
       >
-        <span className="tabular-nums text-[var(--color-muted)]">
+        <span className="font-semibold tabular-nums text-[var(--color-maroon)]">
           {estimateCount} {itemLabel}
-        </span>
-        <span className="text-base font-semibold tabular-nums text-[var(--color-maroon)]">
-          {formatINR(estimateSubtotal)}
         </span>
         <span className="inline-flex items-center gap-1 text-[var(--color-brand)]">
           View estimate

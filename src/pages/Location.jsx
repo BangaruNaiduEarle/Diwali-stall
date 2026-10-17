@@ -8,6 +8,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import PageContainer from '../components/PageContainer'
+import ComplimentaryGiftPromo from '../components/promo/ComplimentaryGiftPromo'
 import Button from '../components/ui/Button'
 import WhatsAppButton from '../components/WhatsAppButton'
 import {
@@ -61,6 +62,8 @@ export default function Location() {
           our complete range of Diwali crackers.
         </p>
       </header>
+
+      <ComplimentaryGiftPromo variant="strip" className="mb-6" />
 
       {/* Location + map panel */}
       <section className="grid gap-6 lg:grid-cols-2 lg:gap-8" aria-labelledby="location-main-heading">

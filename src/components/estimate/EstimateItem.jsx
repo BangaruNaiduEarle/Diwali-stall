@@ -1,17 +1,22 @@
 import { Package, Trash2 } from 'lucide-react'
 import QuantityControl from '../QuantityControl'
-import { formatINR } from '../../utils/currency'
 import { resolveProductImageList } from '../../utils/productImage'
 
 const ICON = { strokeWidth: 1.8 }
 
+function displayUnit(product) {
+  const pack = product?.pack?.trim()
+  return pack || '—'
+}
+
 export default function EstimateItem({ row, onIncrease, onDecrease, onRemove }) {
-  const { product, quantity, lineTotal } = row
+  const { product, quantity } = row
   const imageUrl = resolveProductImageList(product)[0]
+  const unit = displayUnit(product)
 
   return (
     <article className="p-4 sm:p-5">
-      <div className="flex gap-3">
+      <div className="flex gap-3 sm:items-start">
         <div className="product-image-well flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-border)] sm:h-[4.5rem] sm:w-[4.5rem]">
           {imageUrl ? (
             <img
@@ -31,7 +36,21 @@ export default function EstimateItem({ row, onIncrease, onDecrease, onRemove }) 
           <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-red)]">
             {product.category}
           </p>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">{formatINR(product.price)} each</p>
+          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm sm:hidden">
+            <dt className="text-[var(--color-muted)]">Qty</dt>
+            <dd className="font-medium tabular-nums text-[var(--color-charcoal)]">{quantity}</dd>
+            <dt className="text-[var(--color-muted)]">Unit</dt>
+            <dd className="text-[var(--color-charcoal)]">{unit}</dd>
+          </dl>
+        </div>
+
+        <div className="hidden shrink-0 text-right text-sm sm:block sm:min-w-[5rem]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">Qty</p>
+          <p className="mt-0.5 font-semibold tabular-nums text-[var(--color-charcoal)]">{quantity}</p>
+        </div>
+        <div className="hidden shrink-0 text-right text-sm sm:block sm:min-w-[6rem]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">Unit</p>
+          <p className="mt-0.5 text-[var(--color-charcoal)]">{unit}</p>
         </div>
       </div>
 
@@ -42,12 +61,6 @@ export default function EstimateItem({ row, onIncrease, onDecrease, onRemove }) 
           onIncrease={() => onIncrease(product.id)}
           onDecrease={() => onDecrease(product.id)}
         />
-        <div className="text-right">
-          <p className="text-[11px] text-[var(--color-muted)]">
-            {quantity} × {formatINR(product.price)}
-          </p>
-          <p className="text-base font-bold tabular-nums text-[var(--color-maroon)]">{formatINR(lineTotal)}</p>
-        </div>
       </div>
 
       <button

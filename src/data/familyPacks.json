@@ -1,0 +1,898 @@
+{
+  "generatedAt": "2026-10-14T13:25:48.490Z",
+  "packs": [
+    {
+      "id": "pocket-budget",
+      "displayName": "Pocket Budget Pack",
+      "price": 299,
+      "sourceFile": "Diwali_Budget_and_Combination_Packs.xlsx",
+      "sourceSheet": "Pocket Budget Pack",
+      "distinctItemTypes": 6,
+      "totalBillUnits": 6,
+      "items": [
+        {
+          "company": "LEO",
+          "itemName": "3.5 LAXMI",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 15,
+          "productId": "P042"
+        },
+        {
+          "company": "ISW",
+          "itemName": "28 WALA PIN",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 12,
+          "productId": "P047"
+        },
+        {
+          "company": "GLM",
+          "itemName": "28 GAINT",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 13,
+          "productId": "P048"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM ELECTRIC",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P096"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM COLOUR",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P097"
+        },
+        {
+          "company": "MAY",
+          "itemName": "100 WALA",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P054"
+        }
+      ]
+    },
+    {
+      "id": "budget-mix",
+      "displayName": "Budget Mix Pack",
+      "price": 499,
+      "sourceFile": "Diwali_Budget_and_Combination_Packs.xlsx",
+      "sourceSheet": "Budget Mix Pack",
+      "distinctItemTypes": 9,
+      "totalBillUnits": 9,
+      "items": [
+        {
+          "company": "LEO",
+          "itemName": "3.5 LAXMI",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 15,
+          "productId": "P042"
+        },
+        {
+          "company": "ISW",
+          "itemName": "28 WALA PIN",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 12,
+          "productId": "P047"
+        },
+        {
+          "company": "GLM",
+          "itemName": "28 GAINT",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 13,
+          "productId": "P048"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM ELECTRIC",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P096"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM COLOUR",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P097"
+        },
+        {
+          "company": "MAY",
+          "itemName": "100 WALA",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P054"
+        },
+        {
+          "company": "LEO",
+          "itemName": "4 LAXMI",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 20,
+          "productId": "P043"
+        },
+        {
+          "company": "SUK",
+          "itemName": "10 PENCIL",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 30,
+          "productId": "P094"
+        },
+        {
+          "company": "LEO",
+          "itemName": "DORA DORA",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 19,
+          "productId": "P114"
+        }
+      ]
+    },
+    {
+      "id": "budget-family",
+      "displayName": "Budget Family Pack",
+      "price": 899,
+      "sourceFile": "Diwali_Budget_and_Combination_Packs.xlsx",
+      "sourceSheet": "Budget Pack",
+      "distinctItemTypes": 14,
+      "totalBillUnits": 14,
+      "items": [
+        {
+          "company": "LEO",
+          "itemName": "3.5 LAXMI",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 15,
+          "productId": "P042"
+        },
+        {
+          "company": "ISW",
+          "itemName": "28 WALA PIN",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 12,
+          "productId": "P047"
+        },
+        {
+          "company": "GLM",
+          "itemName": "28 GAINT",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 13,
+          "productId": "P048"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM ELECTRIC",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P096"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM COLOUR",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P097"
+        },
+        {
+          "company": "MAY",
+          "itemName": "100 WALA",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P054"
+        },
+        {
+          "company": "LEO",
+          "itemName": "4 LAXMI",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 20,
+          "productId": "P043"
+        },
+        {
+          "company": "SUK",
+          "itemName": "10 PENCIL",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 30,
+          "productId": "P094"
+        },
+        {
+          "company": "LEO",
+          "itemName": "DORA DORA",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 19,
+          "productId": "P114"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM GREEN",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P098"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM RED",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P099"
+        },
+        {
+          "company": "SRG",
+          "itemName": "15 CM ELECTRIC",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P100"
+        },
+        {
+          "company": "SRG",
+          "itemName": "15 CM COLOUR",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P101"
+        },
+        {
+          "company": "LEO",
+          "itemName": "GC BIG 10p",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 30,
+          "productId": "P005"
+        }
+      ]
+    },
+    {
+      "id": "mini-starter",
+      "displayName": "Mini Starter Pack",
+      "price": 999,
+      "sourceFile": "Diwali_Family_Pack_Detailed_Item_List.xlsx",
+      "sourceSheet": "Mini Pack",
+      "distinctItemTypes": 9,
+      "totalBillUnits": 9,
+      "items": [
+        {
+          "company": "DUR",
+          "itemName": "10 CM ELECTRIC",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P096"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM COLOUR",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P097"
+        },
+        {
+          "company": "SUK",
+          "itemName": "10 PENCIL",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 30,
+          "productId": "P094"
+        },
+        {
+          "company": "LEO",
+          "itemName": "FP BIG",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 60,
+          "productId": "P066"
+        },
+        {
+          "company": "LEO",
+          "itemName": "DORA DORA",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 19,
+          "productId": "P114"
+        },
+        {
+          "company": "MAY",
+          "itemName": "100 WALA",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P054"
+        },
+        {
+          "company": "LEO",
+          "itemName": "GC BIG 10p",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 30,
+          "productId": "P005"
+        },
+        {
+          "company": "VEL",
+          "itemName": "4 TWINKLING",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 63,
+          "productId": "P011"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM RED",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P099"
+        }
+      ]
+    },
+    {
+      "id": "mini-family",
+      "displayName": "Mini Family Pack",
+      "price": 1499,
+      "sourceFile": "Diwali_Budget_and_Combination_Packs.xlsx",
+      "sourceSheet": "Mini Pack",
+      "distinctItemTypes": 18,
+      "totalBillUnits": 18,
+      "items": [
+        {
+          "company": "LEO",
+          "itemName": "3.5 LAXMI",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 15,
+          "productId": "P042"
+        },
+        {
+          "company": "ISW",
+          "itemName": "28 WALA PIN",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 12,
+          "productId": "P047"
+        },
+        {
+          "company": "GLM",
+          "itemName": "28 GAINT",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 13,
+          "productId": "P048"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM ELECTRIC",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P096"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM COLOUR",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P097"
+        },
+        {
+          "company": "MAY",
+          "itemName": "100 WALA",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P054"
+        },
+        {
+          "company": "LEO",
+          "itemName": "4 LAXMI",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 20,
+          "productId": "P043"
+        },
+        {
+          "company": "SUK",
+          "itemName": "10 PENCIL",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 30,
+          "productId": "P094"
+        },
+        {
+          "company": "LEO",
+          "itemName": "DORA DORA",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 19,
+          "productId": "P114"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM GREEN",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P098"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM RED",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P099"
+        },
+        {
+          "company": "SRG",
+          "itemName": "15 CM ELECTRIC",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P100"
+        },
+        {
+          "company": "SRG",
+          "itemName": "15 CM COLOUR",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P101"
+        },
+        {
+          "company": "LEO",
+          "itemName": "GC BIG 10p",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 30,
+          "productId": "P005"
+        },
+        {
+          "company": "VEL",
+          "itemName": "4 TWINKLING",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 63,
+          "productId": "P011"
+        },
+        {
+          "company": "LEO",
+          "itemName": "FP BIG",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 60,
+          "productId": "P066"
+        },
+        {
+          "company": "SVK",
+          "itemName": "CHOTA SHOT",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 30,
+          "productId": "P151"
+        },
+        {
+          "company": "LEO",
+          "itemName": "GC SPECIAL",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 50,
+          "productId": "P006"
+        }
+      ]
+    },
+    {
+      "id": "happy-family",
+      "displayName": "Happy Family Pack",
+      "price": 2299,
+      "sourceFile": "Diwali_Budget_and_Combination_Packs.xlsx",
+      "sourceSheet": "Happy Pack",
+      "distinctItemTypes": 21,
+      "totalBillUnits": 21,
+      "items": [
+        {
+          "company": "LEO",
+          "itemName": "3.5 LAXMI",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 15,
+          "productId": "P042"
+        },
+        {
+          "company": "ISW",
+          "itemName": "28 WALA PIN",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 12,
+          "productId": "P047"
+        },
+        {
+          "company": "GLM",
+          "itemName": "28 GAINT",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 13,
+          "productId": "P048"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM ELECTRIC",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P096"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM COLOUR",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P097"
+        },
+        {
+          "company": "MAY",
+          "itemName": "100 WALA",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P054"
+        },
+        {
+          "company": "LEO",
+          "itemName": "4 LAXMI",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 20,
+          "productId": "P043"
+        },
+        {
+          "company": "SUK",
+          "itemName": "10 PENCIL",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 30,
+          "productId": "P094"
+        },
+        {
+          "company": "LEO",
+          "itemName": "DORA DORA",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 19,
+          "productId": "P114"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM GREEN",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P098"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM RED",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P099"
+        },
+        {
+          "company": "SRG",
+          "itemName": "15 CM ELECTRIC",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P100"
+        },
+        {
+          "company": "SRG",
+          "itemName": "15 CM COLOUR",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P101"
+        },
+        {
+          "company": "LEO",
+          "itemName": "GC BIG 10p",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 30,
+          "productId": "P005"
+        },
+        {
+          "company": "SRG",
+          "itemName": "30 CM ELECTRICAL",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P104"
+        },
+        {
+          "company": "SRG",
+          "itemName": "30 CM COLOUR",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 30,
+          "productId": "P105"
+        },
+        {
+          "company": "LEO",
+          "itemName": "FP SPECIAL",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 80,
+          "productId": "P008"
+        },
+        {
+          "company": "VEL",
+          "itemName": "4 TWINKLING",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 63,
+          "productId": "P011"
+        },
+        {
+          "company": "SVK",
+          "itemName": "CHOTA SHOT",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 30,
+          "productId": "P151"
+        },
+        {
+          "company": "SVK",
+          "itemName": "HELICOPTER",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 63,
+          "productId": "P131"
+        },
+        {
+          "company": "VTM",
+          "itemName": "Z BEAST FLOWER POTS 45C",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 175,
+          "productId": "P073"
+        }
+      ]
+    },
+    {
+      "id": "premium-family",
+      "displayName": "Premium Family Pack",
+      "price": 3999,
+      "sourceFile": "Diwali_Budget_and_Combination_Packs.xlsx",
+      "sourceSheet": "Premium Pack",
+      "distinctItemTypes": 25,
+      "totalBillUnits": 25,
+      "items": [
+        {
+          "company": "LEO",
+          "itemName": "3.5 LAXMI",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 15,
+          "productId": "P042"
+        },
+        {
+          "company": "ISW",
+          "itemName": "28 WALA PIN",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 12,
+          "productId": "P047"
+        },
+        {
+          "company": "GLM",
+          "itemName": "28 GAINT",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 13,
+          "productId": "P048"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM ELECTRIC",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P096"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM COLOUR",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P097"
+        },
+        {
+          "company": "MAY",
+          "itemName": "100 WALA",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P054"
+        },
+        {
+          "company": "LEO",
+          "itemName": "4 LAXMI",
+          "quantity": 1,
+          "unit": "Pkt",
+          "billRate": 20,
+          "productId": "P043"
+        },
+        {
+          "company": "SUK",
+          "itemName": "10 PENCIL",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 30,
+          "productId": "P094"
+        },
+        {
+          "company": "LEO",
+          "itemName": "DORA DORA",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 19,
+          "productId": "P114"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM GREEN",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P098"
+        },
+        {
+          "company": "DUR",
+          "itemName": "10 CM RED",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 15,
+          "productId": "P099"
+        },
+        {
+          "company": "SRG",
+          "itemName": "15 CM ELECTRIC",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P100"
+        },
+        {
+          "company": "SRG",
+          "itemName": "15 CM COLOUR",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P101"
+        },
+        {
+          "company": "LEO",
+          "itemName": "GC BIG 10p",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 30,
+          "productId": "P005"
+        },
+        {
+          "company": "SRG",
+          "itemName": "30 CM ELECTRICAL",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 25,
+          "productId": "P104"
+        },
+        {
+          "company": "SRG",
+          "itemName": "30 CM COLOUR",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 30,
+          "productId": "P105"
+        },
+        {
+          "company": "LEO",
+          "itemName": "FP SPECIAL",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 80,
+          "productId": "P008"
+        },
+        {
+          "company": "VEL",
+          "itemName": "4 TWINKLING",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 63,
+          "productId": "P011"
+        },
+        {
+          "company": "SVK",
+          "itemName": "CHOTA SHOT",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 30,
+          "productId": "P151"
+        },
+        {
+          "company": "SVK",
+          "itemName": "HELICOPTER",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 63,
+          "productId": "P131"
+        },
+        {
+          "company": "VTM",
+          "itemName": "Z BEAST FLOWER POTS 45C",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 175,
+          "productId": "P073"
+        },
+        {
+          "company": "QUE",
+          "itemName": "COLOURKOTI DLX 5PC",
+          "quantity": 1,
+          "unit": "Pcs",
+          "billRate": 120,
+          "productId": "P070"
+        },
+        {
+          "company": "LEO",
+          "itemName": "TRI COLOUR FOUNTAIN",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 240,
+          "productId": "P077"
+        },
+        {
+          "company": "LEO",
+          "itemName": "FP ASHOKA",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 100,
+          "productId": "P009"
+        },
+        {
+          "company": "ASK",
+          "itemName": "GANGA JAMUNA",
+          "quantity": 1,
+          "unit": "Box",
+          "billRate": 50,
+          "productId": "P016"
+        }
+      ]
+    }
+  ]
+}

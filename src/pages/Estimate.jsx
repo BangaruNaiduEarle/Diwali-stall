@@ -1,21 +1,42 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, MessageCircle, ReceiptText } from 'lucide-react'
+import { submitPublicCustomerRequest } from '../api/publicCustomerRequests'
 import CustomerDetailsForm from '../components/CustomerDetailsForm'
 import EmptyState from '../components/EmptyState'
 import EstimateItem from '../components/estimate/EstimateItem'
 import EstimateProgress from '../components/estimate/EstimateProgress'
 import EstimateSummaryPanel from '../components/estimate/EstimateSummaryPanel'
 import PageContainer from '../components/PageContainer'
+import ComplimentaryGiftPromo from '../components/promo/ComplimentaryGiftPromo'
 import Button from '../components/ui/Button'
 import { useCustomerDetails } from '../context/CustomerDetailsContext'
 import { useEstimate } from '../context/EstimateContext'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { formatINR } from '../utils/currency'
 import { getMobileDigits, validateCustomerDetails } from '../utils/customerDetailsHelpers'
+import {
+  buildCustomerRequestBody,
+  buildSubmissionFingerprint,
+  createSubmitGuard,
+  idempotencyKeyFromFingerprint,
+} from '../utils/customerRequestPayload'
 import { getEstimateProducts } from '../utils/estimateHelpers'
 import { getWhatsAppEstimateUrl } from '../utils/whatsapp'
 
-function ReviewSection({ rows, subtotal, details, onEditDetails, whatsAppUrl, onSendAttempt, canSend }) {
+function displayUnit(product) {
+  const pack = product?.pack?.trim()
+  return pack || '—'
+}
+
+function ReviewSection({
+  rows,
+  details,
+  onEditDetails,
+  onSend,
+  onSendAttempt,
+  canSend,
+  submitting,
+  sendError,
+}) {
   const mobileDisplay = details.mobile
     ? `+91 ${getMobileDigits(details.mobile).replace(/(\d{5})(\d{5})/, '$1 $2')}`
     : '—'
@@ -29,20 +50,26 @@ function ReviewSection({ rows, subtotal, details, onEditDetails, whatsAppUrl, on
         <h2 id="review-estimate-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">
           Your estimate
         </h2>
-        <ul className="mt-4 space-y-2 text-sm text-[var(--color-charcoal)]">
-          {rows.map(({ product, quantity, lineTotal }) => (
-            <li key={product.id} className="flex justify-between gap-3">
-              <span>
-                {quantity} × {product.name}
-              </span>
-              <span className="shrink-0 tabular-nums font-medium">{formatINR(lineTotal)}</span>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-4 flex justify-between gap-3 border-t border-[var(--color-border)] pt-4 text-sm font-semibold">
-          <span>Estimated total</span>
-          <span className="text-lg tabular-nums text-[var(--color-maroon)]">{formatINR(subtotal)}</span>
-        </p>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[280px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-border)] text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">
+                <th className="pb-2 pr-3 font-semibold">Item</th>
+                <th className="pb-2 pr-3 text-right font-semibold">Qty</th>
+                <th className="pb-2 font-semibold">Unit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(({ product, quantity }) => (
+                <tr key={product.id} className="border-b border-[var(--color-border)] last:border-0">
+                  <td className="py-2.5 pr-3 text-[var(--color-charcoal)]">{product.name}</td>
+                  <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{quantity}</td>
+                  <td className="py-2.5 text-[var(--color-muted)]">{displayUnit(product)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section
@@ -95,17 +122,24 @@ function ReviewSection({ rows, subtotal, details, onEditDetails, whatsAppUrl, on
       </div>
 
       <div>
-        {whatsAppUrl && canSend ? (
-          <Button href={whatsAppUrl} target="_blank" rel="noopener noreferrer" variant="primary" icon={MessageCircle} fullWidth>
-            Send request on WhatsApp
-          </Button>
-        ) : (
-          <Button type="button" variant="primary" icon={MessageCircle} fullWidth onClick={onSendAttempt}>
-            Send request on WhatsApp
-          </Button>
-        )}
+        <Button
+          type="button"
+          variant="primary"
+          icon={MessageCircle}
+          fullWidth
+          loading={submitting}
+          disabled={!canSend && !submitting}
+          onClick={canSend ? onSend : onSendAttempt}
+        >
+          {submitting ? 'Saving your request…' : 'Send estimate on WhatsApp'}
+        </Button>
+        {sendError ? (
+          <p className="mt-3 text-center text-sm text-[var(--color-maroon)]" role="alert">
+            {sendError}
+          </p>
+        ) : null}
         <p className="mt-2 text-center text-xs text-[var(--color-muted)]">
-          Your selected products and details will be shared with our stall team.
+          Your list is saved with our stall team first, then WhatsApp opens with the same details — no prices included.
         </p>
       </div>
     </div>
@@ -118,7 +152,6 @@ export default function Estimate() {
   const {
     estimateItems,
     estimateCount,
-    estimateSubtotal,
     uniqueProductCount,
     increaseQuantity,
     decreaseQuantity,
@@ -126,16 +159,74 @@ export default function Estimate() {
     clearEstimate,
   } = useEstimate()
   const { details, isValid, markTouched } = useCustomerDetails()
+  const [submitting, setSubmitting] = useState(false)
+  const [sendError, setSendError] = useState('')
+
+  const fingerprintRef = useRef('')
+  const idempotencyKeyRef = useRef(/** @type {string | null} */ (null))
+  const submitGuardRef = useRef(/** @type {ReturnType<typeof createSubmitGuard> | null} */ (null))
+  if (!submitGuardRef.current) {
+    submitGuardRef.current = createSubmitGuard()
+  }
 
   const rows = getEstimateProducts(estimateItems)
-  const whatsAppUrl = useMemo(
-    () => (isValid ? getWhatsAppEstimateUrl(estimateItems, details) : null),
-    [estimateItems, details, isValid],
-  )
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [step])
+
+  useEffect(() => {
+    if (step !== 'review') return
+    const fingerprint = buildSubmissionFingerprint(details, estimateItems)
+    if (fingerprint !== fingerprintRef.current) {
+      fingerprintRef.current = fingerprint
+      idempotencyKeyRef.current = null
+      setSendError('')
+    }
+  }, [step, details, estimateItems])
+
+  const ensureIdempotencyKey = useCallback(async () => {
+    if (idempotencyKeyRef.current) return idempotencyKeyRef.current
+    const key = await idempotencyKeyFromFingerprint(fingerprintRef.current)
+    idempotencyKeyRef.current = key
+    return key
+  }, [])
+
+  const handleSendEstimate = useCallback(async () => {
+    markTouched()
+    if (!isValid) {
+      setStep('details')
+      return
+    }
+    if (!submitGuardRef.current.tryBegin()) return
+
+    setSubmitting(true)
+    setSendError('')
+
+    try {
+      if (!fingerprintRef.current) {
+        fingerprintRef.current = buildSubmissionFingerprint(details, estimateItems)
+      }
+      const body = buildCustomerRequestBody(details, estimateItems)
+      const idempotencyKey = await ensureIdempotencyKey()
+      const result = await submitPublicCustomerRequest(body, idempotencyKey)
+
+      if (!result.ok) {
+        setSendError(result.message || 'Could not save your request. Please try again.')
+        return
+      }
+
+      const whatsAppUrl = getWhatsAppEstimateUrl(estimateItems, details)
+      if (whatsAppUrl) {
+        window.open(whatsAppUrl, '_blank', 'noopener,noreferrer')
+      }
+    } catch {
+      setSendError('Could not save your request. Please try again.')
+    } finally {
+      submitGuardRef.current.end()
+      setSubmitting(false)
+    }
+  }, [details, estimateItems, ensureIdempotencyKey, isValid, markTouched])
 
   const handleClear = () => {
     if (window.confirm('Clear your entire estimate? This cannot be undone.')) {
@@ -148,6 +239,10 @@ export default function Estimate() {
   const goToReview = () => {
     markTouched()
     if (Object.keys(validateCustomerDetails(details)).length > 0) return
+    const fingerprint = buildSubmissionFingerprint(details, estimateItems)
+    fingerprintRef.current = fingerprint
+    idempotencyKeyRef.current = null
+    setSendError('')
     setStep('review')
   }
 
@@ -205,6 +300,7 @@ export default function Estimate() {
           </p>
         ) : null}
         <p className="mt-2 text-sm text-[var(--color-muted)]">{headerSupport}</p>
+        {step === 'estimate' ? <ComplimentaryGiftPromo variant="inline" className="mt-4 max-w-md" /> : null}
         <EstimateProgress currentStep={step} />
       </header>
 
@@ -215,7 +311,15 @@ export default function Estimate() {
               Selected products
             </h2>
 
-            <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-white)]">
+            <div className="hidden overflow-x-auto rounded-t-[var(--radius-lg)] border border-b-0 border-[var(--color-border)] bg-[var(--color-ivory)]/60 px-4 py-2 sm:block">
+              <div className="grid grid-cols-[minmax(0,1fr)_5rem_6rem] gap-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">
+                <span>Item</span>
+                <span className="text-right">Qty</span>
+                <span>Unit</span>
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-white)] sm:rounded-t-none sm:border-t-0">
               <ul className="divide-y divide-[var(--color-border)]">
                 {rows.map((row) => (
                   <li key={row.productId}>
@@ -230,12 +334,9 @@ export default function Estimate() {
               </ul>
             </div>
 
-            {/* Mobile: scroll to continue — no fixed sidebar */}
             <div className="mt-6 border-t border-[var(--color-border)] pt-6 lg:hidden">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">Estimated total</p>
-              <p className="mt-1 text-2xl font-bold tabular-nums text-[var(--color-maroon)]">{formatINR(estimateSubtotal)}</p>
-              <p className="mt-2 text-xs text-[var(--color-muted)]">
-                Final availability and price will be confirmed by the stall.
+              <p className="text-xs leading-relaxed text-[var(--color-muted)]">
+                Pricing is confirmed on WhatsApp after we review your list.
               </p>
               <Button type="button" variant="primary" iconRight={ArrowRight} fullWidth className="mt-5" onClick={goToDetails}>
                 Continue to your details
@@ -258,7 +359,6 @@ export default function Estimate() {
           <EstimateSummaryPanel
             uniqueProductCount={uniqueProductCount}
             estimateCount={estimateCount}
-            subtotal={estimateSubtotal}
             primaryLabel="Continue to your details"
             onPrimary={goToDetails}
             helperText="We'll use these details to send your estimate request on WhatsApp."
@@ -284,12 +384,13 @@ export default function Estimate() {
         <div className="mt-6 max-w-2xl space-y-6 lg:mt-8">
           <ReviewSection
             rows={rows}
-            subtotal={estimateSubtotal}
             details={details}
             onEditDetails={() => setStep('details')}
-            whatsAppUrl={whatsAppUrl}
             canSend={isValid}
+            onSend={handleSendEstimate}
             onSendAttempt={handleSendAttempt}
+            submitting={submitting}
+            sendError={sendError}
           />
           <Button type="button" variant="ghost" icon={ArrowLeft} onClick={() => setStep('details')}>
             Edit details

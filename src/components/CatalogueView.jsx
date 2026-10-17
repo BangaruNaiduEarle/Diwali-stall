@@ -6,6 +6,7 @@ import { products } from '../data/products'
 import { countActiveProducts, filterProducts } from '../utils/filterProducts'
 import CataloguePagination from './CataloguePagination'
 import ProductFilters from './ProductFilters'
+import ComplimentaryGiftPromo from './promo/ComplimentaryGiftPromo'
 import ProductGrid from './ProductGrid'
 
 export const PRODUCTS_PER_PAGE = 24
@@ -122,6 +123,8 @@ export default function CatalogueView({
         )}
         <p className="mt-1 text-sm text-[var(--color-muted)]">{`${totalActive} products`}</p>
       </header>
+
+      <ComplimentaryGiftPromo variant="strip" className="mb-4 md:mb-5" />
 
       <ProductFilters
         search={search}

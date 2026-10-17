@@ -1,5 +1,5 @@
 /**
- * Customer-facing catalogue (161 products).
+ * Customer-facing catalogue (160 products).
  * Generated from diwali_product_master_final.csv — do not add supplier/internal fields.
  */
 
@@ -18,8 +18,7 @@ export const products = [
       "/images/products/images-mobile-webp/EMERALD_GIFT_BOX_1.webp",
       "/images/products/images-mobile-webp/EMERALD_GIFT_BOX_2.webp"
     ],
-    "x4": 1694
-  },
+},
   {
     "id": "P002",
     "name": "SILVER GIFT BOX",
@@ -34,8 +33,7 @@ export const products = [
       "/images/products/images-mobile-webp/SILVER_GIFT_BOX_1.webp",
       "/images/products/images-mobile-webp/SILVER_GIFT_BOX_2.webp"
     ],
-    "x4": 2292.4
-  },
+},
   {
     "id": "P003",
     "name": "GOLD GIFT BOX",
@@ -50,8 +48,7 @@ export const products = [
       "/images/products/images-mobile-webp/GOLD_GIFT_BOX_1.webp",
       "/images/products/images-mobile-webp/GOLD_GIFT_BOX_2.webp"
     ],
-    "x4": 2807.2
-  },
+},
   {
     "id": "P004",
     "name": "DIAMOND GIFT BOX",
@@ -66,8 +63,7 @@ export const products = [
       "/images/products/images-mobile-webp/DIAMOND_GIFT_BOX_1.webp",
       "/images/products/images-mobile-webp/DIAMOND_GIFT_BOX_2.webp"
     ],
-    "x4": 4382.4
-  },
+},
   {
     "id": "P005",
     "name": "GC BIG 10P",
@@ -151,8 +147,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/COLOUR_KOTI_DLX.webp"
     ],
-    "x4": 1000
-  },
+},
   {
     "id": "P011",
     "name": "4 TWINKLING",
@@ -180,8 +175,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/Magic_pencil_dlx.webp"
     ],
-    "x4": 300
-  },
+},
   {
     "id": "P013",
     "name": "ITALIAN TORCHERS",
@@ -195,8 +189,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/ITALIAN_TORCHERS.webp"
     ],
-    "x4": 400
-  },
+},
   {
     "id": "P014",
     "name": "JURASSIC BOMB",
@@ -210,8 +203,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/JURASSIC_BOMB.webp"
     ],
-    "x4": 640
-  },
+},
   {
     "id": "P015",
     "name": "MIGHTY BOMB",
@@ -225,8 +217,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/MIGHTY_BOMB.webp"
     ],
-    "x4": 800
-  },
+},
   {
     "id": "P016",
     "name": "Ganga jamuna",
@@ -254,8 +245,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/SIGNAL_BOMB( 7_SHOTS).webp"
     ],
-    "x4": 501.6
-  },
+},
   {
     "id": "P018",
     "name": "MEGA STAR",
@@ -267,8 +257,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 682
-  },
+},
   {
     "id": "P019",
     "name": "flintstones 10 shot",
@@ -280,8 +269,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 682
-  },
+},
   {
     "id": "P020",
     "name": "Mottu pattu",
@@ -293,8 +281,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 1337.6
-  },
+},
   {
     "id": "P021",
     "name": "Swat cats",
@@ -306,8 +293,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 1337.6
-  },
+},
   {
     "id": "P022",
     "name": "Kur kure",
@@ -319,8 +305,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 409.2
-  },
+},
   {
     "id": "P023",
     "name": "SPARSA GREEN 2PC",
@@ -332,8 +317,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 409.2
-  },
+},
   {
     "id": "P024",
     "name": "Scooby doo",
@@ -347,8 +331,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/Scooby_doo.webp"
     ],
-    "x4": 300
-  },
+},
   {
     "id": "P025",
     "name": "CLASSIC WHEEL",
@@ -362,8 +345,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/CLASSIC_WHEEL.webp"
     ],
-    "x4": 200
-  },
+},
   {
     "id": "P026",
     "name": "BLOSSOM",
@@ -377,8 +359,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/BLOSSOM.webp"
     ],
-    "x4": 500
-  },
+},
   {
     "id": "P027",
     "name": "PINKIE PIE",
@@ -392,8 +373,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/PINKIE_PIE.webp"
     ],
-    "x4": 500
-  },
+},
   {
     "id": "P028",
     "name": "minions",
@@ -405,8 +385,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 1196.8
-  },
+},
   {
     "id": "P029",
     "name": "OSCAR",
@@ -420,8 +399,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/OSCAR.webp"
     ],
-    "x4": 1200
-  },
+},
   {
     "id": "P030",
     "name": "Mario",
@@ -435,8 +413,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/Mario.webp"
     ],
-    "x4": 600
-  },
+},
   {
     "id": "P031",
     "name": "Tuity fruity",
@@ -450,8 +427,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/Tuity_fruity.webp"
     ],
-    "x4": 800
-  },
+},
   {
     "id": "P032",
     "name": "JOY WHEEL",
@@ -463,8 +439,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 550
-  },
+},
   {
     "id": "P033",
     "name": "MAGICAL SWORD",
@@ -476,8 +451,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 500
-  },
+},
   {
     "id": "P034",
     "name": "PARTY APPLE",
@@ -489,8 +463,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 787.6
-  },
+},
   {
     "id": "P035",
     "name": "Pinto Box 9 SHOTS",
@@ -502,8 +475,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 1390.4
-  },
+},
   {
     "id": "P036",
     "name": "P 50 COLOUR FOLDER",
@@ -515,8 +487,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 74.4
-  },
+},
   {
     "id": "P037",
     "name": "ROLL CAPS",
@@ -528,8 +499,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 200
-  },
+},
   {
     "id": "P038",
     "name": "GB WONDERFULL 40 ITEMS",
@@ -545,8 +515,7 @@ export const products = [
       "/images/products/images-mobile-webp/GB-WONDERFULL-40-ITEMS.webp",
       "/images/products/images-mobile-webp/GB-WONDERFULL-40-ITEMS-2.webp"
     ],
-    "x4": 2480
-  },
+},
   {
     "id": "P039",
     "name": "45 ITEMS NATCHIYAR",
@@ -558,12 +527,10 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [
-      "/images/products/nachiyar-gift-box-1.webp",
-      "/images/products/nachiyar-gift-box-2.webp",
-      "/images/products/nachiyar-gift-box.webp"
+      "/images/products/images-mobile-webp/nachiyar-gift-box-1.webp",
+      "/images/products/images-mobile-webp/nachiyar-gift-box.webp"
     ],
-    "x4": 3560
-  },
+},
   {
     "id": "P040",
     "name": "5 GANESH BOMB",
@@ -575,8 +542,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 152
-  },
+},
   {
     "id": "P041",
     "name": "4 DLX GANESH",
@@ -590,8 +556,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/4_DLX_GANESH.webp"
     ],
-    "x4": 120
-  },
+},
   {
     "id": "P042",
     "name": "3.5 LAXMI",
@@ -605,8 +570,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/3.5_LAXMI.webp"
     ],
-    "x4": 60
-  },
+},
   {
     "id": "P043",
     "name": "4 LAXMI",
@@ -620,8 +584,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/4_LAXMI.webp"
     ],
-    "x4": 80
-  },
+},
   {
     "id": "P044",
     "name": "4 GOLD LAXMI DLX",
@@ -635,8 +598,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/4_GOLD_LAXMI_DLX.webp"
     ],
-    "x4": 80
-  },
+},
   {
     "id": "P045",
     "name": "2 SOUND BOMB",
@@ -650,8 +612,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/2_SOUND_BOMB.webp"
     ],
-    "x4": 120
-  },
+},
   {
     "id": "P046",
     "name": "3 SOUND BOMB",
@@ -665,8 +626,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/3_SOUND_BOMB.webp"
     ],
-    "x4": 120
-  },
+},
   {
     "id": "P047",
     "name": "28 WALA PIN",
@@ -680,8 +640,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/28_WALA_PIN.webp"
     ],
-    "x4": 48
-  },
+},
   {
     "id": "P048",
     "name": "28 GAINT",
@@ -695,8 +654,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/28_GAINT.webp"
     ],
-    "x4": 52
-  },
+},
   {
     "id": "P049",
     "name": "24 DLX",
@@ -710,8 +668,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/24_DLX.webp"
     ],
-    "x4": 80
-  },
+},
   {
     "id": "P050",
     "name": "50 DLX",
@@ -725,8 +682,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/50_DLX.webp"
     ],
-    "x4": 200
-  },
+},
   {
     "id": "P051",
     "name": "100 DLX",
@@ -740,8 +696,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/100_DLX.webp"
     ],
-    "x4": 600
-  },
+},
   {
     "id": "P052",
     "name": "100 MEGA DLX",
@@ -755,8 +710,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/100_MEGA_DLX.webp"
     ],
-    "x4": 1200
-  },
+},
   {
     "id": "P053",
     "name": "RED BIJILI 100P",
@@ -768,8 +722,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 100
-  },
+},
   {
     "id": "P054",
     "name": "100 WALA",
@@ -783,8 +736,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/100_WALA.webp"
     ],
-    "x4": 100
-  },
+},
   {
     "id": "P055",
     "name": "1K BIJILI",
@@ -826,8 +778,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/2K_BIJILI_May.webp"
     ],
-    "x4": 1080
-  },
+},
   {
     "id": "P058",
     "name": "5K BIJILI",
@@ -939,8 +890,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/WIRE_SPECIAL.webp"
     ],
-    "x4": 400
-  },
+},
   {
     "id": "P066",
     "name": "FP BIG",
@@ -954,8 +904,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/FP_BIG.webp"
     ],
-    "x4": 240
-  },
+},
   {
     "id": "P067",
     "name": "FP SPECIAL AJN",
@@ -997,8 +946,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/FP_GAINT.webp"
     ],
-    "x4": 500
-  },
+},
   {
     "id": "P070",
     "name": "COLOURKOTI DLX 5PC",
@@ -1010,8 +958,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 480
-  },
+},
   {
     "id": "P071",
     "name": "COLOUR KOTI LB",
@@ -1025,8 +972,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/COLOUR_KOTI_LB.webp"
     ],
-    "x4": 640
-  },
+},
   {
     "id": "P072",
     "name": "MAZA COLOUR KOTI RED & GREEN",
@@ -1040,8 +986,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/MAZA_COLOUR_KOTI_RED_&_GREEN.webp"
     ],
-    "x4": 600
-  },
+},
   {
     "id": "P073",
     "name": "Z BEAST FLOWER POTS 45C",
@@ -1055,8 +1000,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/Z_BEAST_FLOWER_POTS_45C.webp"
     ],
-    "x4": 700
-  },
+},
   {
     "id": "P074",
     "name": "MASTI COLOUR KOTI R&Gi MEGA",
@@ -1070,8 +1014,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/MASTI_COLOUR_KOTI_R&G_MEGA.webp"
     ],
-    "x4": 1000
-  },
+},
   {
     "id": "P075",
     "name": "COLOUR KOTI DLX LB",
@@ -1085,8 +1028,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/COLOUR_KOTI_DLX_LB.webp"
     ],
-    "x4": 1000
-  },
+},
   {
     "id": "P076",
     "name": "TINY 5 COLOUR FOUNTAIN",
@@ -1100,8 +1042,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/TINY_5_COLOUR_FOUNTAIN.webp"
     ],
-    "x4": 500
-  },
+},
   {
     "id": "P077",
     "name": "TRI COLOUR FOUNTAIN",
@@ -1113,8 +1054,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 960
-  },
+},
   {
     "id": "P078",
     "name": "TIM LOOSE",
@@ -1126,8 +1066,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 80
-  },
+},
   {
     "id": "P079",
     "name": "BONANZA SD",
@@ -1141,8 +1080,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/BONANZA_SD.webp"
     ],
-    "x4": 1200
-  },
+},
   {
     "id": "P080",
     "name": "TIM little star",
@@ -1156,8 +1094,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/TIM_little_star.webp"
     ],
-    "x4": 800
-  },
+},
   {
     "id": "P081",
     "name": "DLX",
@@ -1169,8 +1106,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 1600
-  },
+},
   {
     "id": "P082",
     "name": "GB",
@@ -1182,8 +1118,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 2000
-  },
+},
   {
     "id": "P083",
     "name": "1.5 TWINKLING",
@@ -1239,8 +1174,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/ANACONDA.webp"
     ],
-    "x4": 200
-  },
+},
   {
     "id": "P087",
     "name": "SNAKE BIG",
@@ -1252,8 +1186,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 600
-  },
+},
   {
     "id": "P088",
     "name": "Sub matches",
@@ -1265,8 +1198,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 1600
-  },
+},
   {
     "id": "P089",
     "name": "POPS",
@@ -1280,8 +1212,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/POPS.webp"
     ],
-    "x4": 200
-  },
+},
   {
     "id": "P090",
     "name": "JOSH",
@@ -1293,8 +1224,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 272
-  },
+},
   {
     "id": "P091",
     "name": "NINJA",
@@ -1306,8 +1236,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 348
-  },
+},
   {
     "id": "P092",
     "name": "DASARA",
@@ -1321,8 +1250,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/DASARA.webp"
     ],
-    "x4": 540
-  },
+},
   {
     "id": "P093",
     "name": "VIP 10 1 matches",
@@ -1336,8 +1264,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/VIP_10_IN_1_matches.webp"
     ],
-    "x4": 440
-  },
+},
   {
     "id": "P094",
     "name": "10 PENCIL",
@@ -1351,8 +1278,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/10_PENCIL.webp"
     ],
-    "x4": 120
-  },
+},
   {
     "id": "P095",
     "name": "18 PENCIL DLX UV",
@@ -1366,8 +1292,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/18_PENCIL_DLX_UV.webp"
     ],
-    "x4": 320
-  },
+},
   {
     "id": "P096",
     "name": "10 CM ELECTRIC",
@@ -1381,8 +1306,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/10_CM_ELECTRIC.webp"
     ],
-    "x4": 60
-  },
+},
   {
     "id": "P097",
     "name": "10 CM COLOUR",
@@ -1396,8 +1320,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/10_CM_COLOUR.webp"
     ],
-    "x4": 60
-  },
+},
   {
     "id": "P098",
     "name": "10 CM GREEN",
@@ -1411,8 +1334,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/10_CM_GREEN.webp"
     ],
-    "x4": 60
-  },
+},
   {
     "id": "P099",
     "name": "10 CM RED",
@@ -1424,8 +1346,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 60
-  },
+},
   {
     "id": "P100",
     "name": "15 CM ELECTRIC",
@@ -1439,8 +1360,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/15_CM_ELECTRIC.webp"
     ],
-    "x4": 100
-  },
+},
   {
     "id": "P101",
     "name": "15 CM COLOUR",
@@ -1454,8 +1374,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/15_CM_COLOUR.webp"
     ],
-    "x4": 100
-  },
+},
   {
     "id": "P102",
     "name": "15 CM GREEN",
@@ -1467,8 +1386,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 100
-  },
+},
   {
     "id": "P103",
     "name": "15 CM RED",
@@ -1482,8 +1400,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/15_CM_RED.webp"
     ],
-    "x4": 100
-  },
+},
   {
     "id": "P104",
     "name": "30 CM ELECTRICAL",
@@ -1497,8 +1414,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/30_CM_ELECTRICAL.webp"
     ],
-    "x4": 100
-  },
+},
   {
     "id": "P105",
     "name": "30 CM COLOUR",
@@ -1512,8 +1428,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/30_CM_COLOUR.webp"
     ],
-    "x4": 120
-  },
+},
   {
     "id": "P106",
     "name": "30 CM GREEN",
@@ -1525,8 +1440,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 120
-  },
+},
   {
     "id": "P107",
     "name": "30 CM RED",
@@ -1540,8 +1454,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/30_CM_RED.webp"
     ],
-    "x4": 120
-  },
+},
   {
     "id": "P108",
     "name": "50 CM ELECTRIC ROLL",
@@ -1553,8 +1466,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 368
-  },
+},
   {
     "id": "P109",
     "name": "50 CM CRACKLING ROLL",
@@ -1566,8 +1478,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 408
-  },
+},
   {
     "id": "P110",
     "name": "75 CM ELECTRIC ROLL",
@@ -1579,8 +1490,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 408
-  },
+},
   {
     "id": "P111",
     "name": "75 CM CRACKLING ROLL",
@@ -1592,8 +1502,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 552
-  },
+},
   {
     "id": "P112",
     "name": "30 CM 5IN1 SPARKLERS",
@@ -1607,8 +1516,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/30_CM_5IN1_SPARKLERS.webp"
     ],
-    "x4": 640
-  },
+},
   {
     "id": "P113",
     "name": "KIT KAT",
@@ -1622,8 +1530,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/KIT_KAT.webp"
     ],
-    "x4": 100
-  },
+},
   {
     "id": "P114",
     "name": "DORA DORA",
@@ -1635,8 +1542,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 76
-  },
+},
   {
     "id": "P115",
     "name": "NAVARANGA STONES",
@@ -1648,8 +1554,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 96
-  },
+},
   {
     "id": "P116",
     "name": "HYDRO BOMB",
@@ -1663,8 +1568,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/HYDRO_BOMB.webp"
     ],
-    "x4": 260
-  },
+},
   {
     "id": "P117",
     "name": "Classic bomb",
@@ -1678,8 +1582,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/Classic_bomb.webp"
     ],
-    "x4": 400
-  },
+},
   {
     "id": "P118",
     "name": "555 BOMB",
@@ -1693,8 +1596,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/555_BOMB.webp"
     ],
-    "x4": 440
-  },
+},
   // {
   //   "id": "P119",
   //   "name": "[VERIFY PRODUCT NAME - ROW 80]",
@@ -1720,8 +1622,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/TARZAN_BOMB_N6.webp"
     ],
-    "x4": 640
-  },
+},
   {
     "id": "P121",
     "name": "TARZAN BOMB N7",
@@ -1735,8 +1636,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/TARZAN_BOMB_N7.webp"
     ],
-    "x4": 720
-  },
+},
   {
     "id": "P122",
     "name": "SS DIGITAL BOMB",
@@ -1748,8 +1648,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 544
-  },
+},
   {
     "id": "P123",
     "name": "LAL MIRCHI BOMB",
@@ -1763,8 +1662,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/LAL_MIRCHI_BOMB.webp"
     ],
-    "x4": 272
-  },
+},
   {
     "id": "P124",
     "name": "GANGA JAMUNA AJN",
@@ -1792,8 +1690,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/ROCKET_BOMB.webp"
     ],
-    "x4": 120
-  },
+},
   {
     "id": "P126",
     "name": "SHOWER MIX",
@@ -1807,8 +1704,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/SHOWER_MIX.webp"
     ],
-    "x4": 400
-  },
+},
   {
     "id": "P127",
     "name": "ASHRAFI MIX",
@@ -1822,8 +1718,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/ASHRAFI_MIX.webp"
     ],
-    "x4": 400
-  },
+},
   {
     "id": "P128",
     "name": "7 SHOTS (5PCS)",
@@ -1835,8 +1730,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 300
-  },
+},
   {
     "id": "P129",
     "name": "PHOTO CAPTURE",
@@ -1850,8 +1744,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/PHOTO_CAPTURE.webp"
     ],
-    "x4": 252
-  },
+},
   {
     "id": "P130",
     "name": "TIN SERIES",
@@ -1865,8 +1758,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/TIN_SERIES.webp"
     ],
-    "x4": 300
-  },
+},
   {
     "id": "P131",
     "name": "HELICOPTER",
@@ -1880,8 +1772,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/HELICOPTER.webp"
     ],
-    "x4": 252
-  },
+},
   {
     "id": "P132",
     "name": "DARLING DANCER",
@@ -1895,8 +1786,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/DARLING_DANCER.webp"
     ],
-    "x4": 300
-  },
+},
   {
     "id": "P133",
     "name": "Musical torch",
@@ -1910,8 +1800,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/Musical_torch.webp"
     ],
-    "x4": 300
-  },
+},
   {
     "id": "P134",
     "name": "WHIZZ WHEEL",
@@ -1925,8 +1814,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/WHIZZ_WHEEL.webp"
     ],
-    "x4": 300
-  },
+},
   {
     "id": "P135",
     "name": "DRONE",
@@ -1940,8 +1828,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/DRONE.webp"
     ],
-    "x4": 500
-  },
+},
   {
     "id": "P136",
     "name": "SIREN",
@@ -1955,8 +1842,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/SIREN.webp"
     ],
-    "x4": 600
-  },
+},
   {
     "id": "P137",
     "name": "SPINNER DLX",
@@ -1970,8 +1856,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/SPINNER_DLX.webp"
     ],
-    "x4": 500
-  },
+},
   {
     "id": "P138",
     "name": "SPINNER SPL",
@@ -1985,8 +1870,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/SPINNER_SPL.webp"
     ],
-    "x4": 400
-  },
+},
   {
     "id": "P139",
     "name": "THANIGAI EXPRESS",
@@ -2000,8 +1884,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/THANIGAI_EXPRESS.webp"
     ],
-    "x4": 500
-  },
+},
   {
     "id": "P140",
     "name": "MAGIC SHOW",
@@ -2015,8 +1898,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/MAGIC_SHOW.webp"
     ],
-    "x4": 600
-  },
+},
   {
     "id": "P141",
     "name": "PEACOCK",
@@ -2030,23 +1912,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/PEACOCK.webp"
     ],
-    "x4": 500
-  },
-  {
-    "id": "P142",
-    "name": "PEACOCK GAINT",
-    "category": "Others",
-    "pack": "",
-    //"price": 1400,
-    "description": "Product details available at the stall.",
-    "featured": false,
-    "stockStatus": "available",
-    "active": true,
-    "images": [
-      "/images/products/peacock-gaint.webp"
-    ],
-    "x4": 1400
-  },
+},
   {
     "id": "P143",
     "name": "WARRIOR SWARD",
@@ -2060,8 +1926,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/WARRIOR_SWARD.webp"
     ],
-    "x4": 320
-  },
+},
   {
     "id": "P144",
     "name": "12 SHOTS RIDER",
@@ -2073,8 +1938,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 480
-  },
+},
   {
     "id": "P145",
     "name": "15 Shot",
@@ -2088,8 +1952,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/leo-15-shots.webp"
     ],
-    "x4": 1000
-  },
+},
   {
     "id": "P146",
     "name": "25 SHOTS",
@@ -2101,8 +1964,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 1500
-  },
+},
   {
     "id": "P147",
     "name": "30 shots",
@@ -2116,8 +1978,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/leo-30-shots.webp"
     ],
-    "x4": 1700
-  },
+},
   {
     "id": "P148",
     "name": "60 shots",
@@ -2131,8 +1992,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/leo-60-shots.webp"
     ],
-    "x4": 3400
-  },
+},
   {
     "id": "P149",
     "name": "120 shots",
@@ -2146,8 +2006,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/leo-120-shots.webp"
     ],
-    "x4": 6800
-  },
+},
   {
     "id": "P150",
     "name": "240 shots",
@@ -2161,8 +2020,7 @@ export const products = [
     "images": [
       "/images/products/images-mobile-webp/leo-240-shots.webp"
     ],
-    "x4": 13600
-  },
+},
   {
     "id": "P151",
     "name": "CHOTA SHOT",
@@ -2174,8 +2032,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 120
-  },
+},
   {
     "id": "P152",
     "name": "SINGLE SHOT 2'",
@@ -2187,8 +2044,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 300
-  },
+},
   {
     "id": "P153",
     "name": "SINGLE SHOT (3PCS) SET",
@@ -2200,8 +2056,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 800
-  },
+},
   {
     "id": "P154",
     "name": "Nayagara falls",
@@ -2213,8 +2068,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 1200
-  },
+},
   {
     "id": "P155",
     "name": "SINGLE SHOT 3.5",
@@ -2226,8 +2080,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 1000
-  },
+},
   {
     "id": "P156",
     "name": "SINGLE SHOT 7steps",
@@ -2239,8 +2092,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 800
-  },
+},
   {
     "id": "P157",
     "name": "RING GUNS SP 56 B",
@@ -2252,8 +2104,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 528
-  },
+},
   {
     "id": "P158",
     "name": "RING GUN 0088 C",
@@ -2265,8 +2116,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 264
-  },
+},
   {
     "id": "P159",
     "name": "RING GUNS 0011 C",
@@ -2278,8 +2128,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 91.2
-  },
+},
   {
     "id": "P160",
     "name": "RING CAPS",
@@ -2291,8 +2140,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 24
-  },
+},
   {
     "id": "P161",
     "name": "POP POP NO 1",
@@ -2304,8 +2152,7 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 933.36
-  },
+},
   {
     "id": "P162",
     "name": "LANTHERS",
@@ -2317,6 +2164,5 @@ export const products = [
     "stockStatus": "available",
     "active": true,
     "images": [],
-    "x4": 52
-  }
+}
  ]

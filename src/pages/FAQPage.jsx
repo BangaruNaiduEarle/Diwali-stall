@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { FAQ_ITEMS } from '../data/faqItems'
 import PageContainer from '../components/PageContainer'
+import ComplimentaryGiftPromo from '../components/promo/ComplimentaryGiftPromo'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const ICON = { strokeWidth: 1.8 }
@@ -48,6 +49,7 @@ export default function FAQPage() {
 
   return (
     <PageContainer>
+      <ComplimentaryGiftPromo variant="strip" className="mb-6" />
       <div className="grid gap-10 lg:grid-cols-12 lg:gap-16">
         <header className="lg:col-span-4 lg:pt-2">
           <p className="editorial-label-festive">Questions?</p>

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useEstimate } from '../context/EstimateContext'
-import { formatINR } from '../utils/currency'
 import { isProductSoldOut } from '../utils/estimateHelpers'
 import Button from './ui/Button'
 import ProductDetailSheet from './ProductDetailSheet'
@@ -21,19 +20,7 @@ export default function ProductCard({ product }) {
   return (
     <>
       <article className="product-card-surface group flex h-full flex-col md:transition-ui md:hover:-translate-y-0.5 md:hover:shadow-[var(--shadow-hover)]">
-        <div
-          role="button"
-          tabIndex={0}
-          className="focus-ring block w-full overflow-hidden rounded-[calc(var(--radius-lg)-2px)] text-left"
-          onClick={openDetails}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              openDetails()
-            }
-          }}
-          aria-label={`View details for ${product.name}`}
-        >
+        <div className="block w-full overflow-hidden rounded-[calc(var(--radius-lg)-2px)]">
           <ProductImageCarousel
             images={product.images}
             productName={product.name}
@@ -59,12 +46,6 @@ export default function ProductCard({ product }) {
               {product.pack.trim()}
             </p>
           ) : null}
-
-          {/* <div className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-1 gap-y-0.5 md:mt-2">
-            <span className="shrink-0 text-[15px] font-bold leading-none tracking-tight text-[var(--color-maroon)] md:text-base">
-              {formatINR(product.price)}
-            </span>
-          </div> */}
 
           {soldOut ? (
             <p className="mt-1 text-[10px] text-[var(--color-red)] md:mt-2 md:text-[11px]">Sold out</p>

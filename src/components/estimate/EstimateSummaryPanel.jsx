@@ -1,11 +1,10 @@
 import Button from '../ui/Button'
-import { formatINR } from '../../utils/currency'
+import ComplimentaryGiftPromo from '../promo/ComplimentaryGiftPromo'
 
 /** Desktop-only sticky summary for step 1. */
 export default function EstimateSummaryPanel({
   uniqueProductCount,
   estimateCount,
-  subtotal,
   primaryLabel,
   onPrimary,
   primaryDisabled = false,
@@ -25,13 +24,10 @@ export default function EstimateSummaryPanel({
       <p className="mt-3 text-sm text-[var(--color-charcoal)]">
         {uniqueProductCount} {productLabel} · {estimateCount} {itemLabel}
       </p>
-      <div className="mt-4 border-t border-[var(--color-border)] pt-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">Estimated total</p>
-        <p className="mt-1 text-2xl font-bold tabular-nums text-[var(--color-maroon)]">{formatINR(subtotal)}</p>
-        <p className="mt-2 text-xs leading-relaxed text-[var(--color-muted)]">
-          Final availability and price will be confirmed by the stall.
-        </p>
-      </div>
+      <ComplimentaryGiftPromo variant="inline" className="mt-4" />
+      <p className="mt-3 text-xs leading-relaxed text-[var(--color-muted)]">
+        We&apos;ll confirm availability and pricing with you on WhatsApp. No prices are shown here by design.
+      </p>
       {primaryLabel ? (
         <Button
           type="button"
