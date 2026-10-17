@@ -6,6 +6,7 @@ import ComplimentaryGiftPromo from '../components/promo/ComplimentaryGiftPromo'
 import HomeStallSection from '../components/home/HomeStallSection'
 import CrackerPacksSection from '../components/packs/CrackerPacksSection'
 import Button from '../components/ui/Button'
+import { useCatalogueProducts } from '../context/CatalogueProductsContext'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { getCategoryProductCounts } from '../utils/categoryCounts'
 import { getCategoryIcon } from '../utils/categoryIcons'
@@ -24,7 +25,8 @@ const HOME_CATEGORY_SLUGS = [
 function Home() {
   usePageTitle('Diwali Crackers')
   const whatsAppUrl = getWhatsAppEnquiryUrl()
-  const counts = getCategoryProductCounts()
+  const { products, loading: catalogueLoading } = useCatalogueProducts()
+  const counts = getCategoryProductCounts(products)
   const categories = CATALOG_CATEGORIES.filter(
     (c) => c.slug !== 'all' && HOME_CATEGORY_SLUGS.includes(c.slug),
   )
@@ -61,7 +63,7 @@ function Home() {
                           {label}
                         </span>
                         <span className="mt-0.5 block text-xs text-[var(--color-muted)]">
-                          {count} {productLabel}
+                          {catalogueLoading ? '…' : `${count} ${productLabel}`}
                         </span>
                       </div>
                     </div>

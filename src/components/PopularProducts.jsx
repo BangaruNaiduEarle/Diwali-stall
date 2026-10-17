@@ -1,19 +1,21 @@
-import { products } from '../data/products'
+import CatalogueProductsGate from './catalogue/CatalogueProductsGate'
+import { useCatalogueProducts } from '../context/CatalogueProductsContext'
 import ProductGrid from './ProductGrid'
 import SectionHeading from './SectionHeading'
 
 const MAX_FEATURED = 8
 
-export function getFeaturedProducts(list = products) {
-  return list.filter(
+export function getFeaturedProducts(list) {
+  return (list ?? []).filter(
     (product) => product.featured && product.active !== false,
   )
 }
 
 export default function PopularProducts() {
-  const featured = getFeaturedProducts().slice(0, MAX_FEATURED)
+  const { products, loading, error, refresh } = useCatalogueProducts()
+  const featured = getFeaturedProducts(products).slice(0, MAX_FEATURED)
 
-  if (featured.length === 0) {
+  if (!loading && !error && featured.length === 0) {
     return null
   }
 
@@ -23,6 +25,7 @@ export default function PopularProducts() {
       className="scroll-mt-28 py-10 sm:py-14"
       aria-labelledby="popular-heading"
     >
+      <CatalogueProductsGate loading={loading} error={error} onRetry={refresh} compact>
       <div className="container-page">
         <SectionHeading
           id="popular-heading"
@@ -30,8 +33,9 @@ export default function PopularProducts() {
           title="Popular picks"
           description="Featured crackers from the catalogue."
         />
-        <ProductGrid products={featured} variant="light" />
+        {!loading && !error ? <ProductGrid products={featured} variant="light" /> : null}
       </div>
+      </CatalogueProductsGate>
     </section>
   )
 }

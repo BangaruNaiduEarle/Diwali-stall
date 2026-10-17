@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { products } from '../data/products'
+import CatalogueProductsGate from './catalogue/CatalogueProductsGate'
+import { useCatalogueProducts } from '../context/CatalogueProductsContext'
 import { consumePendingCatalogueFilters } from '../utils/catalogueNavigation'
 import { countActiveProducts, filterProducts } from '../utils/filterProducts'
 import CataloguePagination from './CataloguePagination'
@@ -10,6 +11,7 @@ import SectionHeading from './SectionHeading'
 const PRODUCTS_PER_PAGE = 24
 
 export default function CatalogueSection() {
+  const { products, loading, error, refresh } = useCatalogueProducts()
   const [search, setSearch] = useState('')
   const [categorySlug, setCategorySlug] = useState('all')
   const [budgetId, setBudgetId] = useState('all')
@@ -46,7 +48,7 @@ export default function CatalogueSection() {
 
   const filtered = useMemo(
     () => filterProducts(products, { search, categorySlug, budgetId }),
-    [search, categorySlug, budgetId],
+    [products, search, categorySlug, budgetId],
   )
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PRODUCTS_PER_PAGE))
@@ -84,6 +86,7 @@ export default function CatalogueSection() {
       className="scroll-mt-28 bg-diwali-cream py-12 sm:py-16"
       aria-labelledby="crackers-heading"
     >
+      <CatalogueProductsGate loading={loading} error={error} onRetry={refresh} compact>
       <div className="container-page">
         <SectionHeading
           id="crackers-heading"
@@ -122,6 +125,7 @@ export default function CatalogueSection() {
           onPageChange={handlePageChange}
         />
       </div>
+      </CatalogueProductsGate>
     </section>
   )
 }

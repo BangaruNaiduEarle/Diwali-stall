@@ -9,6 +9,8 @@ import EstimateSummaryPanel from '../components/estimate/EstimateSummaryPanel'
 import PageContainer from '../components/PageContainer'
 import ComplimentaryGiftPromo from '../components/promo/ComplimentaryGiftPromo'
 import Button from '../components/ui/Button'
+import CatalogueProductsGate from '../components/catalogue/CatalogueProductsGate'
+import { useCatalogueProducts } from '../context/CatalogueProductsContext'
 import { useCustomerDetails } from '../context/CustomerDetailsContext'
 import { useEstimate } from '../context/EstimateContext'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -169,6 +171,7 @@ export default function Estimate() {
     submitGuardRef.current = createSubmitGuard()
   }
 
+  const { loading: catalogueLoading, error: catalogueError, refresh: refreshCatalogue } = useCatalogueProducts()
   const rows = getEstimateProducts(estimateItems)
 
   useEffect(() => {
@@ -249,6 +252,26 @@ export default function Estimate() {
   const handleSendAttempt = () => {
     markTouched()
     if (!isValid) setStep('details')
+  }
+
+  if (catalogueLoading && estimateItems.length > 0) {
+    return (
+      <PageContainer>
+        <CatalogueProductsGate
+          loading
+          error={null}
+          onRetry={refreshCatalogue}
+        />
+      </PageContainer>
+    )
+  }
+
+  if (catalogueError && estimateItems.length > 0) {
+    return (
+      <PageContainer>
+        <CatalogueProductsGate loading={false} error={catalogueError} onRetry={refreshCatalogue} />
+      </PageContainer>
+    )
   }
 
   if (rows.length === 0) {

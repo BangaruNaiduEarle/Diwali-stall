@@ -1,5 +1,6 @@
 import { Boxes } from 'lucide-react'
-import { products } from '../data/products'
+import CatalogueProductsGate from './catalogue/CatalogueProductsGate'
+import { useCatalogueProducts } from '../context/CatalogueProductsContext'
 import ProductGrid from './ProductGrid'
 import SectionHeading from './SectionHeading'
 
@@ -17,6 +18,7 @@ export function getComboProducts(list) {
 }
 
 export default function ComboSection() {
+  const { products, loading, error, refresh } = useCatalogueProducts()
   const combos = getComboProducts(products)
 
   return (
@@ -24,6 +26,7 @@ export default function ComboSection() {
       className="py-10 sm:py-14"
       aria-labelledby="combo-heading"
     >
+      <CatalogueProductsGate loading={loading} error={error} onRetry={refresh} compact>
       <div className="container-page">
         <SectionHeading
           id="combo-heading"
@@ -56,6 +59,7 @@ export default function ComboSection() {
           </div>
         )}
       </div>
+      </CatalogueProductsGate>
     </section>
   )
 }

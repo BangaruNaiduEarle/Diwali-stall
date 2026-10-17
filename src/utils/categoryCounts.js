@@ -1,8 +1,10 @@
 import { CATALOG_CATEGORIES } from '../data/categories'
-import { products } from '../data/products'
 
-export function getCategoryProductCounts() {
-  const active = products.filter((p) => p.active !== false)
+/**
+ * @param {Array<{ active?: boolean, category?: string }>} products
+ */
+export function getCategoryProductCounts(products) {
+  const active = (products ?? []).filter((p) => p.active !== false)
   const counts = {}
 
   for (const { slug, label } of CATALOG_CATEGORIES) {

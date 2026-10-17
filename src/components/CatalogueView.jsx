@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import Button from './ui/Button'
-import { products } from '../data/products'
+import CatalogueProductsGate from './catalogue/CatalogueProductsGate'
+import { useCatalogueProducts } from '../context/CatalogueProductsContext'
 import { countActiveProducts, filterProducts } from '../utils/filterProducts'
 import CataloguePagination from './CataloguePagination'
 import ProductFilters from './ProductFilters'
@@ -25,6 +26,7 @@ export default function CatalogueView({
   const [budgetId, setBudgetId] = useState(budgetFromUrl)
   const [currentPage, setCurrentPage] = useState(1)
   const topRef = useRef(null)
+  const { products, loading, error, refresh } = useCatalogueProducts()
 
   useEffect(() => {
     setBudgetId(budgetFromUrl)
@@ -38,7 +40,7 @@ export default function CatalogueView({
 
   const filtered = useMemo(
     () => filterProducts(products, { search, categorySlug, budgetId }),
-    [search, categorySlug, budgetId],
+    [products, search, categorySlug, budgetId],
   )
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PRODUCTS_PER_PAGE))
@@ -91,6 +93,7 @@ export default function CatalogueView({
       : `${totalActive} products`
 
   return (
+    <CatalogueProductsGate loading={loading} error={error} onRetry={refresh}>
     <div ref={topRef}>
       {breadcrumbs}
 
@@ -193,5 +196,6 @@ export default function CatalogueView({
         <CataloguePagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
       </div>
     </div>
+    </CatalogueProductsGate>
   )
 }

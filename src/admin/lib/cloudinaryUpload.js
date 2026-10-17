@@ -2,6 +2,8 @@
  * Admin direct Cloudinary upload (browser). API secret stays on the Worker only.
  */
 
+import { normalizeProductImageUrl } from '../../utils/productImage.js'
+
 const CLOUDINARY_HOST_RE = /^(res|res-\d+)\.cloudinary\.com$/i
 const SIGNATURE_RE = /^[a-f0-9]{40}$/i
 
@@ -142,13 +144,21 @@ export async function uploadFileToCloudinary(sign, file, opts = {}) {
   return parsed
 }
 
-/** @param {string} src */
+/**
+ * Browser preview URL for an stored image path/URL. Catalogue `/images/...` paths resolve
+ * via {@link normalizeProductImageUrl} (Cloudinary when mapped). Stored values are unchanged on save.
+ * @param {string} src
+ */
 export function imagePreviewSrc(src) {
   const s = String(src ?? '').trim()
   if (!s) return ''
-  if (s.startsWith('/images/')) return s
-  if (s.startsWith('https://')) return s
-  return ''
+  const previewable =
+    s.startsWith('https://') ||
+    s.startsWith('http://') ||
+    s.startsWith('/images/') ||
+    s.startsWith('images/')
+  if (!previewable) return ''
+  return normalizeProductImageUrl(s)
 }
 
 export const MAX_PRODUCT_IMAGES = 20
