@@ -3,7 +3,7 @@ import {
   buildSubmissionFingerprintFromParts,
   createSubmitGuard,
   idempotencyKeyFromFingerprint,
-} from '../../server/src/lib/storefrontCustomerRequestPayload.js'
+} from './storefrontCustomerRequestPayload.js'
 import { getMobileDigits, normalizeCustomerDetails } from './customerDetailsHelpers.js'
 
 export { createSubmitGuard, idempotencyKeyFromFingerprint }
