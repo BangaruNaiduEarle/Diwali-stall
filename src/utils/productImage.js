@@ -1,3 +1,5 @@
+import { catalogueCloudinaryByPath } from '../data/catalogueCloudinaryByPath.js'
+
 /** Files in `public/images/products/` are served at `/images/products/` */
 export const PRODUCT_IMAGE_DIR = '/images/products'
 
@@ -20,6 +22,8 @@ export function normalizeProductImageUrl(raw) {
   s = s.replace(/^public\//i, '')
 
   if (s.startsWith('/images/')) {
+    const cloudinary = catalogueCloudinaryByPath[s]
+    if (cloudinary) return cloudinary
     return s
   }
 
