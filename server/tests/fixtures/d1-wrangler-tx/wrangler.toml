@@ -1,0 +1,9 @@
+# Isolated Wrangler D1 transaction probe — NOT diwali-quotation.
+name = "wrangler-tx-probe"
+main = "src/index.js"
+compatibility_date = "2025-04-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "wrangler-tx-isolated-test"
+database_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"

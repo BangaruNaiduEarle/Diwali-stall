@@ -203,6 +203,34 @@ export async function fetchAdminCustomerRequest(id) {
   return { ok: true, request: /** @type {Record<string, unknown>} */ (result.data?.request) }
 }
 
+/**
+ * @param {string} id
+ * @param {string} status
+ */
+export async function patchAdminCustomerRequestStatus(id, status) {
+  const result = await apiRequest(
+    `/api/admin/customer-requests/${encodeURIComponent(id)}/status`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ status: String(status ?? '').trim() }),
+    },
+  )
+  if (!result.ok) return result
+  const data = /** @type {{ request?: { id?: string, status?: string } }} */ (result.data ?? {})
+  if (!data.request?.id || !data.request?.status) {
+    return {
+      ok: false,
+      status: result.status,
+      error: 'invalid_response',
+      message: 'Status update response was invalid.',
+    }
+  }
+  return {
+    ok: true,
+    request: { id: String(data.request.id), status: String(data.request.status) },
+  }
+}
+
 /** @param {string} requestId */
 export async function createQuotationForRequest(requestId) {
   return apiRequest(`/api/admin/customer-requests/${encodeURIComponent(requestId)}/quotation`, {
@@ -227,6 +255,46 @@ export async function fetchQuotationForRequest(requestId) {
 /** @param {string} quotationId */
 export async function fetchQuotationWhatsApp(quotationId) {
   return apiRequest(`/api/admin/quotations/${encodeURIComponent(quotationId)}/whatsapp`)
+}
+
+/** @param {{ productId: string, quantity: number }[]} items */
+export async function previewQuickBill(items) {
+  const result = await apiRequest('/api/admin/quick-bill/preview', {
+    method: 'POST',
+    body: JSON.stringify({ items }),
+  })
+  if (!result.ok) return result
+  const preview = /** @type {{ preview?: unknown }} */ (result.data ?? {}).preview
+  if (!preview || typeof preview !== 'object') {
+    return {
+      ok: false,
+      status: result.status,
+      error: 'invalid_response',
+      message: 'Preview response was invalid.',
+    }
+  }
+  return { ok: true, preview }
+}
+
+/**
+ * @param {{ customer: { name: string, mobile: string, area?: string, note?: string }, items: { productId: string, quantity: number }[] }} payload
+ */
+export async function checkoutQuickBill(payload) {
+  const result = await apiRequest('/api/admin/quick-bill/checkout', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  if (!result.ok) return result
+  const data = /** @type {{ request?: unknown, quotation?: unknown }} */ (result.data ?? {})
+  if (!data.request || !data.quotation) {
+    return {
+      ok: false,
+      status: result.status,
+      error: 'invalid_response',
+      message: 'Checkout response was invalid.',
+    }
+  }
+  return { ok: true, request: data.request, quotation: data.quotation }
 }
 
 export async function requestUploadSign(productId, slot) {

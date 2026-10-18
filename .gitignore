@@ -41,3 +41,51 @@ server/.env.*
 *.njsproj
 *.sln
 *.sw?
+
+```gitignore
+# Local environment secrets
+.env
+.env.*
+!.env.example
+
+server/.env
+server/.env.*
+!server/.env.example
+server/.dev.vars
+
+# Cloudflare local development
+.wrangler/
+server/.wrangler/
+
+# Dependencies and build output
+node_modules/
+server/node_modules/
+dist/
+server/dist-worker/
+
+# Local databases and backups
+backups/
+server/data/backups/
+server/data/*.sqlite
+server/data/*.sqlite-*
+server/data/*.sqlite3
+server/data/*.db
+
+# Generated catalogue and private-rate SQL
+server/data/generated/
+
+# Local reports and temporary files
+server/reports/
+scripts/pack-preview.txt
+```
+# Explicitly ignore local backup and generated data contents
+/backups/**
+/server/data/backups/**
+/server/data/generated/**
+
+# Local test databases and Wrangler caches
+**/.persist/
+**/.wrangler/
+server/data/backups/
+server/data/generated/
+server/reports/

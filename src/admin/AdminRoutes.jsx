@@ -9,6 +9,7 @@ import AdminCustomerRequestsPage from './pages/AdminCustomerRequestsPage.jsx'
 import AdminCustomerRequestDetailPage from './pages/AdminCustomerRequestDetailPage.jsx'
 import AdminLoginPage from './pages/AdminLoginPage.jsx'
 import AdminUsersPage from './pages/AdminUsersPage.jsx'
+import AdminQuickBillPage from './pages/AdminQuickBillPage.jsx'
 
 export default function AdminRoutes() {
   return (
@@ -26,6 +27,7 @@ export default function AdminRoutes() {
                   <Route path="products" element={<AdminProductsPage />} />
                   <Route path="products/new" element={<AdminProductCreatePage />} />
                   <Route path="products/:id/edit" element={<AdminProductEditPage />} />
+                  <Route path="quick-bill" element={<AdminQuickBillPage />} />
                   <Route path="customer-requests" element={<AdminCustomerRequestsPage />} />
                   <Route path="customer-requests/:id" element={<AdminCustomerRequestDetailPage />} />
                   <Route path="users" element={<AdminUsersPage />} />

@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS tx_probe;
+CREATE TABLE tx_probe (
+  id INTEGER PRIMARY KEY,
+  label TEXT NOT NULL
+);

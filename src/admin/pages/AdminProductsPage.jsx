@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Loader2, PackageOpen, Plus, Search } from 'lucide-react'
+import { Loader2, PackageOpen, Plus, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
 import Button from '../../components/ui/Button.jsx'
 import { formatINR } from '../../utils/currency.js'
 import { fetchAdminCategories, fetchAdminProductsPage } from '../api/adminApi.js'
+import AdminProductCard from '../components/AdminProductCard.jsx'
+import AdminProductTableThumb from '../components/AdminProductTableThumb.jsx'
+import { formatAdminProductCompany, formatAdminProductPack } from '../lib/adminProductTableDisplay.js'
 
 /** @param {{ active?: boolean }} props */
 function StatusBadge({ active = true }) {
@@ -34,6 +37,7 @@ export default function AdminProductsPage() {
   const [includeArchived, setIncludeArchived] = useState(false)
   const [categories, setCategories] = useState(/** @type {{ slug: string, label: string }[]} */ ([]))
   const [page, setPage] = useState(1)
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(searchInput.trim()), 300)
@@ -89,23 +93,41 @@ export default function AdminProductsPage() {
     return `Page ${pagination.page} of ${pagination.totalPages}`
   }, [pagination])
 
+  const activeFilterCount = useMemo(
+    () => [missingRateOnly, missingPurchaseRateOnly, includeArchived].filter(Boolean).length,
+    [missingRateOnly, missingPurchaseRateOnly, includeArchived],
+  )
+
+  const resultsSummary = useMemo(() => {
+    const totalPart = `${pagination.total} product${pagination.total === 1 ? '' : 's'}`
+    return pageLabel ? `${totalPart} · ${pageLabel}` : totalPart
+  }, [pagination.total, pageLabel])
+
+  const mobileFiltersPanelId = 'admin-products-mobile-filters'
+
   return (
-    <div className="admin-page">
-      <div className="admin-page__head">
-        <div>
+    <div className="admin-page admin-page--products">
+      <div className="admin-page__head admin-page__head--products">
+        <div className="admin-page__head-text">
           <h2 className="admin-page__title">Products</h2>
-          <p className="admin-page__subtitle">
-            Purchase rates (Excel Rate) and X4 selling prices (D1) — separate from static public catalogue.
+          <p className="admin-page__subtitle admin-page__subtitle--compact">
+            Manage purchase rates and X4 selling prices.
           </p>
         </div>
-        <Button to="/admin/products/new" variant="primary" surface="light" icon={Plus}>
+        <Button
+          to="/admin/products/new"
+          variant="primary"
+          surface="light"
+          className="admin-page__new-product-btn"
+          icon={Plus}
+        >
           New product
         </Button>
       </div>
 
-      <div className="admin-toolbar admin-toolbar--stack">
-        <label className="admin-search">
-          <Search className="admin-search__icon" aria-hidden="true" />
+      <div className="admin-toolbar admin-toolbar--stack admin-products-toolbar">
+        <label className="admin-search admin-products-toolbar__search">
+          <Search className="admin-search__icon" size={18} strokeWidth={1.75} aria-hidden="true" />
           <input
             type="search"
             className="admin-input admin-search__input"
@@ -115,25 +137,80 @@ export default function AdminProductsPage() {
             autoComplete="off"
           />
         </label>
-        <div className="admin-toolbar">
-          <select
-            className="admin-input"
-            value={categorySlug}
-            onChange={(e) => setCategorySlug(e.target.value)}
-            aria-label="Filter by category"
+        <div className="admin-products-toolbar__row">
+          <div className="admin-products-toolbar__category-wrap">
+            <select
+              className="admin-input admin-products-toolbar__category"
+              value={categorySlug}
+              onChange={(e) => setCategorySlug(e.target.value)}
+              aria-label="Filter by category"
+            >
+              <option value="">All categories</option>
+              {categories.map((c) => (
+                <option key={c.slug} value={c.slug}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="admin-products-toolbar__desktop-filters admin-show-desktop">
+            <label className="admin-check admin-check--inline">
+              <input type="checkbox" checked={missingRateOnly} onChange={(e) => setMissingRateOnly(e.target.checked)} />
+              Missing X4 selling
+            </label>
+            <label className="admin-check admin-check--inline">
+              <input
+                type="checkbox"
+                checked={missingPurchaseRateOnly}
+                onChange={(e) => setMissingPurchaseRateOnly(e.target.checked)}
+              />
+              Missing purchase rate
+            </label>
+            <label className="admin-check admin-check--inline">
+              <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} />
+              Show archived
+            </label>
+            <button type="button" className="admin-link-button" onClick={load} disabled={loading}>
+              Refresh
+            </button>
+          </div>
+          <button
+            type="button"
+            className={`admin-products-filters-toggle admin-show-mobile${activeFilterCount > 0 ? ' admin-products-filters-toggle--active' : ''}`}
+            aria-expanded={mobileFiltersOpen}
+            aria-controls={mobileFiltersPanelId}
+            aria-label={activeFilterCount > 0 ? `Filters, ${activeFilterCount} active` : 'Filters'}
+            onClick={() => setMobileFiltersOpen((open) => !open)}
           >
-            <option value="">All categories</option>
-            {categories.map((c) => (
-              <option key={c.slug} value={c.slug}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-          <label className="admin-check admin-check--inline">
+            <SlidersHorizontal size={16} aria-hidden="true" />
+            <span className="admin-products-filters-toggle__label">Filters</span>
+            {activeFilterCount > 0 ? (
+              <span className="admin-products-filters-toggle__count" aria-hidden="true">
+                {activeFilterCount}
+              </span>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            className="admin-products-refresh-btn admin-show-mobile"
+            onClick={load}
+            disabled={loading}
+            aria-label="Refresh products"
+            title="Refresh products"
+          >
+            <RefreshCw size={18} className={loading ? 'animate-spin' : undefined} aria-hidden="true" />
+          </button>
+        </div>
+        <div
+          id={mobileFiltersPanelId}
+          className={`admin-products-filters-panel admin-show-mobile${mobileFiltersOpen ? ' admin-products-filters-panel--open' : ''}`}
+          hidden={!mobileFiltersOpen}
+        >
+          <label className="admin-check">
             <input type="checkbox" checked={missingRateOnly} onChange={(e) => setMissingRateOnly(e.target.checked)} />
             Missing X4 selling
           </label>
-          <label className="admin-check admin-check--inline">
+          <label className="admin-check">
             <input
               type="checkbox"
               checked={missingPurchaseRateOnly}
@@ -141,13 +218,10 @@ export default function AdminProductsPage() {
             />
             Missing purchase rate
           </label>
-          <label className="admin-check admin-check--inline">
+          <label className="admin-check">
             <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} />
             Show archived
           </label>
-          <button type="button" className="admin-link-button" onClick={load} disabled={loading}>
-            Refresh
-          </button>
         </div>
       </div>
 
@@ -173,22 +247,27 @@ export default function AdminProductsPage() {
 
       {!loading && !error && products.length > 0 ? (
         <>
-          <p className="admin-hint">
-            {pagination.total} product{pagination.total === 1 ? '' : 's'}
-            {pageLabel ? ` · ${pageLabel}` : ''}
-          </p>
-          <div className="admin-table-wrap">
+          <p className="admin-hint admin-products-results-meta">{resultsSummary}</p>
+          <div className="admin-card-list admin-show-mobile" aria-label="Products">
+            {products.map((p) => (
+              <AdminProductCard key={String(p.id ?? '')} product={p} />
+            ))}
+          </div>
+          <div className="admin-table-wrap admin-show-desktop">
             <table className="admin-table">
               <thead>
                 <tr>
+                  <th scope="col" className="admin-table__thumb-col">
+                    <span className="sr-only">Image</span>
+                  </th>
                   <th scope="col">ID</th>
                   <th scope="col">Name</th>
-                  <th scope="col">Category</th>
-                  <th scope="col">Purchase rate</th>
-                  <th scope="col">X4 selling</th>
+                  <th scope="col">Company</th>
+                  <th scope="col">Unit</th>
+                  <th scope="col">Purchase</th>
+                  <th scope="col">X4</th>
                   <th scope="col">Catalogue ref.</th>
                   <th scope="col">Mapping</th>
-                  <th scope="col">Stock</th>
                   <th scope="col">Status</th>
                   <th scope="col" className="admin-table__actions-col">
                     Actions
@@ -201,11 +280,16 @@ export default function AdminProductsPage() {
                   const mapping = p.pricingMapping && typeof p.pricingMapping === 'object' ? p.pricingMapping : null
                   return (
                     <tr key={id}>
+                      <td className="admin-table__thumb-col">
+                        <AdminProductTableThumb images={p.images} name={String(p.name ?? '')} />
+                      </td>
                       <td className="admin-table__mono">{id}</td>
                       <td>
                         <span className="admin-table__primary">{String(p.name ?? '')}</span>
+                        <span className="admin-table__meta">{String(p.categoryLabel ?? p.categorySlug ?? '')}</span>
                       </td>
-                      <td>{String(p.categoryLabel ?? p.categorySlug ?? '—')}</td>
+                      <td>{formatAdminProductCompany(p.company)}</td>
+                      <td>{formatAdminProductPack(p.pack)}</td>
                       <td className="tabular-nums">
                         {p.hasPurchaseRate ? (
                           formatOptionalInr(p.purchaseRateInr)
@@ -230,7 +314,6 @@ export default function AdminProductsPage() {
                           <span className="admin-table__meta">—</span>
                         )}
                       </td>
-                      <td>{String(p.stockStatus ?? '—')}</td>
                       <td>
                         <StatusBadge active={p.active !== false} />
                       </td>

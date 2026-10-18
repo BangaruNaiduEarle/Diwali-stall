@@ -1,0 +1,22 @@
+# Diwali API — Cloudflare Workers + D1 (Phase 1 scaffold)
+# Docs: https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "diwali-api"
+main = "src/index.js"
+compatibility_date = "2025-04-01"
+workers_dev = true
+
+# D1 binding (create DB with: wrangler d1 create diwali-quotation)
+# Replace database_id after creation — placeholder only for scaffold.
+[[d1_databases]]
+binding = "DB"
+database_name = "diwali-quotation"
+database_id = "c2ae3b00-7356-4e54-97ba-e7b92ca79346"
+migrations_dir = "database/migrations"
+
+[vars]
+CORS_ALLOWED_ORIGINS = "https://diwali-stall.vercel.app,http://localhost:5173"
+
+
+[observability]
+enabled = true

@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "packs:verify": "node scripts/verify-family-packs.mjs"
+    "packs:verify": "node scripts/verify-family-packs.mjs",
+    "test": "node --test --test-concurrency=1 src/api/resolveApiUrl.test.js src/admin/api/adminApi.customerRequestStatus.test.js src/admin/lib/adminAuthHints.test.js src/admin/lib/adminProductTableDisplay.test.js src/admin/lib/cloudinaryUpload.preview.test.js src/admin/lib/copyToClipboard.test.js src/admin/lib/customerRequestStatus.test.js src/admin/lib/quotationWhatsAppMessage.test.js src/admin/lib/quickBillCart.test.js src/admin/lib/quickBillProductImage.test.js"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

@@ -1,0 +1,45 @@
+{
+  "name": "diwali-server",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Cloudflare Workers + D1 API scaffold for Diwali quotation workflow (Phase 1)",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "wrangler deploy --dry-run",
+    "db:migrate:local": "wrangler d1 migrations apply diwali-quotation --local",
+    "db:migrations:list:local": "wrangler d1 migrations list diwali-quotation --local",
+    "catalogue:generate": "node scripts/generate-catalogue-import.mjs",
+    "catalogue:import:local": "node scripts/import-catalogue-local.mjs",
+    "catalogue:cloudinary:audit": "node scripts/cloudinary-migration-audit.mjs --dry-run",
+    "catalogue:cloudinary:review": "node scripts/cloudinary-migration-review.mjs",
+    "catalogue:cloudinary:upload": "node scripts/cloudinary-migration-upload.mjs --dry-run",
+    "catalogue:cloudinary:upload:execute": "node scripts/cloudinary-migration-upload.mjs --execute",
+    "admin:local-jwt": "node scripts/issue-local-admin-jwt.mjs",
+    "phase51:reconcile": "node scripts/generate-phase51-reconciliation.mjs",
+    "x4:rates:dry-run": "node scripts/dry-run-x4-private-rates.mjs",
+    "x4:rates:import": "node scripts/import-x4-private-rates.mjs",
+    "x4:rates:import:apply": "node scripts/import-x4-private-rates.mjs --apply",
+    "purchase:rates:dry-run": "node scripts/dry-run-purchase-rates.mjs",
+    "purchase:rates:import": "node scripts/import-purchase-rates.mjs",
+    "purchase:rates:import:apply": "node scripts/import-purchase-rates.mjs --apply",
+    "phase6:verify:local": "node scripts/phase6-local-e2e-verify.mjs",
+    "quick-bill:images:audit": "node scripts/quick-bill-image-backfill-audit.mjs --both",
+    "quick-bill:images:apply-local": "node scripts/quick-bill-image-backfill-apply-local.mjs",
+    "pretest": "wrangler d1 migrations apply diwali-quotation --local",
+    "test": "node --test --test-concurrency=1 tests/",
+    "test:unit": "node --test --test-concurrency=1 tests/health.test.js tests/money.test.js tests/passwordHash.test.js tests/catalogueSource.test.js tests/x4ImplementedMapping.test.js tests/x4PrivateRatesDryRun.test.js tests/x4PrivateRatesImport.test.js tests/purchaseRatesImport.test.js tests/adminProductRateEdit.test.js tests/adminProductRateFlags.test.js tests/publicCustomerRequests.test.js tests/customerRequestPayload.test.js tests/cors.test.js tests/adminPasswordAuth.test.js tests/adminOwnerPolicy.test.js tests/adminCustomerRequests.test.js tests/adminQuickBill.test.js tests/quickBillImageBackfillAudit.test.js tests/quickBillImageBackfillApply.test.js tests/adminPhase5.test.js tests/adminPhase52.test.js tests/adminAuthFailClosed.test.js tests/adminLocalDevAuth.test.js tests/adminRoutesAuth.test.js tests/adminCloudinaryUploadClient.test.js tests/publicProductsSeparation.test.js tests/cloudinarySign.test.js tests/imageValidation.test.js tests/cloudinaryMigrationAudit.test.js tests/cloudinaryMigrationReview.test.js tests/cloudinaryMigrationPathSafety.test.js tests/cloudinaryMigrationUpload.test.js tests/quotationWhatsApp.test.js",
+    "pretest:integration": "wrangler d1 migrations apply diwali-quotation --local",
+    "test:integration": "node --test --test-concurrency=1 tests/00-catalogueImportLocal.test.js tests/migrations.test.js tests/schemaConstraints.test.js tests/z-adminProductsService.test.js tests/d1WranglerTxAtomic.test.js"
+  },
+  "dependencies": {
+    "jose": "^6.1.0"
+  },
+  "engines": {
+    "node": ">=20.3.0"
+  },
+  "devDependencies": {
+    "wrangler": "~4.85.0"
+  }
+}

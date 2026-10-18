@@ -1597,18 +1597,6 @@ export const products = [
       "/images/products/images-mobile-webp/555_BOMB.webp"
     ],
 },
-  // {
-  //   "id": "P119",
-  //   "name": "[VERIFY PRODUCT NAME - ROW 80]",
-  //   "category": "Others",
-  //   "pack": "",
-  //   //"price": 720,
-  //   "description": "Product details available at the stall.",
-  //   "featured": false,
-  //   "stockStatus": "available",
-  //   "active": true,
-  //   "images": []
-  // },
   {
     "id": "P120",
     "name": "TARZAN BOMB N6",

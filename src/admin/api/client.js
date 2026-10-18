@@ -61,5 +61,9 @@ export async function apiRequest(path, init = {}) {
       body.fields && typeof body.fields === 'object' && !Array.isArray(body.fields)
         ? /** @type {Record<string, string>} */ (body.fields)
         : undefined,
+    missingProductIds: Array.isArray(body.missingProductIds)
+      ? body.missingProductIds.map(String)
+      : undefined,
+    requestId: typeof body.requestId === 'string' ? body.requestId : undefined,
   }
 }
