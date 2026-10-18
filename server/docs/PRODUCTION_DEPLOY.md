@@ -5,7 +5,7 @@
 | Layer | In repo |
 |-------|---------|
 | Worker | `server/wrangler.toml` — `name = "diwali-api"`, D1 binding `DB` → `database_name = "diwali-quotation"`, `migrations_dir = "database/migrations"` |
-| Frontend | Root `npm run build` → `dist`; `vercel.json` SPA rewrites; production API via `VITE_API_BASE_URL` |
+| Frontend | Root `npm run build` → `dist`; `vercel.json` **API proxy + SPA** rewrites; **`VITE_API_BASE_URL` empty** in Production |
 | Admin auth | Password + session cookie — see [AUTH_PASSWORD.md](./AUTH_PASSWORD.md) (no Cloudflare Zero Trust required) |
 
 ---
@@ -155,38 +155,48 @@ Further bootstrap calls return **503** or **409**; password login is unchanged.
 
 ---
 
-## 7. Vercel — `VITE_API_BASE_URL`
+## 7. Vercel — same-origin `/api` proxy (required for admin cookies)
 
-Set at **build** time (`src/api/resolveApiUrl.js`). Leave **unset** locally (Vite proxies `/api/*`).
+Root **`vercel.json`** must list **two** rewrites **in this order**:
 
-**Dashboard:** Project → Settings → Environment Variables → **`VITE_API_BASE_URL`** = Worker origin from step 4 (no trailing slash) → **Production** (and Preview if previews use the same API) → **Redeploy** production.
+1. **`/api/:path*`** → **`https://diwali-api.naiduearle2662.workers.dev/api/:path*`** (external proxy; preserves POST/OPTIONS and other methods).
+2. **`/(.*)`** → **`/index.html`** (SPA deep links only).
 
-Build: root `npm run build`; output `dist` (standard Vercel Vite settings).
+**`VITE_API_BASE_URL`:** leave **unset or empty** for Production (and Preview if using the same proxy). The browser must call **`https://diwali-stall.vercel.app/api/...`**, not `*.workers.dev` directly (`src/api/resolveApiUrl.js`).
+
+If Production still has `VITE_API_BASE_URL` pointing at the Worker, **remove it and redeploy** — otherwise session cookies remain cross-site and browsers will not send `diwali_admin_session` on `/api/admin/session`.
+
+Build: root `npm run build`; output `dist` (standard Vercel Vite settings). **Commit and deploy `vercel.json`** with the API rewrite — a frontend-only redeploy without it leaves `/api/*` on the SPA fallback.
+
+### Troubleshooting: `POST /api/admin/auth/login` → **405 Method Not Allowed**
+
+| Signal | Meaning |
+|--------|---------|
+| Response header `Content-Disposition: inline; filename="index.html"` | Request never reached the Worker; Vercel served the static SPA shell. |
+| `GET /api/public/products` returns HTML, not JSON | Same — missing or inactive `/api` rewrite. |
+
+**Fix:** Ensure the deployed commit includes the **`/api/:path*`** rewrite (see repo `vercel.json`). Redeploy from the repo root (not a subdirectory). In Vercel → **Project → Settings → Routing**, remove conflicting **Project Routing Rules** that rewrite `/api/*` to `/index.html`. There are **no** `/api` serverless functions in this repo.
+
+**After fix:** `curl -sI https://diwali-stall.vercel.app/api/public/products` should show **`Content-Type: application/json`** (Worker), not `text/html`.
 
 ---
 
-## 8. Smoke tests and cross-origin cookies
+## 8. Smoke tests and admin session cookies
 
 ### Public / private separation
 
-- Browser: `https://diwali-stall.vercel.app` — catalogue loads; network calls hit `VITE_API_BASE_URL/api/public/...`.
-- Unauthenticated admin: `GET <WORKER>/api/admin/session` → **401**.
+- Browser: `https://diwali-stall.vercel.app` — catalogue loads; network calls hit **`/api/public/...`** on the **same origin** (Vercel proxy → Worker).
+- Unauthenticated admin: `GET /api/admin/session` → **401**.
 - Public JSON must not include purchase or X4 rate fields (see `tests/publicProductsSeparation.test.js`).
 
-### Admin login (cross-site cookie)
+### Admin login (first-party cookie via proxy)
 
-Production layout: page origin **Vercel**, API origin **`*.workers.dev`**. Login `POST` returns `Set-Cookie: diwali_admin_session=…` with **`HttpOnly; Secure; SameSite=None`** on the **Worker** domain (`adminSessionCookie.js`). The admin client uses **`credentials: 'include'`** (`src/admin/api/client.js`).
-
-**Practical browser checks:**
-
-1. DevTools → **Network** → `auth/login` → response **Set-Cookie** and **201**.
-2. Next request to Worker (e.g. `GET …/api/admin/session`) → request includes **Cookie**; **200** with email/role.
-3. **Application → Cookies** → select the **Worker** origin (not Vercel) → session cookie present after login.
+1. DevTools → **Network** → `POST /api/admin/auth/login` (URL on **vercel.app**, not workers.dev) → **200** and **Set-Cookie: diwali_admin_session=…** (`SameSite=Lax` when proxied).
+2. `GET /api/admin/session` → request includes **Cookie** → **200** with email/role.
+3. **Application → Cookies** → **`https://diwali-stall.vercel.app`** → session cookie present after login.
 4. Sign out → cookie cleared; admin routes **401**.
 
-**Cross-site limitation:** Some browsers restrict **third-party** cookies (Vercel page calling Worker API). If login succeeds but session stays **401**, check third-party cookie settings or try another browser; fixing that may require a same-site API hostname (out of scope for this repo’s default config).
-
-**CORS:** From `https://diwali-stall.vercel.app`, responses must include `Access-Control-Allow-Origin: https://diwali-stall.vercel.app` and `Access-Control-Allow-Credentials: true` when `CORS_ALLOWED_ORIGINS` is set (`src/lib/cors.js`).
+Direct Worker calls from Postman still work with cookies on the Worker origin; browser production must use the Vercel `/api` proxy.
 
 ### Admin features
 
@@ -205,7 +215,7 @@ Production layout: page origin **Vercel**, API origin **`*.workers.dev`**. Login
 | Bootstrap secret | `wrangler secret put/delete ADMIN_BOOTSTRAP_SECRET` | Workers → Secrets |
 | Deploy Worker | `npm run deploy` | Workers → Deploy |
 | Bootstrap HTTP | `curl.exe` + JSON file | API client |
-| Frontend API URL | — | Vercel → Environment Variables + Redeploy |
+| Frontend API URL + proxy | Commit root `vercel.json` (API rewrite) | Vercel → Env (clear `VITE_API_BASE_URL`) + Redeploy |
 
 ---
 
