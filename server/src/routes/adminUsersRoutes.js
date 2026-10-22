@@ -1,9 +1,11 @@
 import { readJsonBody, JSON_HEADERS } from '../lib/http.js'
+import { canManageAdminUsers } from '../lib/adminRoles.js'
 import {
   createAdminUser,
   listAdminUsers,
   resetAdminUserPassword,
   setAdminUserDisabled,
+  updateAdminUserRole,
 } from '../services/adminUsersManagement.js'
 
 const NO_STORE = { ...JSON_HEADERS, 'Cache-Control': 'no-store' }
@@ -14,7 +16,7 @@ const NO_STORE = { ...JSON_HEADERS, 'Cache-Control': 'no-store' }
  * @param {{ identity: { userId?: string, email: string, role?: string } }} auth
  */
 export async function handleAdminUsersRoutes(request, env, auth) {
-  if (auth.identity.role !== 'owner') {
+  if (!canManageAdminUsers(auth.identity.role)) {
     return Response.json(
       { error: 'forbidden', message: 'Owner access required.' },
       { status: 403, headers: NO_STORE },
@@ -43,6 +45,7 @@ export async function handleAdminUsersRoutes(request, env, auth) {
       email: String(body.email ?? ''),
       password: String(body.password ?? ''),
       displayName: body.displayName != null ? String(body.displayName) : undefined,
+      role: body.role,
     })
     if (!result.ok) {
       return Response.json(
@@ -51,6 +54,26 @@ export async function handleAdminUsersRoutes(request, env, auth) {
       )
     }
     return Response.json({ user: result.user }, { status: 201, headers: NO_STORE })
+  }
+
+  const roleMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)\/role$/)
+  if (method === 'POST' && roleMatch) {
+    const parsed = await readJsonBody(request)
+    if (!parsed.ok) {
+      return Response.json(
+        { error: parsed.error, message: parsed.message },
+        { status: parsed.status, headers: NO_STORE },
+      )
+    }
+    const body = /** @type {Record<string, unknown>} */ (parsed.value ?? {})
+    const result = await updateAdminUserRole(env.DB, roleMatch[1], body.role)
+    if (!result.ok) {
+      return Response.json(
+        { error: result.code, message: result.message },
+        { status: result.status, headers: NO_STORE },
+      )
+    }
+    return Response.json({ user: result.user }, { status: 200, headers: NO_STORE })
   }
 
   const disableMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)\/disable$/)

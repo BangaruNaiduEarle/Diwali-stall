@@ -1,3 +1,4 @@
+import { isValidFamilyPackId } from './familyPackValidation.js'
 import { isValidProductId } from './validation.js'
 
 export const CUSTOMER_REQUEST_LIMITS = {
@@ -8,12 +9,18 @@ export const CUSTOMER_REQUEST_LIMITS = {
   nameMax: 80,
   phoneDigits: 10,
   areaMax: 120,
+  deliveryAddressMax: 240,
+  deliveryLandmarkMax: 120,
+  deliveryMapsUrlMax: 500,
   pickupMax: 40,
   noteMax: 300,
   idempotencyKeyMax: 128,
 }
 
 const FORBIDDEN_BODY_KEYS = new Set([
+  'publicReference',
+  'public_reference',
+  'reference',
   'unitRatePaise',
   'unit_rate_paise',
   'price',
@@ -109,6 +116,24 @@ export function validateCustomerRequestBody(body) {
     errors['customer.note'] = 'Note is too long.'
   }
 
+  const deliveryAddress = String(customerObj.deliveryAddress ?? customerObj.delivery_address ?? '').trim()
+  if (deliveryAddress.length > CUSTOMER_REQUEST_LIMITS.deliveryAddressMax) {
+    errors['customer.deliveryAddress'] = 'Delivery address is too long.'
+  }
+
+  const deliveryLandmark = String(customerObj.deliveryLandmark ?? customerObj.delivery_landmark ?? '').trim()
+  if (deliveryLandmark.length > CUSTOMER_REQUEST_LIMITS.deliveryLandmarkMax) {
+    errors['customer.deliveryLandmark'] = 'Landmark is too long.'
+  }
+
+  const deliveryMapsUrl = String(customerObj.deliveryMapsUrl ?? customerObj.delivery_maps_url ?? '').trim()
+  if (deliveryMapsUrl.length > CUSTOMER_REQUEST_LIMITS.deliveryMapsUrlMax) {
+    errors['customer.deliveryMapsUrl'] = 'Maps link is too long.'
+  }
+  if (deliveryMapsUrl && !/^https?:\/\//i.test(deliveryMapsUrl)) {
+    errors['customer.deliveryMapsUrl'] = 'Maps link must start with http:// or https://.'
+  }
+
   /** @type {NormalizedLineItem[]} */
   const items = []
   if (Array.isArray(itemsRaw)) {
@@ -131,23 +156,42 @@ export function validateCustomerRequestBody(body) {
           }
         }
         const productId = String(item.productId ?? item.product_id ?? '').trim()
-        if (!isValidProductId(productId)) {
-          errors[`${prefix}.productId`] = 'Invalid product id.'
+        const familyPackId = String(item.familyPackId ?? item.family_pack_id ?? '').trim()
+        if (productId && familyPackId) {
+          errors[`${prefix}.productId`] = 'Provide productId or familyPackId, not both.'
           return
         }
-        if (seen.has(productId)) {
-          errors[`${prefix}.productId`] = 'Duplicate product id in request.'
+        if (!productId && !familyPackId) {
+          errors[`${prefix}.productId`] = 'Product id or family pack id is required.'
           return
         }
-        seen.add(productId)
+
+        const lineKey = productId ? `p:${productId}` : `fp:${familyPackId}`
+        if (seen.has(lineKey)) {
+          errors[productId ? `${prefix}.productId` : `${prefix}.familyPackId`] = 'Duplicate line in request.'
+          return
+        }
+        seen.add(lineKey)
+
+        if (productId) {
+          if (!isValidProductId(productId)) {
+            errors[`${prefix}.productId`] = 'Invalid product id.'
+            return
+          }
+        } else if (!isValidFamilyPackId(familyPackId)) {
+          errors[`${prefix}.familyPackId`] = 'Invalid family pack id.'
+          return
+        }
 
         const quantity = Number(item.quantity)
         if (!Number.isInteger(quantity)) {
           errors[`${prefix}.quantity`] = 'Quantity must be a whole number.'
         } else if (quantity < CUSTOMER_REQUEST_LIMITS.minQuantity || quantity > CUSTOMER_REQUEST_LIMITS.maxQuantity) {
           errors[`${prefix}.quantity`] = `Quantity must be between ${CUSTOMER_REQUEST_LIMITS.minQuantity} and ${CUSTOMER_REQUEST_LIMITS.maxQuantity}.`
-        } else {
+        } else if (productId) {
           items.push({ productId, quantity })
+        } else {
+          items.push({ familyPackId, quantity })
         }
       })
     }
@@ -166,6 +210,9 @@ export function validateCustomerRequestBody(body) {
         area,
         pickupPreference,
         note,
+        deliveryAddress,
+        deliveryLandmark,
+        deliveryMapsUrl,
       },
       items,
     },

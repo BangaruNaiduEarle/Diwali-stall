@@ -5,6 +5,7 @@ import {
   createOrGetQuotationForRequest,
   getActiveQuotationForRequest,
   getQuotationById,
+  getOrderConfirmationWhatsAppPayload,
   getQuotationWhatsAppPayload,
 } from '../services/adminQuotations.js'
 
@@ -107,6 +108,33 @@ export async function handleAdminQuotationRoutes(request, env, url, identity) {
       return Response.json({ error: 'not_found', message: 'Quotation not found.' }, { status: 404, headers: NO_STORE })
     }
     return Response.json({ quotation }, { headers: NO_STORE })
+  }
+
+  const orderConfirmMatch = pathname.match(
+    /^\/api\/admin\/customer-requests\/([^/]+)\/order-confirmation\/whatsapp\/?$/,
+  )
+  if (orderConfirmMatch && method === 'GET') {
+    const requestId = orderConfirmMatch[1]
+    if (!isValidCustomerRequestId(requestId)) {
+      return Response.json({ error: 'not_found', message: 'Customer request not found.' }, { status: 404, headers: NO_STORE })
+    }
+    const payload = await getOrderConfirmationWhatsAppPayload(db, requestId)
+    if (!payload.ok) {
+      return Response.json(
+        { error: payload.code, message: payload.message },
+        { status: payload.status ?? 400, headers: NO_STORE },
+      )
+    }
+    const urlOut = buildWhatsAppSendUrl(payload.message, payload.customerPhone)
+    return Response.json(
+      {
+        message: payload.message,
+        whatsAppUrl: urlOut,
+        quotationId: payload.quotationId,
+        requestId: payload.requestId,
+      },
+      { headers: NO_STORE },
+    )
   }
 
   const waMatch = pathname.match(/^\/api\/admin\/quotations\/([^/]+)\/whatsapp\/?$/)

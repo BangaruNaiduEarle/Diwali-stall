@@ -5,6 +5,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { isRetryableLocalD1Error, withLocalD1LockAndRetry } from './lib/localD1Lock.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const SERVER_ROOT = path.resolve(__dirname, '..')
@@ -18,15 +19,17 @@ function sqlString(value) {
 }
 
 function runSqlFile(filePath) {
-  execFileSync(
-    'npx',
-    ['wrangler', 'd1', 'execute', DB_NAME, '--local', '--file', filePath],
-    {
-      cwd: SERVER_ROOT,
-      stdio: 'pipe',
-      shell: process.platform === 'win32',
-    },
-  )
+  withLocalD1LockAndRetry(() => {
+    execFileSync(
+      'npx',
+      ['wrangler', 'd1', 'execute', DB_NAME, '--local', '--file', filePath],
+      {
+        cwd: SERVER_ROOT,
+        stdio: 'pipe',
+        shell: process.platform === 'win32',
+      },
+    )
+  })
 }
 
 if (!fs.existsSync(IMPORT_JSON)) {
@@ -42,6 +45,11 @@ const lines = [
   'BEGIN TRANSACTION;',
   "DELETE FROM products WHERE id GLOB 'TEST-*';",
   "DELETE FROM products WHERE id = 'P900';",
+  "DELETE FROM products WHERE id = 'P901';",
+  "DELETE FROM products WHERE id = 'P902';",
+  "DELETE FROM products WHERE id = 'P903';",
+  "DELETE FROM products WHERE id = 'P905';",
+  "DELETE FROM products WHERE id = 'P906';",
 ]
 
 for (const r of records) {
@@ -96,10 +104,12 @@ if (process.env.WRANGLER_LOG === 'debug') {
 
 const countFile = path.join(SERVER_ROOT, 'data', 'generated', '_count.sql')
 fs.writeFileSync(countFile, 'SELECT COUNT(*) AS n FROM products;\n', 'utf8')
-const countOut = execFileSync(
-  'npx',
-  ['wrangler', 'd1', 'execute', DB_NAME, '--local', '--file', countFile, '--json'],
-  { cwd: SERVER_ROOT, encoding: 'utf8', shell: process.platform === 'win32' },
+const countOut = withLocalD1LockAndRetry(() =>
+  execFileSync(
+    'npx',
+    ['wrangler', 'd1', 'execute', DB_NAME, '--local', '--file', countFile, '--json'],
+    { cwd: SERVER_ROOT, encoding: 'utf8', shell: process.platform === 'win32' },
+  ),
 )
 
 let importedCount = null

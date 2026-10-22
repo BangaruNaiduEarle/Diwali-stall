@@ -2,13 +2,17 @@ import { Link } from 'react-router-dom'
 import { Pencil } from 'lucide-react'
 import { formatINR } from '../../utils/currency.js'
 import AdminProductTableThumb from './AdminProductTableThumb.jsx'
-import { formatAdminProductCompany, formatAdminProductPack } from '../lib/adminProductTableDisplay.js'
+import {
+  adminProductListSellingPriceView,
+  formatAdminProductCompany,
+  formatAdminProductPack,
+} from '../lib/adminProductTableDisplay.js'
 
 /** @param {{ active?: boolean }} props */
 function StatusBadge({ active = true }) {
   return (
     <span className={`admin-product-card__status${active ? '' : ' admin-product-card__status--muted'}`}>
-      {active ? 'Active' : 'Archived'}
+      {active ? 'Active' : 'Inactive'}
     </span>
   )
 }
@@ -21,15 +25,25 @@ function formatOptionalInr(value) {
   return formatINR(n)
 }
 
-/** @param {{ product: Record<string, unknown> }} props */
-export default function AdminProductCard({ product }) {
+/** @param {{ product: Record<string, unknown>, showSensitiveColumns?: boolean, showUnitInSummary?: boolean }} props */
+export default function AdminProductCard({
+  product,
+  showSensitiveColumns = true,
+  showUnitInSummary = showSensitiveColumns,
+}) {
   const id = String(product.id ?? '')
   const name = String(product.name ?? '')
   const category = String(product.categoryLabel ?? product.categorySlug ?? '')
   const company = product.company ? formatAdminProductCompany(product.company) : ''
   const pack = product.pack ? formatAdminProductPack(product.pack) : ''
-  const extras = [company !== '—' ? company : '', pack !== '—' ? pack : ''].filter(Boolean).join(' · ')
+  const extras = [
+    company !== '—' ? company : '',
+    showUnitInSummary && pack !== '—' ? pack : '',
+  ]
+    .filter(Boolean)
+    .join(' · ')
   const editLabel = `Edit ${name}`
+  const sellingView = adminProductListSellingPriceView(product)
 
   return (
     <article className="admin-card admin-product-card">
@@ -64,21 +78,23 @@ export default function AdminProductCard({ product }) {
       </div>
 
       <dl className="admin-product-card__rates">
+        {showSensitiveColumns ? (
+          <div>
+            <dt>Purchase</dt>
+            <dd className="tabular-nums">
+              {product.hasPurchaseRate ? (
+                formatOptionalInr(product.purchaseRateInr)
+              ) : (
+                <span className="admin-table__meta admin-table__meta--warn">Missing</span>
+              )}
+            </dd>
+          </div>
+        ) : null}
         <div>
-          <dt>Purchase</dt>
+          <dt>Selling Price</dt>
           <dd className="tabular-nums">
-            {product.hasPurchaseRate ? (
-              formatOptionalInr(product.purchaseRateInr)
-            ) : (
-              <span className="admin-table__meta admin-table__meta--warn">Missing</span>
-            )}
-          </dd>
-        </div>
-        <div>
-          <dt>X4</dt>
-          <dd className="tabular-nums">
-            {product.hasX4SellingRate || product.hasPrivateX4Rate ? (
-              formatOptionalInr(product.x4SellingPriceInr ?? product.privateX4Inr)
+            {sellingView.kind === 'value' ? (
+              formatOptionalInr(sellingView.inr)
             ) : (
               <span className="admin-table__meta admin-table__meta--warn">Missing</span>
             )}

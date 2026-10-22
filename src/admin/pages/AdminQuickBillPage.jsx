@@ -67,7 +67,7 @@ export default function AdminQuickBillPage() {
     if (!res.ok) {
       setPreview(null)
       const missing = res.missingProductIds?.length
-        ? ` Missing X4 for: ${res.missingProductIds.join(', ')}.`
+        ? ` Missing selling price for: ${res.missingProductIds.join(', ')}.`
         : ''
       setPreviewError((res.message || 'Could not calculate total.') + missing)
       return
@@ -104,7 +104,7 @@ export default function AdminQuickBillPage() {
       setCheckoutBusy(false)
       if (!res.ok) {
         const missing = res.missingProductIds?.length
-          ? ` Missing X4 for: ${res.missingProductIds.join(', ')}.`
+          ? ` Missing selling price for: ${res.missingProductIds.join(', ')}.`
           : ''
         setCheckoutError((res.message || 'Checkout failed.') + missing)
         return
@@ -129,7 +129,7 @@ export default function AdminQuickBillPage() {
         <header className="admin-page__head">
           <h2 className="admin-page__title">Bill saved</h2>
           <p className="admin-muted">
-            Quotation total {formatINR(paiseToInrHelper(success.totalPaise))} (X4 rates). No payment recorded.
+            Quotation total {formatINR(paiseToInrHelper(success.totalPaise))} (selling prices). No payment recorded.
           </p>
         </header>
         <div className="admin-panel admin-quick-bill__success">
@@ -148,7 +148,7 @@ export default function AdminQuickBillPage() {
     <div className="admin-page admin-quick-bill admin-quick-bill--with-dock">
       <header className="admin-page__head">
         <h2 className="admin-page__title">Quick bill</h2>
-        <p className="admin-muted">Search products, build a cart, create a manual request with X4 quotation.</p>
+        <p className="admin-muted">Search products, build a cart, create a manual request with a selling-price quotation.</p>
       </header>
 
       <section className="admin-quick-bill__search" aria-label="Product search">
@@ -188,7 +188,7 @@ export default function AdminQuickBillPage() {
                       <span className="admin-quick-bill__result-name">{name}</span>
                     </span>
                     {!hasX4 ? (
-                      <span className="admin-quick-bill__badge admin-quick-bill__badge--warn">No X4</span>
+                      <span className="admin-quick-bill__badge admin-quick-bill__badge--warn">No selling price</span>
                     ) : (
                       <span className="admin-quick-bill__badge-spacer" aria-hidden="true" />
                     )}
@@ -287,7 +287,7 @@ export default function AdminQuickBillPage() {
       <div className="admin-quick-bill__dock" aria-live="polite">
         <div className="admin-quick-bill__dock-inner">
           <div className="admin-quick-bill__total-block">
-            <span className="admin-quick-bill__total-label">Total (X4)</span>
+            <span className="admin-quick-bill__total-label">Total (Selling Price)</span>
             <span className="admin-quick-bill__total-value">
               {previewBusy ? <Loader2 size={22} className="animate-spin" aria-hidden="true" /> : totalInr}
             </span>

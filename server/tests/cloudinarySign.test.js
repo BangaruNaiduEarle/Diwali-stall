@@ -141,6 +141,21 @@ describe('POST /api/admin/uploads/sign handler', () => {
     assert.equal(body.signature, expected)
   })
 
+  it('returns family pack folder and publicId when familyPackId is provided', async () => {
+    const res = await handleAdminUploadSign(
+      new Request('https://example.com/api/admin/uploads/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ familyPackId: 'FP001', slot: 2 }),
+      }),
+      env,
+    )
+    assert.equal(res.status, 200)
+    const body = await res.json()
+    assert.equal(body.folder, 'diwali/family-packs')
+    assert.equal(body.publicId, 'FP001/2')
+  })
+
   it('rejects invalid productId', async () => {
     const res = await handleAdminUploadSign(
       new Request('https://example.com/api/admin/uploads/sign', {

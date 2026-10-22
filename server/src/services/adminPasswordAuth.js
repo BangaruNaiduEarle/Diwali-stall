@@ -1,10 +1,13 @@
 import { randomBytesHex } from '../lib/passwordHash.js'
+import { isLocalAdminDevAuthEnabled } from '../middleware/localAdminDevAuth.js'
 import {
+  buildDevJwtSuppressClearCookie,
+  buildDevJwtSuppressSetCookie,
   buildSessionClearCookie,
   buildSessionSetCookie,
   readSessionIdFromRequest,
   readSessionTtlSeconds,
-  requestIsSecure,
+  resolveSessionCookieOptions,
 } from '../lib/adminSessionCookie.js'
 import {
   hashPassword,
@@ -12,6 +15,8 @@ import {
   validatePasswordPolicy,
   verifyPassword,
 } from '../lib/passwordHash.js'
+import { classifyAdminLoginFailure, logAdminLoginFailure } from '../lib/adminLoginDiagnostics.js'
+import { normalizeAdminRole } from '../lib/adminRoles.js'
 import { getAdminUserByEmail, getAdminUserById, isAdminUserActive } from './adminUserStore.js'
 
 const MAX_USERS = 5
@@ -123,7 +128,7 @@ export async function resolveSessionIdentity(db, sessionId) {
   return {
     userId: String(row.id),
     email: String(row.email),
-    role: row.role === 'owner' ? 'owner' : 'admin',
+    role: normalizeAdminRole(row.role),
     sub: String(row.session_id),
   }
 }
@@ -154,6 +159,7 @@ export async function loginWithPassword(request, db, env, creds) {
   }
 
   if (await isLoginRateLimited(db, email, ipHash)) {
+    logAdminLoginFailure('rate_limited', { emailNormalized: email })
     return {
       ok: false,
       status: 429,
@@ -163,15 +169,21 @@ export async function loginWithPassword(request, db, env, creds) {
   }
 
   const user = await getAdminUserByEmail(db, email)
-  const validUser = user && isAdminUserActive(user) && user.passwordHash
-  let success = false
-  if (validUser) {
-    success = await verifyPassword(password, user.passwordHash)
+  const activeUser = user && isAdminUserActive(user)
+  let passwordVerified = false
+  if (activeUser && user.passwordHash) {
+    passwordVerified = await verifyPassword(password, user.passwordHash)
   }
 
-  await recordLoginAttempt(db, { emailNormalized: email, ipHash, success })
+  const loginOk = Boolean(activeUser && user.passwordHash && passwordVerified)
+  await recordLoginAttempt(db, { emailNormalized: email, ipHash, success: loginOk })
 
-  if (!validUser || !success) {
+  if (!loginOk) {
+    const reason = classifyAdminLoginFailure({
+      user: user ?? null,
+      passwordVerified,
+    })
+    logAdminLoginFailure(reason, { emailNormalized: email, userId: user?.id ?? null })
     return { ok: false, status: 401, code: 'unauthorized', message: 'Invalid email or password.' }
   }
 
@@ -185,25 +197,33 @@ export async function loginWithPassword(request, db, env, creds) {
 
   const ttl = readSessionTtlSeconds(env)
   const sessionId = await createSession(db, user.id, ttl)
-  const secure = requestIsSecure(request)
+  const cookieOpts = resolveSessionCookieOptions(request, env)
   return {
     ok: true,
     identity: { userId: user.id, email: user.email, role: user.role, sub: sessionId },
-    setCookie: buildSessionSetCookie(sessionId, ttl, { secure }),
+    setCookie: buildSessionSetCookie(sessionId, ttl, cookieOpts),
+    clearDevJwtSuppressCookie: buildDevJwtSuppressClearCookie(cookieOpts),
   }
 }
 
 /**
  * @param {Request} request
  * @param {D1Database} db
+ * @param {Record<string, unknown>} env
  */
-export async function logoutSession(request, db) {
+export async function logoutSession(request, db, env) {
   const sessionId = readSessionIdFromRequest(request)
   if (sessionId) {
     await db.prepare('DELETE FROM admin_sessions WHERE id = ?').bind(sessionId).run()
   }
-  const secure = requestIsSecure(request)
-  return { ok: true, clearCookie: buildSessionClearCookie({ secure }) }
+  const cookieOpts = resolveSessionCookieOptions(request, env)
+  const ttl = readSessionTtlSeconds(env)
+  /** @type {{ ok: true, clearCookie: string, suppressDevJwtCookie?: string }} */
+  const result = { ok: true, clearCookie: buildSessionClearCookie(cookieOpts) }
+  if (isLocalAdminDevAuthEnabled(env, request)) {
+    result.suppressDevJwtCookie = buildDevJwtSuppressSetCookie(ttl, cookieOpts)
+  }
+  return result
 }
 
 /**

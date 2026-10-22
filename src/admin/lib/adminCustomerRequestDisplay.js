@@ -1,3 +1,5 @@
+import { formatAdminDateTimeIST } from './adminDateTime.js'
+
 /** @param {unknown} id */
 export function formatShortRequestId(id) {
   const s = String(id ?? '').trim()
@@ -5,17 +7,13 @@ export function formatShortRequestId(id) {
   return `${s.slice(0, 8)}…${s.slice(-4)}`
 }
 
+/** @param {unknown} publicReference */
+export function formatAdminPublicReference(publicReference) {
+  const s = String(publicReference ?? '').trim()
+  return s || '—'
+}
+
 /** @param {unknown} raw */
 export function formatRequestCreatedAt(raw) {
-  const s = String(raw ?? '').trim()
-  if (!s) return '—'
-  const d = new Date(s.includes('T') ? s : s.replace(' ', 'T'))
-  if (Number.isNaN(d.getTime())) return s
-  return d.toLocaleString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatAdminDateTimeIST(raw)
 }

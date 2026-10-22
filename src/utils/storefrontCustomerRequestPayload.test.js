@@ -31,6 +31,24 @@ describe('storefrontCustomerRequestPayload (frontend)', () => {
     assert.equal(body.customer.pickupDate, 'November 7, 2026')
   })
 
+  it('sorts mixed product and family pack lines for stable submission', () => {
+    const mixed = [
+      { familyPackId: 'FP002', quantity: 1 },
+      { productId: 'P002', quantity: 2 },
+      { familyPackId: 'FP001', quantity: 3 },
+      { productId: 'P001', quantity: 1 },
+    ]
+    const body = buildCustomerRequestBodyFromParts(sampleCustomer, mixed)
+    assert.deepEqual(body.items, [
+      { familyPackId: 'FP001', quantity: 3 },
+      { familyPackId: 'FP002', quantity: 1 },
+      { productId: 'P001', quantity: 1 },
+      { productId: 'P002', quantity: 2 },
+    ])
+    assert.equal('price' in body.items[0], false)
+    assert.equal('snapshotPricePaise' in body.items[0], false)
+  })
+
   it('uses a stable fingerprint and idempotency key for the same submission', async () => {
     const fp1 = buildSubmissionFingerprintFromParts(sampleCustomer, sampleItems)
     const fp2 = buildSubmissionFingerprintFromParts(sampleCustomer, [...sampleItems].reverse())

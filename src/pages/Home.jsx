@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ChevronRight, HelpCircle } from 'lucide-react'
 import { CATALOG_CATEGORIES } from '../data/categories'
+import PreorderMarquee from '../components/PreorderMarquee'
 import FestiveHero from '../components/hero/FestiveHero'
 import ComplimentaryGiftPromo from '../components/promo/ComplimentaryGiftPromo'
 import HomeStallSection from '../components/home/HomeStallSection'
@@ -33,6 +34,7 @@ function Home() {
 
   return (
     <>
+      <PreorderMarquee />
       <FestiveHero />
 
       <ComplimentaryGiftPromo variant="marquee" />

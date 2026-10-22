@@ -1,3 +1,6 @@
+import { getFamilyPackById, isFamilyPackAvailableForEstimate } from './familyPackCatalogue.js'
+import { paiseToInr } from './currencyPaise.js'
+
 export const ESTIMATE_STORAGE_KEY = 'crackers_estimate'
 export const ESTIMATE_MAX_QUANTITY = 99
 
@@ -18,14 +21,39 @@ export function isProductSoldOut(product) {
   return status === 'soldout' || status === 'sold-out'
 }
 
+export function isFamilyPackEstimateItem(item) {
+  return Boolean(item && typeof item.familyPackId === 'string' && item.familyPackId.trim())
+}
+
 export function normalizeEstimateItem(raw) {
-  if (!raw || typeof raw.productId !== 'string') return null
+  if (!raw || typeof raw !== 'object') return null
   const quantity = Number(raw.quantity)
   if (!Number.isFinite(quantity) || quantity < 1) return null
-  return {
-    productId: raw.productId,
-    quantity: Math.min(ESTIMATE_MAX_QUANTITY, Math.floor(quantity)),
+  const clamped = Math.min(ESTIMATE_MAX_QUANTITY, Math.floor(quantity))
+
+  const familyPackId = String(raw.familyPackId ?? '').trim()
+  if (familyPackId) {
+    const snapshotName = String(raw.snapshotName ?? '').trim()
+    const snapshotPricePaiseRaw = Number(raw.snapshotPricePaise)
+    const snapshotPricePaise = Number.isInteger(snapshotPricePaiseRaw) ? snapshotPricePaiseRaw : undefined
+    return {
+      familyPackId,
+      quantity: clamped,
+      ...(snapshotName ? { snapshotName } : {}),
+      ...(snapshotPricePaise !== undefined ? { snapshotPricePaise } : {}),
+    }
   }
+
+  if (typeof raw.productId !== 'string') return null
+  return {
+    productId: raw.productId.trim(),
+    quantity: clamped,
+  }
+}
+
+function estimateItemKey(item) {
+  if (isFamilyPackEstimateItem(item)) return `fp:${item.familyPackId}`
+  return `p:${item.productId}`
 }
 
 export function loadEstimateFromStorage() {
@@ -38,8 +66,10 @@ export function loadEstimateFromStorage() {
     const seen = new Set()
     for (const entry of parsed) {
       const item = normalizeEstimateItem(entry)
-      if (!item || seen.has(item.productId)) continue
-      seen.add(item.productId)
+      if (!item) continue
+      const key = estimateItemKey(item)
+      if (seen.has(key)) continue
+      seen.add(key)
       items.push(item)
     }
     return items
@@ -56,6 +86,26 @@ export function saveEstimateToStorage(items) {
   }
 }
 
+/**
+ * Normalize draft lines and persist immediately (avoids StrictMode / effect timing restoring stale data).
+ * @param {{ productId: string, quantity: number }[]} items
+ * @returns {{ productId: string, quantity: number }[]}
+ */
+export function persistDraftEstimateItems(items) {
+  const normalized = []
+  const seen = new Set()
+  for (const entry of items ?? []) {
+    const item = normalizeEstimateItem(entry)
+    if (!item) continue
+    const key = estimateItemKey(item)
+    if (seen.has(key)) continue
+    seen.add(key)
+    normalized.push(item)
+  }
+  saveEstimateToStorage(normalized)
+  return normalized
+}
+
 export function getProductById(productId) {
   return productById.get(String(productId ?? '').trim()) ?? null
 }
@@ -69,13 +119,15 @@ function unitPriceForEstimate(product) {
   return typeof price === 'number' && Number.isFinite(price) ? price : 0
 }
 
-/** Estimate rows for messaging and internal helpers. Do not show lineTotal in customer UI. */
+/** Product-only estimate rows. Do not show lineTotal in customer UI. */
 export function getEstimateProducts(estimateItems) {
   return estimateItems
+    .filter((item) => !isFamilyPackEstimateItem(item))
     .map(({ productId, quantity }) => {
       const product = getProductById(productId)
       if (!product || isProductSoldOut(product)) return null
       return {
+        lineType: 'product',
         productId,
         product,
         quantity,
@@ -85,8 +137,67 @@ export function getEstimateProducts(estimateItems) {
     .filter(Boolean)
 }
 
+/** Family pack lines with price snapshots (pack is one billable SKU). */
+export function getFamilyPackEstimateRows(estimateItems) {
+  return estimateItems
+    .filter(isFamilyPackEstimateItem)
+    .map((item) => {
+      const pack = getFamilyPackById(item.familyPackId)
+      const liveName = pack ? String(pack.name) : null
+      const livePaise = pack ? Number(pack.sellingPricePaise) : null
+      const name = item.snapshotName || liveName || 'Family pack'
+      const unitPricePaise =
+        Number.isInteger(item.snapshotPricePaise) && item.snapshotPricePaise > 0
+          ? item.snapshotPricePaise
+          : Number.isInteger(livePaise) && livePaise > 0
+            ? livePaise
+            : 0
+      const available = isFamilyPackAvailableForEstimate(item.familyPackId)
+      return {
+        lineType: 'family_pack',
+        familyPackId: item.familyPackId,
+        pack,
+        name,
+        quantity: item.quantity,
+        unitPricePaise,
+        unitPriceInr: paiseToInr(unitPricePaise),
+        lineTotalPaise: unitPricePaise * item.quantity,
+        lineTotal: paiseToInr(unitPricePaise * item.quantity),
+        unavailable: !available && !item.snapshotName,
+        snapshotStale:
+          pack &&
+          Number.isInteger(item.snapshotPricePaise) &&
+          Number.isInteger(livePaise) &&
+          item.snapshotPricePaise !== livePaise,
+      }
+    })
+    .filter((row) => row.name)
+}
+
+export function getEstimateDisplayRows(estimateItems) {
+  return [...getEstimateProducts(estimateItems), ...getFamilyPackEstimateRows(estimateItems)]
+}
+
 export function computeEstimateSubtotal(estimateItems) {
-  return getEstimateProducts(estimateItems).reduce((sum, row) => sum + row.lineTotal, 0)
+  const productTotal = getEstimateProducts(estimateItems).reduce((sum, row) => sum + row.lineTotal, 0)
+  const packTotal = getFamilyPackEstimateRows(estimateItems).reduce((sum, row) => sum + row.lineTotal, 0)
+  return productTotal + packTotal
+}
+
+/**
+ * @param {string} familyPackId
+ * @returns {{ familyPackId: string, snapshotName: string, snapshotPricePaise: number } | null}
+ */
+export function buildFamilyPackEstimateSnapshot(familyPackId) {
+  const pack = getFamilyPackById(familyPackId)
+  if (!pack) return null
+  const sellingPricePaise = Number(pack.sellingPricePaise)
+  if (!Number.isInteger(sellingPricePaise) || sellingPricePaise <= 0) return null
+  return {
+    familyPackId,
+    snapshotName: String(pack.name),
+    snapshotPricePaise: sellingPricePaise,
+  }
 }
 
 export function computeEstimateCount(estimateItems) {

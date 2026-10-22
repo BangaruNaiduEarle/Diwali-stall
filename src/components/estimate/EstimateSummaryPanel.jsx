@@ -1,10 +1,15 @@
 import Button from '../ui/Button'
 import ComplimentaryGiftPromo from '../promo/ComplimentaryGiftPromo'
+import { formatINR } from '../../utils/currency.js'
+import FreeDoorDeliveryNotice from './FreeDoorDeliveryNotice.jsx'
 
 /** Desktop-only sticky summary for step 1. */
 export default function EstimateSummaryPanel({
   uniqueProductCount,
   estimateCount,
+  qualifyingTotalInr = 0,
+  deliveryMessage = '',
+  deliveryQualified = false,
   primaryLabel,
   onPrimary,
   primaryDisabled = false,
@@ -24,6 +29,16 @@ export default function EstimateSummaryPanel({
       <p className="mt-3 text-sm text-[var(--color-charcoal)]">
         {uniqueProductCount} {productLabel} · {estimateCount} {itemLabel}
       </p>
+      {qualifyingTotalInr > 0 ? (
+        <p className="mt-3 text-sm font-semibold tabular-nums text-[var(--color-charcoal)]">
+          Estimated total (listed prices): {formatINR(qualifyingTotalInr)}
+        </p>
+      ) : null}
+      <FreeDoorDeliveryNotice
+        message={deliveryMessage}
+        qualified={deliveryQualified}
+        qualifyingTotalInr={qualifyingTotalInr}
+      />
       <ComplimentaryGiftPromo variant="inline" className="mt-4" />
       <p className="mt-3 text-xs leading-relaxed text-[var(--color-muted)]">
         We&apos;ll confirm availability and pricing with you on WhatsApp. No prices are shown here by design.

@@ -8,6 +8,7 @@ import { validateCustomerRequestStatusTransition } from '../lib/adminCustomerReq
 export const ADMIN_LIST_CUSTOMER_REQUESTS_SQL = `
   SELECT
     r.id,
+    r.public_reference,
     r.status,
     r.source,
     r.customer_name,
@@ -25,6 +26,7 @@ export const ADMIN_LIST_CUSTOMER_REQUESTS_SQL = `
 export const ADMIN_GET_CUSTOMER_REQUEST_SQL = `
   SELECT
     id,
+    public_reference,
     status,
     source,
     customer_name,
@@ -32,6 +34,9 @@ export const ADMIN_GET_CUSTOMER_REQUEST_SQL = `
     customer_area,
     pickup_preference,
     customer_note,
+    delivery_address,
+    delivery_landmark,
+    delivery_maps_url,
     created_at,
     updated_at
   FROM customer_requests
@@ -39,7 +44,7 @@ export const ADMIN_GET_CUSTOMER_REQUEST_SQL = `
 `.trim()
 
 export const ADMIN_LIST_CUSTOMER_REQUEST_ITEMS_SQL = `
-  SELECT line_number, product_id, product_name, quantity
+  SELECT line_number, product_id, family_pack_id, product_name, quantity, unit_price_paise
   FROM customer_request_items
   WHERE request_id = ?
   ORDER BY line_number ASC
@@ -51,10 +56,67 @@ export const ADMIN_UPDATE_CUSTOMER_REQUEST_STATUS_SQL = `
   WHERE id = ?
 `.trim()
 
+/**
+ * Phone match key. Must stay aligned with CUSTOMER_PHONE_SEARCH_SQL:
+ * spaces, hyphens, parentheses, and plus signs are ignored.
+ * @param {unknown} value
+ */
+export function normalizeCustomerRequestPhoneSearch(value) {
+  return String(value ?? '').replace(/[\s()+-]/g, '')
+}
+
+/** @param {string} value */
+export function escapeSqlLikeFragment(value) {
+  return String(value).replace(/[\\%_]/g, (ch) => `\\${ch}`)
+}
+
+/** Stored phones normalized the same way as normalizeCustomerRequestPhoneSearch. */
+const CUSTOMER_PHONE_SEARCH_SQL =
+  "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(r.customer_phone, ''), ' ', ''), '-', ''), '(', ''), ')', ''), '+', '')"
+
+/**
+ * @param {{ status?: string, q?: string }} opts
+ * @returns {{ whereSql: string, binds: unknown[] }}
+ */
+export function buildAdminCustomerRequestListFilter(opts) {
+  /** @type {string[]} */
+  const wheres = []
+  /** @type {unknown[]} */
+  const binds = []
+
+  if (opts.status) {
+    wheres.push('r.status = ?')
+    binds.push(opts.status)
+  }
+
+  const q = String(opts.q ?? '').trim()
+  if (q) {
+    /** @type {string[]} */
+    const match = [`r.customer_name LIKE ? ESCAPE '\\'`]
+    binds.push(`%${escapeSqlLikeFragment(q)}%`)
+    const phoneNeedle = normalizeCustomerRequestPhoneSearch(q)
+    if (phoneNeedle) {
+      match.push(`${CUSTOMER_PHONE_SEARCH_SQL} LIKE ? ESCAPE '\\'`)
+      binds.push(`%${escapeSqlLikeFragment(phoneNeedle)}%`)
+    }
+    wheres.push(`(${match.join(' OR ')})`)
+  }
+
+  return {
+    whereSql: wheres.length ? `WHERE ${wheres.join(' AND ')}` : '',
+    binds,
+  }
+}
+
 /** @param {Record<string, unknown>} row */
 export function mapAdminCustomerRequestListRow(row) {
+  const publicReferenceRaw = row.public_reference
   return {
     id: row.id,
+    publicReference:
+      publicReferenceRaw != null && String(publicReferenceRaw).trim()
+        ? String(publicReferenceRaw).trim()
+        : null,
     status: row.status,
     source: row.source,
     customerName: row.customer_name ?? null,
@@ -67,8 +129,13 @@ export function mapAdminCustomerRequestListRow(row) {
 
 /** @param {Record<string, unknown>} row @param {Record<string, unknown>[]} items */
 export function mapAdminCustomerRequestDetail(row, items) {
+  const publicReferenceRaw = row.public_reference
   return {
     id: row.id,
+    publicReference:
+      publicReferenceRaw != null && String(publicReferenceRaw).trim()
+        ? String(publicReferenceRaw).trim()
+        : null,
     status: row.status,
     source: row.source,
     customerName: row.customer_name ?? null,
@@ -76,6 +143,9 @@ export function mapAdminCustomerRequestDetail(row, items) {
     customerArea: row.customer_area ?? null,
     pickupPreference: row.pickup_preference ?? null,
     customerNote: row.customer_note ?? null,
+    deliveryAddress: row.delivery_address ?? null,
+    deliveryLandmark: row.delivery_landmark ?? null,
+    deliveryMapsUrl: row.delivery_maps_url ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     items: items.map(mapAdminCustomerRequestItemRow),
@@ -84,41 +154,32 @@ export function mapAdminCustomerRequestDetail(row, items) {
 
 /** @param {Record<string, unknown>} row */
 function mapAdminCustomerRequestItemRow(row) {
+  const familyPackId = row.family_pack_id ? String(row.family_pack_id) : null
+  const productId = row.product_id ? String(row.product_id) : null
   return {
     lineNumber: row.line_number,
-    productId: row.product_id ?? null,
+    lineType: familyPackId ? 'family_pack' : 'product',
+    productId,
+    familyPackId,
     productName: row.product_name,
     quantity: row.quantity,
+    unitPricePaise: row.unit_price_paise != null ? Number(row.unit_price_paise) : null,
   }
 }
 
 /**
  * @param {D1Database} db
- * @param {{ limit: number, offset: number, status?: string }} opts
+ * @param {{ limit: number, offset: number, status?: string, q?: string }} opts
  */
 export async function listAdminCustomerRequests(db, opts) {
   const limit = opts.limit
   const offset = opts.offset
-  const status = opts.status
+  const { whereSql, binds } = buildAdminCustomerRequestListFilter(opts)
+  const listSql = `${ADMIN_LIST_CUSTOMER_REQUESTS_SQL} ${whereSql} ORDER BY r.created_at DESC, r.id DESC LIMIT ? OFFSET ?`
+  const countSql = `SELECT COUNT(*) AS total FROM customer_requests r ${whereSql}`
 
-  const whereClause = status ? 'WHERE r.status = ?' : ''
-  const listSql = `${ADMIN_LIST_CUSTOMER_REQUESTS_SQL} ${whereClause} ORDER BY r.created_at DESC, r.id DESC LIMIT ? OFFSET ?`
-  const countSql = status
-    ? 'SELECT COUNT(*) AS total FROM customer_requests r WHERE r.status = ?'
-    : 'SELECT COUNT(*) AS total FROM customer_requests r'
-
-  const listStmt = db.prepare(listSql)
-  const countStmt = db.prepare(countSql)
-
-  let listResult
-  let countRow
-  if (status) {
-    listResult = await listStmt.bind(status, limit, offset).all()
-    countRow = await countStmt.bind(status).first()
-  } else {
-    listResult = await listStmt.bind(limit, offset).all()
-    countRow = await countStmt.first()
-  }
+  const listResult = await db.prepare(listSql).bind(...binds, limit, offset).all()
+  const countRow = await db.prepare(countSql).bind(...binds).first()
 
   const total = Number(countRow?.total ?? 0)
   const requests = (listResult.results ?? []).map(mapAdminCustomerRequestListRow)

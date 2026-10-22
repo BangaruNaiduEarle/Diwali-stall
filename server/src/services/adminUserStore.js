@@ -1,5 +1,7 @@
+import { normalizeAdminRole } from '../lib/adminRoles.js'
+
 /**
- * @typedef {{ id: string, email: string, displayName: string | null, role: 'owner' | 'admin', passwordHash: string | null, disabledAt: string | null }} AdminUserRow
+ * @typedef {{ id: string, email: string, displayName: string | null, role: import('../lib/adminRoles.js').AdminRole, passwordHash: string | null, disabledAt: string | null }} AdminUserRow
  */
 
 /**
@@ -42,7 +44,7 @@ export function mapAdminUserRow(row) {
     id: String(row.id),
     email: String(row.email),
     displayName: row.display_name != null ? String(row.display_name) : null,
-    role: row.role === 'owner' ? 'owner' : 'admin',
+    role: normalizeAdminRole(row.role),
     passwordHash: row.password_hash != null ? String(row.password_hash) : null,
     disabledAt: row.disabled_at != null ? String(row.disabled_at) : null,
   }
@@ -82,6 +84,28 @@ export async function countOwnersWithPassword(db) {
 
 /**
  * @param {D1Database} db
+ * @param {string} [excludeUserId]
+ */
+export async function countActiveOwners(db, excludeUserId = '') {
+  const exclude = String(excludeUserId ?? '').trim()
+  const row = exclude
+    ? await db
+        .prepare(
+          `SELECT COUNT(*) AS n FROM admin_users
+           WHERE role = 'owner' AND disabled_at IS NULL AND id != ?`,
+        )
+        .bind(exclude)
+        .first()
+    : await db
+        .prepare(
+          `SELECT COUNT(*) AS n FROM admin_users WHERE role = 'owner' AND disabled_at IS NULL`,
+        )
+        .first()
+  return Number(row?.n ?? 0)
+}
+
+/**
+ * @param {D1Database} db
  */
 export async function listAdminUsers(db) {
   const result = await db
@@ -94,7 +118,7 @@ export async function listAdminUsers(db) {
     id: String(row.id),
     email: String(row.email),
     displayName: row.display_name != null ? String(row.display_name) : null,
-    role: row.role === 'owner' ? 'owner' : 'admin',
+    role: normalizeAdminRole(row.role),
     disabled: Boolean(row.disabled_at),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),

@@ -30,7 +30,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss(), localAdminProxyHintPlugin(env)],
     server: {
       // Local dev: proxy admin API to wrangler dev (default http://127.0.0.1:8787).
-      // Production: serve the SPA and Worker on one Access-protected origin; set VITE_API_BASE_URL only if split.
+      // Production: Vercel rewrites /api/* to the Worker; leave VITE_API_BASE_URL empty in Vercel builds.
       proxy: {
         '/api/admin': {
           target: env.VITE_DEV_API_PROXY || 'http://127.0.0.1:8787',

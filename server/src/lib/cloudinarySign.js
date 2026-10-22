@@ -4,6 +4,7 @@
  */
 
 export const CLOUDINARY_PRODUCT_FOLDER = 'diwali/products'
+export const CLOUDINARY_FAMILY_PACK_FOLDER = 'diwali/family-packs'
 export const CLOUDINARY_SLOT_MIN = 1
 export const CLOUDINARY_SLOT_MAX = 20
 
@@ -48,6 +49,17 @@ export function buildProductUploadTarget(productId, slot) {
   return {
     folder: CLOUDINARY_PRODUCT_FOLDER,
     publicId: `${productId}/${slot}`,
+  }
+}
+
+/**
+ * @param {string} familyPackId
+ * @param {number} slot
+ */
+export function buildFamilyPackUploadTarget(familyPackId, slot) {
+  return {
+    folder: CLOUDINARY_FAMILY_PACK_FOLDER,
+    publicId: `${familyPackId}/${slot}`,
   }
 }
 

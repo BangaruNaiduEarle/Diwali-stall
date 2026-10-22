@@ -1,12 +1,19 @@
 import { Eye, EyeOff } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import Button from '../../components/ui/Button.jsx'
 import { isLocalViteProxyMode } from '../../api/adminApiMode.js'
 import { fetchAdminSession, loginAdmin } from '../api/adminApi.js'
+import { useAdminSession } from '../context/AdminSessionContext.jsx'
 
 export default function AdminLoginPage() {
+  const { refreshSession } = useAdminSession()
   const navigate = useNavigate()
+  const location = useLocation()
+  const logoutNotice =
+    location.state && typeof location.state === 'object' && 'logoutNotice' in location.state
+      ? String(/** @type {{ logoutNotice?: unknown }} */ (location.state).logoutNotice ?? '')
+      : ''
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -14,6 +21,11 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false)
   const [checkingSession, setCheckingSession] = useState(true)
   const usingViteProxy = isLocalViteProxyMode()
+
+  useEffect(() => {
+    if (!logoutNotice) return
+    navigate(location.pathname, { replace: true, state: null })
+  }, [location.pathname, logoutNotice, navigate])
 
   useEffect(() => {
     let cancelled = false
@@ -39,8 +51,8 @@ export default function AdminLoginPage() {
       setError(result.message || 'Sign in failed.')
       return
     }
+    await refreshSession()
     navigate('/admin/products', { replace: true })
-    window.location.reload()
   }
 
   if (checkingSession) {
@@ -57,6 +69,11 @@ export default function AdminLoginPage() {
       <p className="admin-auth-screen__hint mb-6 max-w-sm text-center">
         Use your stall admin email and password. Sessions expire after several hours.
       </p>
+      {logoutNotice ? (
+        <p className="mb-4 max-w-sm text-center text-sm text-[var(--color-charcoal)] opacity-90" role="status">
+          {logoutNotice}
+        </p>
+      ) : null}
       {usingViteProxy ? (
         <div className="admin-auth-screen__hint mb-4 max-w-md space-y-2 text-center text-xs opacity-90">
           <p>

@@ -8,7 +8,7 @@ export default function MobileStickyEstimateBar() {
   const { pathname } = useLocation()
   const { estimateCount } = useEstimate()
 
-  if (estimateCount <= 0 || pathname === '/estimate') return null
+  if (estimateCount <= 0 || pathname.startsWith('/estimate')) return null
 
   const itemLabel = estimateCount === 1 ? 'item' : 'items'
 

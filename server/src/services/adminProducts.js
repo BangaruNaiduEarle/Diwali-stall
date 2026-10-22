@@ -43,10 +43,14 @@ export function mapAdminProductRow(row) {
     images = []
   }
   const cataloguePublicPriceInr = getCataloguePublicPriceInr(String(row.id ?? ''))
-  const sellingPricePaise =
+  let sellingPricePaise =
     row.selling_price_paise === null || row.selling_price_paise === undefined
       ? null
       : Number(row.selling_price_paise)
+  // Catalogue price and admin Selling Price are the same; D1 column overrides when set.
+  if (sellingPricePaise === null && cataloguePublicPriceInr != null && Number.isFinite(cataloguePublicPriceInr)) {
+    sellingPricePaise = inrToPaise(cataloguePublicPriceInr)
+  }
   const x4SellingPaise =
     row.x4_selling_paise === null || row.x4_selling_paise === undefined
       ? null
@@ -324,12 +328,64 @@ export async function updateAdminProduct(db, id, body) {
 
 /** @param {D1Database} db @param {string} id */
 export async function archiveAdminProduct(db, id) {
-  return setActiveFlag(db, id, 0)
+  return setAdminProductActive(db, id, false)
 }
 
 /** @param {D1Database} db @param {string} id */
 export async function restoreAdminProduct(db, id) {
-  return setActiveFlag(db, id, 1)
+  return setAdminProductActive(db, id, true)
+}
+
+/** @param {D1Database} db @param {string} id @param {boolean} active */
+export async function setAdminProductActive(db, id, active) {
+  return setActiveFlag(db, id, active ? 1 : 0)
+}
+
+/** @param {D1Database} db @param {string} productId */
+export async function countProductReferenceRows(db, productId) {
+  const id = String(productId)
+  const tables = [
+    'SELECT COUNT(*) AS total FROM customer_request_items WHERE product_id = ?',
+    'SELECT COUNT(*) AS total FROM family_pack_items WHERE product_id = ?',
+    'SELECT COUNT(*) AS total FROM quotation_items WHERE product_id = ?',
+  ]
+  let total = 0
+  for (const sql of tables) {
+    const row = await db.prepare(sql).bind(id).first()
+    total += Number(row?.total ?? 0)
+  }
+  return total
+}
+
+/**
+ * @param {D1Database} db
+ * @param {string} id
+ */
+export async function deleteAdminProduct(db, id) {
+  const productId = String(id ?? '').trim()
+  if (!isValidProductId(productId)) {
+    return { ok: false, errors: { id: 'Invalid product id.' } }
+  }
+  const existing = await db.prepare('SELECT id, name FROM products WHERE id = ?').bind(productId).first()
+  if (!existing) {
+    return { ok: false, status: 404, error: 'not_found', message: 'Product not found.' }
+  }
+  const referenceCount = await countProductReferenceRows(db, productId)
+  if (referenceCount > 0) {
+    return {
+      ok: false,
+      status: 409,
+      error: 'product_referenced',
+      message:
+        'This product appears on customer requests, quotations, or family packs. Those records must be preserved. Deactivate the product instead of deleting it.',
+      referenceCount,
+    }
+  }
+  const run = await db.prepare('DELETE FROM products WHERE id = ?').bind(productId).run()
+  if (!run.meta?.changes) {
+    return { ok: false, status: 404, error: 'not_found', message: 'Product not found.' }
+  }
+  return { ok: true, id: productId, name: String(existing.name ?? '') }
 }
 
 /** @param {D1Database} db @param {string} id @param {0|1} active */

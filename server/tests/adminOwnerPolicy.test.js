@@ -21,8 +21,8 @@ describe('single owner policy', () => {
     }
   })
 
-  it('createAdminUser always creates admin role', async () => {
-    const db = createCountDb(0)
+  it('createAdminUser defaults to admin role', async () => {
+    const db = createInsertDb(0)
     const result = await createAdminUser(db, {
       email: 'staff@test.com',
       password: 'twelvecharspw',
@@ -31,6 +31,17 @@ describe('single owner policy', () => {
     if (result.ok) {
       assert.equal(result.user.role, 'admin')
     }
+  })
+
+  it('createAdminUser can create super_admin role', async () => {
+    const db = createInsertDb(0)
+    const result = await createAdminUser(db, {
+      email: 'super@test.com',
+      password: 'twelvecharspw',
+      role: 'super_admin',
+    })
+    assert.equal(result.ok, true)
+    if (result.ok) assert.equal(result.user.role, 'super_admin')
   })
 })
 
@@ -74,6 +85,13 @@ describe('atomic owner bootstrap', () => {
 
 /** @param {number} activeCount */
 function createCountDb(activeCount) {
+  return createInsertDb(activeCount)
+}
+
+/** @param {number} activeCount */
+function createInsertDb(activeCount) {
+  /** @type {Map<string, { role: string }>} */
+  const inserted = new Map()
   return {
     prepare(sql) {
       const normalized = sql.replace(/\s+/g, ' ').trim()
@@ -81,17 +99,33 @@ function createCountDb(activeCount) {
       const isEmail = normalized.includes('FROM admin_users WHERE lower(email)')
       const stmt = {
         async first() {
-          if (isCount) return { n: activeCount }
+          if (isCount) return { n: activeCount + inserted.size }
           if (isEmail) return null
           return null
         },
         async run() {
+          if (normalized.startsWith('INSERT INTO admin_users')) {
+            inserted.set('x', { role: 'admin' })
+          }
           return { meta: { changes: 1 } }
         },
       }
       return {
-        bind() {
-          return stmt
+        bind(...args) {
+          const bound = {
+            async first() {
+              if (isCount) return { n: activeCount + inserted.size }
+              if (isEmail) return null
+              return null
+            },
+            async run() {
+              if (normalized.startsWith('INSERT INTO admin_users')) {
+                inserted.set(String(args[0]), { role: String(args[3]) })
+              }
+              return { meta: { changes: 1 } }
+            },
+          }
+          return bound
         },
         first: () => stmt.first(),
         run: () => stmt.run(),

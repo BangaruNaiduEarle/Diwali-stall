@@ -232,8 +232,16 @@ function createPhase52MockDb() {
           return makeStmt(next.length ? next : params)
         },
         async first() {
-          if (normalized.includes('admin_users')) {
-            return String(params[0]).toLowerCase() === ALLOWED_EMAIL.toLowerCase() ? { ok: 1 } : null
+          if (normalized.includes('FROM admin_users WHERE lower(email)')) {
+            if (String(params[0]).toLowerCase() !== ALLOWED_EMAIL.toLowerCase()) return null
+            return {
+              id: 'u-owner',
+              email: ALLOWED_EMAIL,
+              display_name: 'Owner',
+              role: 'owner',
+              password_hash: 'x',
+              disabled_at: null,
+            }
           }
           if (normalized.includes('FROM products WHERE id = ?')) {
             const p = state.products.get(String(params[0]))

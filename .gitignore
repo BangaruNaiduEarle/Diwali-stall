@@ -74,6 +74,10 @@ server/data/*.db
 # Generated catalogue and private-rate SQL
 server/data/generated/
 
+# Local import artefacts (scripts write here; not for git)
+server/data/catalogue-import.json
+server/data/catalogue-public-prices.json
+
 # Local reports and temporary files
 server/reports/
 scripts/pack-preview.txt

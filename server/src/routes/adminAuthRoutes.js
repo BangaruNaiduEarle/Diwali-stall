@@ -38,18 +38,25 @@ export async function handleAdminAuthRoutes(request, env) {
         { status: result.status, headers: NO_STORE },
       )
     }
+    const loginHeaders = new Headers(NO_STORE)
+    loginHeaders.append('Set-Cookie', result.setCookie)
+    if (result.clearDevJwtSuppressCookie) {
+      loginHeaders.append('Set-Cookie', result.clearDevJwtSuppressCookie)
+    }
     return Response.json(
       { ok: true, email: result.identity.email, role: result.identity.role },
-      { status: 200, headers: { ...NO_STORE, 'Set-Cookie': result.setCookie } },
+      { status: 200, headers: loginHeaders },
     )
   }
 
   if (method === 'POST' && pathname === '/api/admin/auth/logout') {
-    const result = await logoutSession(request, env.DB)
-    return Response.json(
-      { ok: true },
-      { status: 200, headers: { ...NO_STORE, 'Set-Cookie': result.clearCookie } },
-    )
+    const result = await logoutSession(request, env.DB, env)
+    const logoutHeaders = new Headers(NO_STORE)
+    logoutHeaders.append('Set-Cookie', result.clearCookie)
+    if (result.suppressDevJwtCookie) {
+      logoutHeaders.append('Set-Cookie', result.suppressDevJwtCookie)
+    }
+    return Response.json({ ok: true }, { status: 200, headers: logoutHeaders })
   }
 
   if (method === 'POST' && pathname === '/api/admin/auth/bootstrap-owner') {

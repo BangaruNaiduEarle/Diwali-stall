@@ -1,8 +1,10 @@
 import { useEffect, useId, useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import Button from '../../components/ui/Button.jsx'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
+import { adminRoleDisplayLabel, canManageAdminUsers } from '../lib/adminRoles.js'
+import { closeMobileNavForSignOut } from './adminSignOut.js'
 
 function navLinkClass(isActive) {
   return `admin-header__link${isActive ? ' admin-header__link--active' : ''}`
@@ -11,8 +13,23 @@ function navLinkClass(isActive) {
 export default function AdminLayout() {
   const { email, role, logout } = useAdminSession()
   const [navOpen, setNavOpen] = useState(false)
+  const [signOutLoading, setSignOutLoading] = useState(false)
   const navId = useId()
   const location = useLocation()
+  const navigate = useNavigate()
+
+  async function handleSignOut() {
+    if (signOutLoading) return
+    setSignOutLoading(true)
+    closeMobileNavForSignOut({ setNavOpen })
+    const outcome = await logout()
+    setSignOutLoading(false)
+    if (outcome.skipped) return
+    navigate('/admin/login', {
+      replace: true,
+      state: outcome.notice ? { logoutNotice: outcome.notice } : undefined,
+    })
+  }
 
   useEffect(() => {
     setNavOpen(false)
@@ -62,13 +79,16 @@ export default function AdminLayout() {
             <NavLink to="/admin/products" className={({ isActive }) => navLinkClass(isActive)} end={false}>
               Products
             </NavLink>
+            <NavLink to="/admin/family-packs" className={({ isActive }) => navLinkClass(isActive)}>
+              Family packs
+            </NavLink>
             <NavLink to="/admin/quick-bill" className={({ isActive }) => navLinkClass(isActive)}>
               Quick bill
             </NavLink>
             <NavLink to="/admin/customer-requests" className={({ isActive }) => navLinkClass(isActive)}>
               Requests
             </NavLink>
-            {role === 'owner' ? (
+            {canManageAdminUsers(role) ? (
               <NavLink to="/admin/users" className={({ isActive }) => navLinkClass(isActive)}>
                 Users
               </NavLink>
@@ -78,22 +98,38 @@ export default function AdminLayout() {
             </a>
             <div className="admin-header__account admin-header__account--mobile">
               {email ? (
-                <p className="admin-header__user" title={role === 'owner' ? 'Owner' : 'Admin'}>
+                <p className="admin-header__user" title={adminRoleDisplayLabel(role)}>
                   {email}
                 </p>
               ) : null}
-              <Button type="button" variant="ghost" surface="dark" size="sm" onClick={() => logout()}>
+              <Button
+                type="button"
+                variant="ghost"
+                surface="dark"
+                size="sm"
+                loading={signOutLoading}
+                disabled={signOutLoading}
+                onClick={() => handleSignOut()}
+              >
                 Sign out
               </Button>
             </div>
           </nav>
           <div className="admin-header__account admin-header__account--desktop">
             {email ? (
-              <p className="admin-header__user" title={role === 'owner' ? 'Owner' : 'Admin'}>
+              <p className="admin-header__user" title={adminRoleDisplayLabel(role)}>
                 {email}
               </p>
             ) : null}
-            <Button type="button" variant="ghost" surface="dark" size="sm" onClick={() => logout()}>
+            <Button
+              type="button"
+              variant="ghost"
+              surface="dark"
+              size="sm"
+              loading={signOutLoading}
+              disabled={signOutLoading}
+              onClick={() => handleSignOut()}
+            >
               Sign out
             </Button>
           </div>

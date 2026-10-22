@@ -1,6 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { assertProductSaveNotBlockedByImages } from '../lib/adminProductImageSave.js'
 import { useNavigate, useParams } from 'react-router-dom'
-import { fetchAdminCategories, fetchAdminProduct, updateAdminProduct } from '../api/adminApi.js'
+import {
+  deleteAdminProduct,
+  fetchAdminCategories,
+  fetchAdminProduct,
+  patchAdminProductStatus,
+  updateAdminProduct,
+} from '../api/adminApi.js'
+import AdminConfirmDialog from '../components/AdminConfirmDialog.jsx'
+import Button from '../../components/ui/Button.jsx'
 import { updateAdminPurchaseRate, updateAdminX4SellingRate } from '../api/adminApi.js'
 import ProductForm, {
   adminRateFieldChanged,
@@ -9,13 +18,20 @@ import ProductForm, {
   getX4SellingInrFromForm,
   productToFormValues,
 } from '../components/ProductForm.jsx'
+import AdminFeedbackBanner from '../components/AdminFeedbackBanner.jsx'
+import { useAdminFlash } from '../lib/useAdminFlash.js'
+import { useAdminSession } from '../context/AdminSessionContext.jsx'
+import { showAdminProductSensitiveColumns } from '../lib/adminProductTableColumns.js'
 
 const PRODUCT_ID_RE = /^P\d{3,}$/
 
 export default function AdminProductEditPage() {
+  const { role } = useAdminSession()
+  const showSensitiveColumns = showAdminProductSensitiveColumns(role)
   const { id: routeId } = useParams()
   const productId = String(routeId ?? '').trim()
   const navigate = useNavigate()
+  const { flash, setFlash, clearFlash } = useAdminFlash()
 
   const [initial, setInitial] = useState(/** @type {import('../components/ProductForm.jsx').ProductFormValues | null} */ (null))
   const [categories, setCategories] = useState(/** @type {{ slug: string, label: string }[]} */ ([]))
@@ -24,6 +40,12 @@ export default function AdminProductEditPage() {
   const [submitting, setSubmitting] = useState(false)
   const [serverError, setServerError] = useState(/** @type {string | null} */ (null))
   const [serverFields, setServerFields] = useState(/** @type {Record<string, string> | null} */ (null))
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const uploadCoordinatorRef = useRef(
+    /** @type {{ waitUntilIdle: () => Promise<void>, isBusy: () => boolean } | null} */ (null),
+  )
+  const [imageUploadBusy, setImageUploadBusy] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -85,9 +107,22 @@ export default function AdminProductEditPage() {
   }
 
   async function handleSubmit(values) {
-    setSubmitting(true)
+    if (submitting) return
     setServerError(null)
     setServerFields(null)
+    clearFlash()
+
+    await uploadCoordinatorRef.current?.waitUntilIdle()
+    const imageGate = assertProductSaveNotBlockedByImages({
+      uploading: uploadCoordinatorRef.current?.isBusy() ?? imageUploadBusy,
+      images: values.images ?? [],
+    })
+    if (!imageGate.ok) {
+      setServerError(imageGate.message)
+      return
+    }
+
+    setSubmitting(true)
     const body = buildProductPayload(values)
     delete body.id
     const result = await updateAdminProduct(productId, body)
@@ -97,27 +132,29 @@ export default function AdminProductEditPage() {
       setServerFields(result.fields ?? null)
       return
     }
-    if (adminRateFieldChanged(initial.x4SellingPriceInr, values.x4SellingPriceInr)) {
-      const x4Inr = getX4SellingInrFromForm(values)
-      if (x4Inr !== null && Number.isFinite(x4Inr)) {
-        const rateRes = await updateAdminX4SellingRate(productId, x4Inr)
-        if (!rateRes.ok) {
-          setSubmitting(false)
-          setServerError(rateRes.message)
-          setServerFields(rateRes.fields ?? null)
-          return
+    if (showSensitiveColumns) {
+      if (adminRateFieldChanged(initial.x4SellingPriceInr, values.x4SellingPriceInr)) {
+        const x4Inr = getX4SellingInrFromForm(values)
+        if (x4Inr !== null && Number.isFinite(x4Inr)) {
+          const rateRes = await updateAdminX4SellingRate(productId, x4Inr)
+          if (!rateRes.ok) {
+            setSubmitting(false)
+            setServerError(rateRes.message)
+            setServerFields(rateRes.fields ?? null)
+            return
+          }
         }
       }
-    }
-    if (adminRateFieldChanged(initial.purchaseRateInr, values.purchaseRateInr)) {
-      const purchaseInr = getPurchaseRateInrFromForm(values)
-      if (purchaseInr !== null && Number.isFinite(purchaseInr)) {
-        const purchaseRes = await updateAdminPurchaseRate(productId, purchaseInr)
-        if (!purchaseRes.ok) {
-          setSubmitting(false)
-          setServerError(purchaseRes.message)
-          setServerFields(purchaseRes.fields ?? null)
-          return
+      if (adminRateFieldChanged(initial.purchaseRateInr, values.purchaseRateInr)) {
+        const purchaseInr = getPurchaseRateInrFromForm(values)
+        if (purchaseInr !== null && Number.isFinite(purchaseInr)) {
+          const purchaseRes = await updateAdminPurchaseRate(productId, purchaseInr)
+          if (!purchaseRes.ok) {
+            setSubmitting(false)
+            setServerError(purchaseRes.message)
+            setServerFields(purchaseRes.fields ?? null)
+            return
+          }
         }
       }
     }
@@ -126,6 +163,7 @@ export default function AdminProductEditPage() {
     if (refreshed.ok) {
       setInitial(productToFormValues(/** @type {Record<string, unknown>} */ (refreshed.product)))
     }
+    setFlash({ type: 'success', message: 'Changes saved successfully.' })
   }
 
   if (loading) {
@@ -149,16 +187,43 @@ export default function AdminProductEditPage() {
     )
   }
 
+  async function handleStatusToggle() {
+    const result = await patchAdminProductStatus(productId, !initial.active)
+    if (!result.ok) {
+      setServerError(result.message)
+      return
+    }
+    const product = /** @type {{ product?: Record<string, unknown> }} */ (result.data ?? {}).product
+    if (product) setInitial(productToFormValues(product))
+  }
+
+  async function handleDeleteConfirm() {
+    if (deleting) return
+    setDeleting(true)
+    setServerError(null)
+    const result = await deleteAdminProduct(productId)
+    setDeleting(false)
+    if (!result.ok) {
+      setDeleteOpen(false)
+      setServerError(result.message)
+      return
+    }
+    navigate('/admin/products', { replace: true })
+  }
+
   return (
     <div className="admin-page admin-page--wide">
       <div className="admin-page__head">
         <div>
           <h2 className="admin-page__title">Edit {productId}</h2>
           <p className="admin-page__subtitle">
-            Edit catalogue fields, purchase rate (Excel Rate), and X4 selling price independently.
+            {showSensitiveColumns
+              ? 'Edit catalogue fields, purchase rate (Excel Rate), and selling price independently.'
+              : 'Edit catalogue fields and product images.'}
           </p>
         </div>
       </div>
+      <AdminFeedbackBanner variant={flash?.type ?? 'success'} message={flash?.message} onDismiss={clearFlash} />
       <ProductForm
         mode="edit"
         initial={initial}
@@ -171,6 +236,29 @@ export default function AdminProductEditPage() {
         resolvedProductId={productId}
         onEnsureProduct={ensureProduct}
         onPersistImages={persistImages}
+        uploadCoordinatorRef={uploadCoordinatorRef}
+        onUploadBusyChange={setImageUploadBusy}
+        showSensitiveColumns={showSensitiveColumns}
+      />
+      <div className="mt-6 flex flex-wrap gap-3">
+        <Button type="button" variant="secondary" disabled={submitting || deleting} onClick={handleStatusToggle}>
+          {initial.active ? 'Deactivate' : 'Activate'}
+        </Button>
+        <Button type="button" variant="ghost" disabled={submitting || deleting} onClick={() => setDeleteOpen(true)}>
+          Delete
+        </Button>
+      </div>
+      <AdminConfirmDialog
+        open={deleteOpen}
+        title={`Delete “${initial.name.trim() || productId}”?`}
+        description="Permanent deletion cannot be undone. If this product appears on customer requests, quotations, or family packs, deletion will be blocked — deactivate the product instead."
+        cancelLabel="Keep product"
+        confirmLabel="Delete permanently"
+        confirming={deleting}
+        onCancel={() => {
+          if (!deleting) setDeleteOpen(false)
+        }}
+        onConfirm={handleDeleteConfirm}
       />
     </div>
   )

@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { assertProductSaveNotBlockedByImages } from '../lib/adminProductImageSave.js'
 import { useNavigate } from 'react-router-dom'
 import { createAdminProduct, fetchAdminCategories, updateAdminProduct } from '../api/adminApi.js'
 import ProductForm, { buildProductPayload, emptyProductFormValues } from '../components/ProductForm.jsx'
+import { adminNavigationFlashState } from '../lib/adminNavigationFlash.js'
 
 const PRODUCT_ID_RE = /^P\d{3,}$/
 
@@ -15,6 +17,10 @@ export default function AdminProductCreatePage() {
   const [serverFields, setServerFields] = useState(/** @type {Record<string, string> | null} */ (null))
   /** Set after first successful create (e.g. before image upload). */
   const [persistedProductId, setPersistedProductId] = useState(/** @type {string | null} */ (null))
+  const uploadCoordinatorRef = useRef(
+    /** @type {{ waitUntilIdle: () => Promise<void>, isBusy: () => boolean } | null} */ (null),
+  )
+  const [imageUploadBusy, setImageUploadBusy] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -75,10 +81,21 @@ export default function AdminProductCreatePage() {
   }
 
   async function handleSubmit(values) {
-    setSubmitting(true)
+    if (submitting) return
     setServerError(null)
     setServerFields(null)
 
+    await uploadCoordinatorRef.current?.waitUntilIdle()
+    const imageGate = assertProductSaveNotBlockedByImages({
+      uploading: uploadCoordinatorRef.current?.isBusy() ?? imageUploadBusy,
+      images: values.images ?? [],
+    })
+    if (!imageGate.ok) {
+      setServerError(imageGate.message)
+      return
+    }
+
+    setSubmitting(true)
     const body = buildProductPayload(values)
     const result =
       persistedProductId && persistedProductId === values.id
@@ -103,7 +120,10 @@ export default function AdminProductCreatePage() {
     }
     const product = /** @type {{ product?: { id?: string } }} */ (result.data ?? {}).product
     const newId = product?.id ? String(product.id) : values.id
-    navigate(`/admin/products/${encodeURIComponent(newId)}/edit`, { replace: true })
+    navigate(`/admin/products/${encodeURIComponent(newId)}/edit`, {
+      replace: true,
+      state: adminNavigationFlashState('Product created successfully.'),
+    })
   }
 
   if (loadingCategories) {
@@ -139,6 +159,8 @@ export default function AdminProductCreatePage() {
         resolvedProductId={persistedProductId}
         onEnsureProduct={ensureProduct}
         onPersistImages={persistImages}
+        uploadCoordinatorRef={uploadCoordinatorRef}
+        onUploadBusyChange={setImageUploadBusy}
       />
     </div>
   )

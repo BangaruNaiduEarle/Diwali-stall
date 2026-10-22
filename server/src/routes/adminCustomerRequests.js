@@ -27,8 +27,8 @@ export async function handleAdminCustomerRequestRoutes(request, env, url) {
     const parsed = parseAdminCustomerRequestListQuery(url.searchParams)
     if (!parsed.ok) return validationErrorResponse(parsed.errors)
 
-    const { page, limit, offset, status } = parsed.data
-    const { requests, total } = await listAdminCustomerRequests(db, { limit, offset, status })
+    const { page, limit, offset, status, q } = parsed.data
+    const { requests, total } = await listAdminCustomerRequests(db, { limit, offset, status, q })
     const totalPages = total === 0 ? 0 : Math.ceil(total / limit)
 
     return Response.json(

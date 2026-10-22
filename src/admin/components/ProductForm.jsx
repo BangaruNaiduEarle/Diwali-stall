@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import Button from '../../components/ui/Button.jsx'
 import ProductImageManager from './ProductImageManager.jsx'
+import { isLocalPreviewUrl } from '../lib/adminImageUploadFlow.js'
 import { MAX_PRODUCT_IMAGES } from '../lib/cloudinaryUpload.js'
 
 const STOCK_OPTIONS = [
@@ -24,6 +25,9 @@ const PRODUCT_ID_RE = /^P\d{3,}$/
  *   resolvedProductId: string | null,
  *   onEnsureProduct: (values: import('../components/ProductForm.jsx').ProductFormValues) => Promise<{ ok: true, productId: string } | { ok: false, message: string }>,
  *   onPersistImages: (images: string[], values: import('../components/ProductForm.jsx').ProductFormValues) => Promise<{ ok: true } | { ok: false, message: string }>,
+ *   uploadCoordinatorRef?: { current: { waitUntilIdle: () => Promise<void>, isBusy: () => boolean } | null },
+ *   onUploadBusyChange?: (busy: boolean) => void,
+ *   showSensitiveColumns?: boolean,
  * }} props
  */
 export default function ProductForm({
@@ -38,6 +42,9 @@ export default function ProductForm({
   resolvedProductId,
   onEnsureProduct,
   onPersistImages,
+  uploadCoordinatorRef,
+  onUploadBusyChange,
+  showSensitiveColumns = false,
 }) {
   const [values, setValues] = useState(initial)
   const [clientErrors, setClientErrors] = useState(/** @type {Record<string, string>} */ ({}))
@@ -88,8 +95,13 @@ export default function ProductForm({
     const images = values.images ?? []
     if (images.length > MAX_PRODUCT_IMAGES) errors.images = `Maximum ${MAX_PRODUCT_IMAGES} images.`
     for (const img of images) {
-      if (!String(img).trim()) {
+      const s = String(img).trim()
+      if (!s) {
         errors.images = 'Image paths cannot be empty.'
+        break
+      }
+      if (isLocalPreviewUrl(s)) {
+        errors.images = 'Images are still uploading. Wait for uploads to finish before saving.'
         break
       }
     }
@@ -202,68 +214,66 @@ export default function ProductForm({
         {fieldError.categorySlug ? <p className="admin-field-error">{fieldError.categorySlug}</p> : null}
       </div>
 
-      <div className="admin-form__row">
-        {mode === 'edit' ? (
-          <>
-            <div className="admin-field">
-              <label className="admin-label" htmlFor="product-purchase-rate">
-                Purchase rate — Excel Rate (INR)
-              </label>
-              <input
-                id="product-purchase-rate"
-                type="number"
-                min="0"
-                step="0.01"
-                className="admin-input"
-                value={values.purchaseRateInr ?? ''}
-                onChange={(e) => setField('purchaseRateInr', e.target.value)}
-                disabled={formDisabled}
-                placeholder={values.hasPurchaseRate ? '' : 'Missing — set purchase rate'}
-              />
-              {fieldError.purchaseRateInr ? <p className="admin-field-error">{fieldError.purchaseRateInr}</p> : null}
-              {!values.hasPurchaseRate ? (
-                <p className="admin-hint admin-hint--warn">No purchase rate stored in D1 yet.</p>
-              ) : null}
-            </div>
-            <div className="admin-field">
-              <label className="admin-label" htmlFor="product-x4-selling">
-                Public selling price — Excel X4 (INR)
-              </label>
-              <input
-                id="product-x4-selling"
-                type="number"
-                min="0"
-                step="0.01"
-                className="admin-input"
-                value={values.x4SellingPriceInr ?? ''}
-                onChange={(e) => setField('x4SellingPriceInr', e.target.value)}
-                disabled={formDisabled}
-                placeholder={values.hasX4SellingRate ? '' : 'Missing — set X4 selling price'}
-              />
-              {fieldError.x4SellingPriceInr ? <p className="admin-field-error">{fieldError.x4SellingPriceInr}</p> : null}
-              {!values.hasX4SellingRate ? (
-                <p className="admin-hint admin-hint--warn">No current X4 selling rate in D1.</p>
-              ) : null}
-            </div>
-          </>
-        ) : null}
-        <div className="admin-field">
-          {values.cataloguePublicPriceInr != null ? (
-            <p className="admin-hint">
-              Public site catalogue reference (static JS): ₹
-              {Number(values.cataloguePublicPriceInr).toLocaleString('en-IN')} — not auto-synced from D1.
-            </p>
-          ) : null}
-          {values.pricingMapping?.mappingStatus ? (
-            <p className="admin-hint">
-              Excel mapping: {String(values.pricingMapping.mappingStatus)}
-              {values.pricingMapping.publicCataloguePriceDrift === true
-                ? ' · catalogue price differs from Excel X4'
-                : ''}
-            </p>
-          ) : null}
+      {mode === 'edit' && showSensitiveColumns ? (
+        <div className="admin-form__row">
+          <div className="admin-field">
+            <label className="admin-label" htmlFor="product-purchase-rate">
+              Purchase rate — Excel Rate (INR)
+            </label>
+            <input
+              id="product-purchase-rate"
+              type="number"
+              min="0"
+              step="0.01"
+              className="admin-input"
+              value={values.purchaseRateInr ?? ''}
+              onChange={(e) => setField('purchaseRateInr', e.target.value)}
+              disabled={formDisabled}
+              placeholder={values.hasPurchaseRate ? '' : 'Missing — set purchase rate'}
+            />
+            {fieldError.purchaseRateInr ? <p className="admin-field-error">{fieldError.purchaseRateInr}</p> : null}
+            {!values.hasPurchaseRate ? (
+              <p className="admin-hint admin-hint--warn">No purchase rate stored in D1 yet.</p>
+            ) : null}
+          </div>
+          <div className="admin-field">
+            <label className="admin-label" htmlFor="product-x4-selling">
+              Selling Price (INR)
+            </label>
+            <input
+              id="product-x4-selling"
+              type="number"
+              min="0"
+              step="0.01"
+              className="admin-input"
+              value={values.x4SellingPriceInr ?? ''}
+              onChange={(e) => setField('x4SellingPriceInr', e.target.value)}
+              disabled={formDisabled}
+              placeholder={values.hasX4SellingRate ? '' : 'Missing — set selling price'}
+            />
+            {fieldError.x4SellingPriceInr ? <p className="admin-field-error">{fieldError.x4SellingPriceInr}</p> : null}
+            {!values.hasX4SellingRate ? (
+              <p className="admin-hint admin-hint--warn">No current selling price in D1.</p>
+            ) : null}
+          </div>
+          <div className="admin-field">
+            {values.cataloguePublicPriceInr != null ? (
+              <p className="admin-hint">
+                Public site catalogue reference (static JS): ₹
+                {Number(values.cataloguePublicPriceInr).toLocaleString('en-IN')} — not auto-synced from D1.
+              </p>
+            ) : null}
+            {values.pricingMapping?.mappingStatus ? (
+              <p className="admin-hint">
+                Excel mapping: {String(values.pricingMapping.mappingStatus)}
+                {values.pricingMapping.publicCataloguePriceDrift === true
+                  ? ' · catalogue price differs from selling price (Excel)'
+                  : ''}
+              </p>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="admin-form__row">
         <div className="admin-field">
@@ -359,6 +369,8 @@ export default function ProductForm({
         disabled={formDisabled}
         onEnsureProduct={handleEnsureProduct}
         onPersistImages={handlePersistImages}
+        uploadCoordinatorRef={uploadCoordinatorRef}
+        onUploadBusyChange={onUploadBusyChange}
       />
       {fieldError.images ? <p className="admin-field-error">{fieldError.images}</p> : null}
 
@@ -390,7 +402,13 @@ export default function ProductForm({
           Cancel
         </Button>
         <Button type="submit" variant="primary" surface="light" loading={submitting} disabled={formDisabled}>
-          {mode === 'create' ? 'Create product' : 'Save changes'}
+          {submitting
+            ? mode === 'create'
+              ? 'Creating…'
+              : 'Saving changes…'
+            : mode === 'create'
+              ? 'Create product'
+              : 'Save changes'}
         </Button>
       </div>
     </form>
@@ -466,7 +484,10 @@ export function buildProductPayload(values) {
     stockStatus: values.stockStatus,
     active: values.active,
     sortOrder: values.sortOrder,
-    images: values.images ?? [],
+    images: (values.images ?? []).filter((url) => {
+      const s = String(url ?? '').trim()
+      return s && !isLocalPreviewUrl(s)
+    }),
   }
   return payload
 }

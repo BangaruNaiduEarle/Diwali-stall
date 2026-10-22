@@ -16,6 +16,11 @@ import {
   handlePublicProductsList,
 } from './routes/publicProducts.js'
 import { handlePublicCustomerRequestPost } from './routes/publicCustomerRequests.js'
+import {
+  handlePublicFamilyPackBySlug,
+  handlePublicFamilyPacksList,
+} from './routes/publicFamilyPacks.js'
+import { handleAdminFamilyPackRoutes } from './routes/adminFamilyPacks.js'
 import { adminAuthErrorResponse, requireAdmin } from './middleware/requireAdmin.js'
 import { withRequestContext } from './middleware/requestContext.js'
 
@@ -46,6 +51,15 @@ async function handleRequest(request, env, ctx) {
     return handlePublicCustomerRequestPost(request, env)
   }
 
+  if (method === 'GET' && pathname === '/api/public/family-packs') {
+    return handlePublicFamilyPacksList(request, env)
+  }
+
+  const publicFamilyPackMatch = pathname.match(/^\/api\/public\/family-packs\/([a-z0-9-]+)\/?$/)
+  if (method === 'GET' && publicFamilyPackMatch) {
+    return handlePublicFamilyPackBySlug(request, env, publicFamilyPackMatch[1])
+  }
+
   if (pathname.startsWith('/api/admin')) {
     const publicAuth = await handleAdminAuthRoutes(request, env)
     if (publicAuth) {
@@ -58,16 +72,21 @@ async function handleRequest(request, env, ctx) {
     }
 
     if (method === 'GET' && pathname === '/api/admin/session') {
-      return handleAdminSession(request, { identity: auth.identity })
+      return handleAdminSession(request, { identity: auth.identity }, env)
     }
 
     if (method === 'POST' && pathname === '/api/admin/uploads/sign') {
       return handleAdminUploadSign(request, env)
     }
 
-    const adminResponse = await handleAdminCatalogueRoutes(request, env, url)
+    const adminResponse = await handleAdminCatalogueRoutes(request, env, url, auth.identity)
     if (adminResponse) {
       return adminResponse
+    }
+
+    const familyPackResponse = await handleAdminFamilyPackRoutes(request, env, url)
+    if (familyPackResponse) {
+      return familyPackResponse
     }
 
     const customerRequestResponse = await handleAdminCustomerRequestRoutes(request, env, url)

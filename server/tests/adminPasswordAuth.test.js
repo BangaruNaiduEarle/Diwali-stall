@@ -68,6 +68,117 @@ describe('admin password auth HTTP', () => {
     assert.equal(body.role, 'owner')
   })
 
+  it('logout clears session cookie and invalidates server session', async () => {
+    const loginRes = await worker.fetch(
+      new Request('https://api.example.com/api/admin/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'owner@stall.test', password: 'stall-password-12' }),
+      }),
+      env,
+      {},
+    )
+    assert.equal(loginRes.status, 200)
+    const setCookie = loginRes.headers.get('Set-Cookie') ?? ''
+    const sessionCookie = setCookie.split(';')[0]
+
+    const logoutRes = await worker.fetch(
+      new Request('https://api.example.com/api/admin/auth/logout', {
+        method: 'POST',
+        headers: { Cookie: sessionCookie },
+      }),
+      env,
+      {},
+    )
+    assert.equal(logoutRes.status, 200)
+    const clearCookie = logoutRes.headers.get('Set-Cookie') ?? ''
+    assert.ok(clearCookie.includes(`${ADMIN_SESSION_COOKIE}=`))
+    assert.match(clearCookie, /Max-Age=0/)
+    assert.match(clearCookie, /Path=\//)
+
+    const sessionRes = await worker.fetch(
+      new Request('https://api.example.com/api/admin/session', {
+        headers: { Cookie: sessionCookie },
+      }),
+      env,
+      {},
+    )
+    assert.equal(sessionRes.status, 401)
+  })
+
+  it('logout without active session still returns success and clear-cookie header', async () => {
+    const logoutRes = await worker.fetch(
+      new Request('https://api.example.com/api/admin/auth/logout', { method: 'POST' }),
+      env,
+      {},
+    )
+    assert.equal(logoutRes.status, 200)
+    const body = await logoutRes.json()
+    assert.equal(body.ok, true)
+    const clearCookie = logoutRes.headers.get('Set-Cookie') ?? ''
+    assert.ok(clearCookie.includes(`${ADMIN_SESSION_COOKIE}=`))
+    assert.match(clearCookie, /Max-Age=0/)
+  })
+
+  it('logout via frontend proxy clears cookie with SameSite=Lax', async () => {
+    const proxyEnv = {
+      ...env,
+      CORS_ALLOWED_ORIGINS: 'https://diwali-stall.vercel.app',
+    }
+    const loginRes = await worker.fetch(
+      new Request('https://diwali-api.example.workers.dev/api/admin/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Forwarded-Host': 'diwali-stall.vercel.app',
+        },
+        body: JSON.stringify({ email: 'owner@stall.test', password: 'stall-password-12' }),
+      }),
+      proxyEnv,
+      {},
+    )
+    const sessionCookie = (loginRes.headers.get('Set-Cookie') ?? '').split(';')[0]
+
+    const logoutRes = await worker.fetch(
+      new Request('https://diwali-api.example.workers.dev/api/admin/auth/logout', {
+        method: 'POST',
+        headers: {
+          Cookie: sessionCookie,
+          'X-Forwarded-Host': 'diwali-stall.vercel.app',
+        },
+      }),
+      proxyEnv,
+      {},
+    )
+    assert.equal(logoutRes.status, 200)
+    const clearCookie = logoutRes.headers.get('Set-Cookie') ?? ''
+    assert.match(clearCookie, /SameSite=Lax/)
+    assert.doesNotMatch(clearCookie, /SameSite=None/)
+  })
+
+  it('login via frontend proxy uses SameSite=Lax session cookie', async () => {
+    const proxyEnv = {
+      ...env,
+      CORS_ALLOWED_ORIGINS: 'https://diwali-stall.vercel.app',
+    }
+    const loginRes = await worker.fetch(
+      new Request('https://diwali-api.example.workers.dev/api/admin/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Forwarded-Host': 'diwali-stall.vercel.app',
+        },
+        body: JSON.stringify({ email: 'owner@stall.test', password: 'stall-password-12' }),
+      }),
+      proxyEnv,
+      {},
+    )
+    assert.equal(loginRes.status, 200)
+    const setCookie = loginRes.headers.get('Set-Cookie') ?? ''
+    assert.match(setCookie, /SameSite=Lax/)
+    assert.doesNotMatch(setCookie, /SameSite=None/)
+  })
+
   it('resolveSessionIdentity rejects disabled accounts', async () => {
     const db = createAuthDb()
     const userId = 'admin-disabled-test'
@@ -198,6 +309,9 @@ function createAuthDb() {
             userId: String(args[1]),
             expiresAt: String(args[2] || new Date(Date.now() + 86400000).toISOString()),
           })
+        }
+        if (normalized.startsWith('DELETE FROM admin_sessions WHERE id =')) {
+          sessions.delete(String(args[0]))
         }
         return { success: true }
       },

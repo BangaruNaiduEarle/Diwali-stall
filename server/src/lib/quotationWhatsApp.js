@@ -1,22 +1,43 @@
 import { paiseToInr } from '../services/money.js'
 
+const THANK_YOU_FOOTER = 'Thank you for choosing Diwali Stall! 🙏✨'
+
+/**
+ * @param {unknown} requestSource
+ * @returns {'preorder' | 'walk_in'}
+ */
+export function resolveQuotationWhatsAppFormat(requestSource) {
+  return String(requestSource ?? '').trim() === 'web' ? 'preorder' : 'walk_in'
+}
+
 /**
  * @param {Record<string, unknown>} quotation
  * @param {Record<string, unknown>[]} items
+ * @param {{ requestSource?: string | null }} [options]
  */
-export function buildQuotationWhatsAppMessage(quotation, items) {
+export function buildQuotationWhatsAppMessage(quotation, items, options = {}) {
+  const format = resolveQuotationWhatsAppFormat(options.requestSource)
   const ref = String(quotation.id ?? '').trim()
+  const totalPaise = Number(quotation.totalPaise ?? quotation.total_paise ?? 0)
+  const grandTotalLine = `Grand total: ₹${formatInrFromPaise(totalPaise)}`
+
+  const lines = ['DIWALI CRACKERS QUOTATION']
+  if (ref) lines.push(`Ref: ${ref}`)
+
+  if (format === 'walk_in') {
+    lines.push('', grandTotalLine)
+    return lines.join('\n').trim()
+  }
+
   const customerName = quotation.customerName ?? quotation.customer_name ?? ''
   const customerPhone = quotation.customerPhone ?? quotation.customer_phone ?? ''
-  const pickup = quotation.pickupPreference ?? quotation.pickup_preference ?? null
 
-  const lines = ['DIWALI CRACKERS QUOTATION', ref ? `Ref: ${ref}` : '', '']
+  lines.push('')
 
   if (customerName || customerPhone) {
     lines.push('Customer')
     if (customerName) lines.push(`Name: ${customerName}`)
     if (customerPhone) lines.push(`Mobile: ${customerPhone}`)
-    if (pickup) lines.push(`Preferred pickup: ${pickup}`)
     lines.push('')
   }
 
@@ -25,14 +46,12 @@ export function buildQuotationWhatsAppMessage(quotation, items) {
   sorted.forEach((row, index) => {
     const name = row.productName ?? row.product_name
     const qty = row.quantity
-    const unitInr = formatInrFromPaise(row.unitRatePaise ?? row.unit_rate_paise)
-    lines.push(`${index + 1}. ${name} — Qty: ${qty} — Rate: ₹${unitInr}`)
+    lines.push(`${index + 1}. ${name} — Qty: ${qty}`)
   })
 
-  const totalPaise = Number(quotation.totalPaise ?? quotation.total_paise ?? 0)
-  lines.push('', `Grand total: ₹${formatInrFromPaise(totalPaise)}`, '', 'Please confirm to proceed with pickup.')
+  lines.push('', grandTotalLine, '', 'Please confirm to proceed with pickup.', THANK_YOU_FOOTER)
 
-  return lines.filter((l) => l !== undefined).join('\n').replace(/\n{3,}/g, '\n\n').trim()
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
 /** @param {number} paise */

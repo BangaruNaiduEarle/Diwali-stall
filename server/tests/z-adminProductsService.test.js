@@ -25,7 +25,7 @@ after(() => {
   deleteTestProductsById([ADMIN_ARCHIVE_PRODUCT_ID, ADMIN_UPDATE_PRODUCT_ID, ADMIN_IMAGE_ORDER_PRODUCT_ID])
 })
 
-describe('admin product service', () => {
+describe('admin product service', { concurrency: 1 }, () => {
   it('rejects invalid validation on create', async () => {
     const db = createLocalD1Database()
     const result = await createAdminProduct(db, {
@@ -38,7 +38,7 @@ describe('admin product service', () => {
     if (!result.ok) assert.ok(result.errors.id)
   })
 
-  it('creates, archives, and restores product', async () => {
+  it('creates, deactivates, and reactivates product', async () => {
     deleteTestProductsById([ADMIN_ARCHIVE_PRODUCT_ID])
     const db = createLocalD1Database()
     const created = await createAdminProduct(db, {

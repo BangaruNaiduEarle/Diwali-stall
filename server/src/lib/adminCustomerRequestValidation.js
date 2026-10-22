@@ -22,6 +22,7 @@ export const ADMIN_CUSTOMER_REQUEST_LIST_LIMITS = {
   defaultLimit: 25,
   maxLimit: 100,
   maxPage: 10_000,
+  maxSearchLength: 80,
 }
 
 const FORBIDDEN_STATUS_PATCH_KEYS = new Set([
@@ -72,13 +73,14 @@ export function validateCustomerRequestStatusTransition(currentStatus, nextStatu
 
 /**
  * @param {URLSearchParams} searchParams
- * @returns {{ ok: true, data: { page: number, limit: number, offset: number, status?: string } } | { ok: false, errors: Record<string, string> }}
+ * @returns {{ ok: true, data: { page: number, limit: number, offset: number, status?: string, q: string } } | { ok: false, errors: Record<string, string> }}
  */
 export function parseAdminCustomerRequestListQuery(searchParams) {
   const errors = {}
   const pageRaw = searchParams.get('page')
   const limitRaw = searchParams.get('limit')
   const statusRaw = searchParams.get('status')
+  const qRaw = searchParams.get('q')
 
   let page = 1
   if (pageRaw !== null && pageRaw !== '') {
@@ -113,9 +115,14 @@ export function parseAdminCustomerRequestListQuery(searchParams) {
     }
   }
 
+  let q = ''
+  if (qRaw !== null && qRaw.trim()) {
+    q = qRaw.trim().slice(0, ADMIN_CUSTOMER_REQUEST_LIST_LIMITS.maxSearchLength)
+  }
+
   if (Object.keys(errors).length) return { ok: false, errors }
   const offset = (page - 1) * limit
-  return { ok: true, data: { page, limit, offset, status } }
+  return { ok: true, data: { page, limit, offset, status, q } }
 }
 
 /**

@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import Catalogue from './pages/Catalogue'
 import Category from './pages/Category'
 import Estimate from './pages/Estimate'
+import EstimateHistory from './pages/EstimateHistory'
 import FAQPage from './pages/FAQPage'
 import Home from './pages/Home.jsx'
 import Location from './pages/Location'
@@ -22,6 +23,7 @@ function App() {
           <Route path="packs/:packSlug" element={<PackDetail />} />
           <Route path="crackers" element={<Catalogue />} />
           <Route path="crackers/:categorySlug" element={<Category />} />
+          <Route path="estimate/history" element={<EstimateHistory />} />
           <Route path="estimate" element={<Estimate />} />
           <Route path="location" element={<Location />} />
           <Route path="faq" element={<FAQPage />} />

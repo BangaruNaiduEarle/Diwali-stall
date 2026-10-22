@@ -1,4 +1,4 @@
-import { getStallDatesList } from '../data/siteConfig'
+import { getStallDatesList } from '../data/siteConfig.js'
 
 export const CUSTOMER_STORAGE_KEY = 'crackers_customer_details'
 
@@ -6,6 +6,9 @@ const MAX = {
   name: 80,
   mobile: 15,
   area: 120,
+  deliveryAddress: 240,
+  deliveryLandmark: 120,
+  deliveryMapsUrl: 500,
   pickupDate: 40,
   note: 300,
 }
@@ -18,6 +21,9 @@ export function normalizeCustomerDetails(raw) {
     name: String(raw.name ?? '').trim().slice(0, MAX.name),
     mobile: String(raw.mobile ?? '').trim().slice(0, MAX.mobile),
     area: String(raw.area ?? '').trim().slice(0, MAX.area),
+    deliveryAddress: String(raw.deliveryAddress ?? '').trim().slice(0, MAX.deliveryAddress),
+    deliveryLandmark: String(raw.deliveryLandmark ?? '').trim().slice(0, MAX.deliveryLandmark),
+    deliveryMapsUrl: String(raw.deliveryMapsUrl ?? '').trim().slice(0, MAX.deliveryMapsUrl),
     pickupDate: String(raw.pickupDate ?? '').trim().slice(0, MAX.pickupDate),
     note: String(raw.note ?? '').trim().slice(0, MAX.note),
   }
@@ -28,6 +34,9 @@ export function emptyCustomerDetails() {
     name: '',
     mobile: '',
     area: '',
+    deliveryAddress: '',
+    deliveryLandmark: '',
+    deliveryMapsUrl: '',
     pickupDate: '',
     note: '',
   }
@@ -55,7 +64,31 @@ export function getMobileDigits(mobile) {
   return String(mobile ?? '').replace(/\D/g, '')
 }
 
-export function validateCustomerDetails(details) {
+/** @param {ReturnType<typeof normalizeCustomerDetails>} normalized */
+export function validateDeliveryLocationFields(normalized) {
+  const errors = {}
+  if (normalized.deliveryAddress.length > MAX.deliveryAddress) {
+    errors.deliveryAddress = 'Delivery address is too long.'
+  }
+  if (normalized.deliveryLandmark.length > MAX.deliveryLandmark) {
+    errors.deliveryLandmark = 'Landmark is too long.'
+  }
+  if (normalized.deliveryMapsUrl.length > MAX.deliveryMapsUrl) {
+    errors.deliveryMapsUrl = 'Maps link is too long.'
+  } else if (normalized.deliveryMapsUrl && !/^https?:\/\//i.test(normalized.deliveryMapsUrl)) {
+    errors.deliveryMapsUrl = 'Paste a full Google Maps link starting with https://'
+  }
+  if (!normalized.deliveryAddress && !normalized.area) {
+    errors.deliveryAddress = 'Enter your delivery address or area/locality for door delivery.'
+  }
+  return errors
+}
+
+/**
+ * @param {unknown} details
+ * @param {{ requireDeliveryLocation?: boolean }} [options]
+ */
+export function validateCustomerDetails(details, options = {}) {
   const normalized = normalizeCustomerDetails(details)
   const errors = {}
 
@@ -84,6 +117,14 @@ export function validateCustomerDetails(details) {
     if (allowed.length > 0 && !allowed.includes(normalized.pickupDate)) {
       errors.pickupDate = 'Please choose a stall date: November 6, 7, or 8, 2026.'
     }
+  }
+
+  if (options.requireDeliveryLocation) {
+    Object.assign(errors, validateDeliveryLocationFields(normalized))
+  } else {
+    const optionalDelivery = validateDeliveryLocationFields(normalized)
+    delete optionalDelivery.deliveryAddress
+    Object.assign(errors, optionalDelivery)
   }
 
   return errors

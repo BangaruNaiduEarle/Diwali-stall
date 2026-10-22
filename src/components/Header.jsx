@@ -4,6 +4,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import {
   ChevronDown,
   CircleHelp,
+  History,
   Home,
   LayoutGrid,
   MapPin,
@@ -29,6 +30,7 @@ const DESKTOP_NAV = [
   { to: '/crackers', label: 'Crackers', end: false },
   { to: '/location', label: 'Location', end: true },
   { to: '/faq', label: 'FAQ', end: true },
+  { to: '/estimate/history', label: 'Estimate History', end: true },
 ]
 
 const MOBILE_NAV = [
@@ -326,6 +328,21 @@ function MobileNavDrawer({ open, onClose, brandName, estimateCount, categoryLink
               })}
 
               <li className="my-2 border-t border-[var(--color-border)] pt-2" aria-hidden="true" />
+              <li>
+                <NavLink
+                  to="/estimate/history"
+                  end
+                  className={({ isActive }) =>
+                    ['nav-drawer-link focus-ring', isActive ? 'nav-drawer-link--current' : '']
+                      .filter(Boolean)
+                      .join(' ')
+                  }
+                  onClick={onClose}
+                >
+                  <History className="nav-drawer-icon h-5 w-5 shrink-0" {...ICON} aria-hidden="true" />
+                  <span>Estimate History</span>
+                </NavLink>
+              </li>
               <li>
                 <NavLink
                   to="/estimate"

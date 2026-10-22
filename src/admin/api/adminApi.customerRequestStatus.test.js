@@ -66,3 +66,51 @@ describe('patchAdminCustomerRequestStatus', () => {
     }
   })
 })
+
+describe('fetchAdminCustomerRequests search query', () => {
+  before(() => {
+    originalFetch = globalThis.fetch
+  })
+
+  after(() => {
+    if (originalFetch) globalThis.fetch = originalFetch
+  })
+
+  it('sends page, status, and trimmed search text', async () => {
+    /** @type {string | undefined} */
+    let capturedUrl
+    globalThis.fetch = async (url) => {
+      capturedUrl = String(url)
+      return new Response(JSON.stringify({ requests: [], pagination: { page: 2, limit: 25, total: 0, totalPages: 0 } }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { fetchAdminCustomerRequests } = await import(`./adminApi.js?search=${Date.now()}`)
+    const result = await fetchAdminCustomerRequests({ page: 2, status: 'received', q: ' Ravi ' })
+    assert.equal(result.ok, true)
+    const url = new URL(capturedUrl ?? '', 'http://localhost')
+    assert.equal(url.pathname, '/api/admin/customer-requests')
+    assert.equal(url.searchParams.get('page'), '2')
+    assert.equal(url.searchParams.get('status'), 'received')
+    assert.equal(url.searchParams.get('q'), 'Ravi')
+  })
+
+  it('omits an empty search query', async () => {
+    /** @type {string | undefined} */
+    let capturedUrl
+    globalThis.fetch = async (url) => {
+      capturedUrl = String(url)
+      return new Response(JSON.stringify({ requests: [], pagination: {} }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { fetchAdminCustomerRequests } = await import(`./adminApi.js?empty=${Date.now()}`)
+    await fetchAdminCustomerRequests({ page: 1, q: '   ' })
+    const url = new URL(capturedUrl ?? '', 'http://localhost')
+    assert.equal(url.searchParams.has('q'), false)
+  })
+})

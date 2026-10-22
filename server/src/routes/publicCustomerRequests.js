@@ -6,6 +6,7 @@ import {
 import {
   createPublicCustomerRequest,
   deriveRequestIdFromIdempotencyKey,
+  ensurePublicReferenceOnRequest,
   getPublicRequestSummary,
 } from '../services/publicCustomerRequests.js'
 
@@ -55,8 +56,15 @@ export async function handlePublicCustomerRequestPost(request, env) {
     requestId = await deriveRequestIdFromIdempotencyKey(idempotencyHeader)
     const existing = await getPublicRequestSummary(env.DB, requestId)
     if (existing) {
+      const ensured = await ensurePublicReferenceOnRequest(env.DB, requestId)
+      if (ensured && typeof ensured === 'object' && 'ok' in ensured && ensured.ok === false) {
+        return Response.json(
+          { error: ensured.error ?? 'server_error', message: ensured.message ?? 'Request failed.' },
+          { status: ensured.status ?? 500, headers: { ...JSON_HEADERS, 'Cache-Control': 'no-store' } },
+        )
+      }
       return Response.json(
-        { request: existing, idempotentReplay: true },
+        { request: ensured ?? existing, idempotentReplay: true },
         { status: 200, headers: { ...JSON_HEADERS, 'Cache-Control': 'no-store' } },
       )
     }

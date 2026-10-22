@@ -51,6 +51,7 @@ export const PUBLIC_PRODUCT_FIELD_KEYS = [
   'stockStatus',
   'sortOrder',
   'images',
+  'coverImageUrl',
 ]
 
 /** @param {Record<string, unknown>} row */
@@ -63,6 +64,7 @@ export function mapPublicProductRow(row) {
     images = []
   }
 
+  const normalizedImages = images.map((entry) => String(entry ?? '').trim()).filter(Boolean)
   return {
     id: row.id,
     categorySlug: row.category_slug,
@@ -73,7 +75,8 @@ export function mapPublicProductRow(row) {
     featured: Boolean(row.featured),
     stockStatus: row.stock_status,
     sortOrder: row.sort_order,
-    images,
+    images: normalizedImages,
+    coverImageUrl: normalizedImages[0] ?? null,
   }
 }
 

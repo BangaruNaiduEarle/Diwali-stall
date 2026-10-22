@@ -161,21 +161,22 @@ function createQuickBillMockDb(opts = {}) {
             const paise = rates.get(String(params[0]))
             return paise == null ? null : { unit_rate_paise: paise }
           }
-          if (
-            normalized.includes('SELECT id, status, source, created_at') &&
-            normalized.includes('FROM customer_requests')
-          ) {
-            const r = state.requests.get(String(params[0]))
-            return r
-              ? { id: r.id, status: r.status, source: r.source, created_at: r.created_at }
-              : null
-          }
           if (normalized.includes('FROM customer_requests') && normalized.includes('WHERE id = ?')) {
             const id = String(params[0])
             const r = state.requests.get(id)
             if (!r) return null
+            if (normalized.includes('public_reference') && normalized.includes('created_at')) {
+              return {
+                id: r.id,
+                public_reference: r.public_reference ?? null,
+                status: r.status,
+                source: r.source,
+                created_at: r.created_at,
+              }
+            }
             return {
               id: r.id,
+              public_reference: r.public_reference ?? null,
               status: r.status,
               customer_name: r.customer_name,
               customer_phone: r.customer_phone,
@@ -210,9 +211,10 @@ function createQuickBillMockDb(opts = {}) {
         },
         async run() {
           if (normalized.startsWith('INSERT INTO customer_requests')) {
-            const [id, name, phone, area, pickup, note, source = 'web'] = params
+            const [id, publicReference, name, phone, area, pickup, note, source = 'web'] = params
             state.requests.set(id, {
               id,
+              public_reference: publicReference ?? null,
               status: 'received',
               source,
               customer_name: name,
@@ -225,11 +227,12 @@ function createQuickBillMockDb(opts = {}) {
             return { meta: { changes: 1 } }
           }
           if (normalized.startsWith('INSERT INTO customer_request_items')) {
-            const [requestId, lineNumber, productId, productName, quantity] = params
+            const [requestId, lineNumber, productId, familyPackId, productName, quantity] = params
             state.requestItems.push({
               request_id: requestId,
               line_number: lineNumber,
               product_id: productId,
+              family_pack_id: familyPackId ?? null,
               product_name: productName,
               quantity,
             })

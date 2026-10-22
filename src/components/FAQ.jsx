@@ -31,7 +31,7 @@ const FAQ_ITEMS = [
   {
     question: 'Where do I collect my order?',
     answer:
-      'Pickup is at our Diwali stall. The address and timings on this page come from our configuration—check the stall location section or ask us on WhatsApp if you need directions.',
+      'Qualifying website orders of ₹1,000 or more may be eligible for free door delivery (subject to coverage in your area). You can also collect at our Diwali stall—see the Location page or message us on WhatsApp for directions.',
   },
 ]
 

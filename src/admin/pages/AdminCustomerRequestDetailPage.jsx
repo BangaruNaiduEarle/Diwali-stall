@@ -6,14 +6,17 @@ import {
   createQuotationForRequest,
   fetchAdminCustomerRequest,
   fetchQuotationForRequest,
+  fetchOrderConfirmationWhatsApp,
   fetchQuotationWhatsApp,
   patchAdminCustomerRequestStatus,
   regenerateQuotationForRequest,
 } from '../api/adminApi.js'
 import {
+  formatAdminPublicReference,
   formatRequestCreatedAt,
   formatShortRequestId,
 } from '../lib/adminCustomerRequestDisplay.js'
+import AdminFeedbackBanner from '../components/AdminFeedbackBanner.jsx'
 import { copyTextToClipboard } from '../lib/copyToClipboard.js'
 import {
   CUSTOMER_REQUEST_STATUSES,
@@ -98,7 +101,7 @@ export default function AdminCustomerRequestDetailPage() {
 
     setRequest((prev) => (prev ? { ...prev, status: res.request.status } : prev))
     setStatusValue(res.request.status)
-    setStatusMessage('Status saved.')
+    setStatusMessage('Status updated successfully.')
   }
 
   async function handleCreateQuote() {
@@ -129,6 +132,19 @@ export default function AdminCustomerRequestDetailPage() {
     setWaMessage('')
     setCopyFeedback(null)
     await reloadRequest()
+  }
+
+  async function handlePrepareOrderConfirmation() {
+    setBusy(true)
+    setCopyFeedback(null)
+    const res = await fetchOrderConfirmationWhatsApp(requestId)
+    setBusy(false)
+    if (!res.ok) {
+      setError(res.message)
+      return
+    }
+    setWaMessage(String(res.data?.message ?? ''))
+    setWhatsAppUrl(String(res.data?.whatsAppUrl ?? ''))
   }
 
   async function handlePrepareWhatsApp() {
@@ -190,6 +206,11 @@ export default function AdminCustomerRequestDetailPage() {
       <header className="admin-request-detail__header">
         <h2 className="admin-page__title admin-request-detail__title">Request details</h2>
         <p className="admin-request-detail__ref" title={requestId}>
+          Reference {formatAdminPublicReference(request?.publicReference)}
+          <span className="admin-request-detail__ref-sep" aria-hidden="true">
+            {' '}
+            ·{' '}
+          </span>
           ID {formatShortRequestId(requestId)}
         </p>
       </header>
@@ -223,6 +244,24 @@ export default function AdminCustomerRequestDetailPage() {
             <div>
               <dt>Pickup</dt>
               <dd>{String(request.pickupPreference)}</dd>
+            </div>
+          ) : null}
+          {request?.deliveryAddress ? (
+            <div className="admin-request-detail__dl-item--full">
+              <dt>Delivery address</dt>
+              <dd>{String(request.deliveryAddress)}</dd>
+            </div>
+          ) : null}
+          {request?.deliveryLandmark ? (
+            <div>
+              <dt>Landmark</dt>
+              <dd>{String(request.deliveryLandmark)}</dd>
+            </div>
+          ) : null}
+          {request?.deliveryMapsUrl ? (
+            <div className="admin-request-detail__dl-item--full">
+              <dt>Google Maps</dt>
+              <dd className="admin-request-detail__mono break-all">{String(request.deliveryMapsUrl)}</dd>
             </div>
           ) : null}
           <div className="admin-request-detail__dl-item--full">
@@ -259,16 +298,18 @@ export default function AdminCustomerRequestDetailPage() {
               <Loader2 className="inline h-3.5 w-3.5 animate-spin align-[-2px]" aria-hidden="true" /> Saving status…
             </p>
           ) : null}
-          {statusMessage ? (
-            <p className="admin-hint admin-hint--success" role="status">
-              {statusMessage}
-            </p>
-          ) : null}
-          {statusError ? (
-            <p className="admin-field-error" role="alert">
-              {statusError}
-            </p>
-          ) : null}
+          <AdminFeedbackBanner
+            variant="success"
+            message={statusMessage}
+            onDismiss={() => setStatusMessage(null)}
+            className="mt-2"
+          />
+          <AdminFeedbackBanner
+            variant="error"
+            message={statusError}
+            onDismiss={() => setStatusError(null)}
+            className="mt-2"
+          />
           {statusTerminal ? (
             <p id="request-status-terminal-hint" className="admin-hint admin-hint--warn">
               This request is in a terminal state ({customerRequestStatusLabel(currentStatus)}) and cannot be changed
@@ -283,14 +324,26 @@ export default function AdminCustomerRequestDetailPage() {
           Requested items
         </h3>
         <ul className="admin-request-detail__item-list">
-          {items.map((it) => (
-            <li key={String(it.lineNumber)} className="admin-request-detail__item-row">
-              <span className="admin-request-detail__item-name">{String(it.productName)}</span>
-              <span className="admin-request-detail__item-meta">
-                {String(it.productId)} × {String(it.quantity)}
-              </span>
-            </li>
-          ))}
+          {items.map((it) => {
+            const isPack = it.lineType === 'family_pack' || Boolean(it.familyPackId)
+            const ref = isPack ? String(it.familyPackId ?? '—') : String(it.productId ?? '—')
+            const unitPaise = Number(it.unitPricePaise)
+            const qty = Number(it.quantity)
+            const lineTotalPaise =
+              Number.isInteger(unitPaise) && unitPaise > 0 && Number.isInteger(qty) ? unitPaise * qty : null
+            return (
+              <li key={String(it.lineNumber)} className="admin-request-detail__item-row">
+                <span className="admin-request-detail__item-name">
+                  {String(it.productName)}
+                  {isPack ? ' (Family pack)' : ''}
+                </span>
+                <span className="admin-request-detail__item-meta">
+                  {ref} × {String(it.quantity)}
+                  {lineTotalPaise != null ? ` — ${formatINR(paiseToInrHelper(lineTotalPaise))}` : ''}
+                </span>
+              </li>
+            )
+          })}
         </ul>
       </section>
 
@@ -311,6 +364,11 @@ export default function AdminCustomerRequestDetailPage() {
                 {formatINR(paiseToInrHelper(quotation.totalPaise))}
               </p>
             </div>
+            <p className="admin-hint admin-request-detail__delivery-hint">
+              Free door delivery in order confirmations uses this quotation total (₹1,000+ for web preorders only).
+              Eligibility is not the same as confirmed coverage—verify the customer&apos;s address is serviceable
+              before sending a free-delivery confirmation.
+            </p>
             <div className="admin-form__actions admin-form__actions--start admin-request-detail__actions">
               <button
                 type="button"
@@ -318,7 +376,15 @@ export default function AdminCustomerRequestDetailPage() {
                 disabled={busy}
                 onClick={handlePrepareWhatsApp}
               >
-                Prepare WhatsApp message
+                Prepare quotation WhatsApp
+              </button>
+              <button
+                type="button"
+                className="admin-touch-button admin-touch-button--secondary"
+                disabled={busy}
+                onClick={handlePrepareOrderConfirmation}
+              >
+                Prepare order confirmation
               </button>
               <button type="button" className="admin-touch-button admin-touch-button--secondary" disabled={busy} onClick={handleCreateQuote}>
                 Open existing quotation
@@ -341,7 +407,7 @@ export default function AdminCustomerRequestDetailPage() {
           </>
         ) : (
           <>
-            <p className="admin-hint admin-request-detail__quote-empty">Create a quotation to price this request with X4 rates.</p>
+            <p className="admin-hint admin-request-detail__quote-empty">Create a quotation to price this request using selling prices.</p>
             <div className="admin-form__actions admin-form__actions--start admin-request-detail__actions">
               <button type="button" className="admin-touch-button admin-touch-button--primary" disabled={busy} onClick={handleCreateQuote}>
                 Create quotation

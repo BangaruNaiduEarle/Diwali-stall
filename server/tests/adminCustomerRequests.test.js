@@ -6,7 +6,9 @@ import {
   ADMIN_GET_CUSTOMER_REQUEST_SQL,
   ADMIN_LIST_CUSTOMER_REQUESTS_SQL,
   ADMIN_LIST_CUSTOMER_REQUEST_ITEMS_SQL,
+  buildAdminCustomerRequestListFilter,
   listAdminCustomerRequests,
+  normalizeCustomerRequestPhoneSearch,
   updateAdminCustomerRequestStatus,
 } from '../src/services/adminCustomerRequests.js'
 import {
@@ -44,12 +46,8 @@ async function adminFetch(path, { method = 'GET', body, db } = {}) {
 }
 
 describe('admin customer request SQL separation', () => {
-  it('list and detail SQL do not reference private_rates or money columns', () => {
-    for (const sql of [
-      ADMIN_LIST_CUSTOMER_REQUESTS_SQL,
-      ADMIN_GET_CUSTOMER_REQUEST_SQL,
-      ADMIN_LIST_CUSTOMER_REQUEST_ITEMS_SQL,
-    ]) {
+  it('list and detail SQL do not reference private_rates or quotation totals', () => {
+    for (const sql of [ADMIN_LIST_CUSTOMER_REQUESTS_SQL, ADMIN_GET_CUSTOMER_REQUEST_SQL]) {
       const lower = sql.toLowerCase()
       assert.ok(!lower.includes('private_rates'))
       assert.ok(!lower.includes('unit_rate'))
@@ -57,6 +55,10 @@ describe('admin customer request SQL separation', () => {
       assert.ok(!lower.includes('subtotal'))
       assert.ok(!lower.includes('total_paise'))
     }
+    const itemsSql = ADMIN_LIST_CUSTOMER_REQUEST_ITEMS_SQL.toLowerCase()
+    assert.ok(!itemsSql.includes('private_rates'))
+    assert.ok(itemsSql.includes('unit_price_paise'))
+    assert.ok(!itemsSql.includes('from private_rates'))
   })
 })
 
@@ -80,6 +82,26 @@ describe('admin customer request list query validation', () => {
     const bad = parseAdminCustomerRequestListQuery(new URLSearchParams('status=shipped'))
     assert.equal(bad.ok, false)
   })
+
+  it('trims search text and keeps it alongside the status filter', () => {
+    const parsed = parseAdminCustomerRequestListQuery(new URLSearchParams('q=%20Ravi%20&status=received'))
+    assert.equal(parsed.ok, true)
+    if (parsed.ok) {
+      assert.equal(parsed.data.q, 'Ravi')
+      assert.equal(parsed.data.status, 'received')
+    }
+    const blank = parseAdminCustomerRequestListQuery(new URLSearchParams('q=%20%20'))
+    assert.equal(blank.ok, true)
+    if (blank.ok) assert.equal(blank.data.q, '')
+  })
+
+  it('caps search length', () => {
+    const parsed = parseAdminCustomerRequestListQuery(
+      new URLSearchParams(`q=${'a'.repeat(ADMIN_CUSTOMER_REQUEST_LIST_LIMITS.maxSearchLength + 10)}`),
+    )
+    assert.equal(parsed.ok, true)
+    if (parsed.ok) assert.equal(parsed.data.q.length, ADMIN_CUSTOMER_REQUEST_LIST_LIMITS.maxSearchLength)
+  })
 })
 
 describe('admin customer request authorization', () => {
@@ -88,6 +110,7 @@ describe('admin customer request authorization', () => {
     const env = localEnv(db)
     const paths = [
       ['GET', '/api/admin/customer-requests'],
+      ['GET', '/api/admin/customer-requests?q=ravi'],
       ['GET', '/api/admin/customer-requests/cr-0123456789abcdef0123456789abcdef'],
       ['PATCH', '/api/admin/customer-requests/cr-0123456789abcdef0123456789abcdef/status'],
     ]
@@ -272,7 +295,188 @@ describe('admin customer request API (mock D1)', () => {
     const last = db.lastListBind
     assert.deepEqual(last, ['received', 10, 0])
   })
+
+  it('binds search text instead of interpolating it into SQL', async () => {
+    const db = createAdminMockDb({ requests: sampleRequests, items: [] })
+    await listAdminCustomerRequests(db, { limit: 10, offset: 0, q: "O'Hara%" })
+    assert.equal(String(db.lastListSql).includes("O'Hara"), false)
+    assert.match(String(db.lastListSql), /LIKE \?/)
+    assert.deepEqual(db.lastListBind, ["%O'Hara\\%%", "%O'Hara\\%%", 10, 0])
+  })
 })
+
+describe('admin customer request search', () => {
+  const searchRequests = [
+    {
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      status: 'received',
+      source: 'web',
+      customer_name: 'Ravi Kumar',
+      customer_phone: '+91 (958) 123-4567',
+      customer_area: 'Chennai',
+      created_at: '2026-10-16 09:00:00',
+      updated_at: '2026-10-16 09:00:00',
+    },
+    {
+      id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      status: 'reviewing',
+      source: 'web',
+      customer_name: 'Meera',
+      customer_phone: '9876543210',
+      customer_area: 'Madurai',
+      created_at: '2026-10-16 12:00:00',
+      updated_at: '2026-10-16 12:00:00',
+    },
+    {
+      id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      status: 'quoted',
+      source: 'web',
+      customer_name: 'Anita Rao',
+      customer_phone: '9581098765',
+      customer_area: 'Chennai',
+      created_at: '2026-10-16 13:00:00',
+      updated_at: '2026-10-16 13:00:00',
+    },
+  ]
+
+  it('normalizes phone search text', () => {
+    assert.equal(normalizeCustomerRequestPhoneSearch(' +91 (958)-123 '), '91958123')
+    assert.equal(normalizeCustomerRequestPhoneSearch('9581'), '9581')
+  })
+
+  it('searches by full and partial customer name, ignoring case', async () => {
+    const db = createAdminMockDb({ requests: searchRequests, items: [] })
+    const full = await adminFetch('/api/admin/customer-requests?q=Ravi%20Kumar', { db })
+    assert.equal(full.status, 200)
+    const fullBody = await full.json()
+    assert.equal(fullBody.pagination.total, 1)
+    assert.equal(fullBody.requests[0].customerName, 'Ravi Kumar')
+
+    const partial = await adminFetch('/api/admin/customer-requests?q=ravi', { db })
+    const partialBody = await partial.json()
+    assert.equal(partialBody.pagination.total, 1)
+    assert.equal(partialBody.requests[0].id, searchRequests[0].id)
+  })
+
+  it('searches by full and partial phone numbers, ignoring formatting', async () => {
+    const db = createAdminMockDb({ requests: searchRequests, items: [] })
+    const full = await adminFetch('/api/admin/customer-requests?q=9876543210', { db })
+    const fullBody = await full.json()
+    assert.equal(fullBody.pagination.total, 1)
+    assert.equal(fullBody.requests[0].customerName, 'Meera')
+
+    const partial = await adminFetch('/api/admin/customer-requests?q=9581', { db })
+    const partialBody = await partial.json()
+    assert.equal(partialBody.pagination.total, 2)
+    const names = partialBody.requests.map((row) => row.customerName).sort()
+    assert.deepEqual(names, ['Anita Rao', 'Ravi Kumar'])
+
+    const formatted = await adminFetch(
+      `/api/admin/customer-requests?q=${encodeURIComponent('+91 (958)-123')}`,
+      { db },
+    )
+    const formattedBody = await formatted.json()
+    assert.equal(formattedBody.pagination.total, 1)
+    assert.equal(formattedBody.requests[0].customerName, 'Ravi Kumar')
+  })
+
+  it('returns an empty page when nothing matches', async () => {
+    const db = createAdminMockDb({ requests: searchRequests, items: [] })
+    const res = await adminFetch('/api/admin/customer-requests?q=zzzz', { db })
+    const body = await res.json()
+    assert.equal(body.requests.length, 0)
+    assert.equal(body.pagination.total, 0)
+    assert.equal(body.pagination.totalPages, 0)
+  })
+
+  it('returns the full list when search is blank', async () => {
+    const db = createAdminMockDb({ requests: searchRequests, items: [] })
+    const res = await adminFetch('/api/admin/customer-requests?q=%20%20', { db })
+    const body = await res.json()
+    assert.equal(body.pagination.total, 3)
+    assert.equal(body.requests.length, 3)
+  })
+
+  it('composes search with the status filter and searches beyond the first page', async () => {
+    const db = createAdminMockDb({ requests: searchRequests, items: [] })
+    const filtered = await adminFetch('/api/admin/customer-requests?q=ravi&status=received', { db })
+    const filteredBody = await filtered.json()
+    assert.equal(filteredBody.pagination.total, 1)
+    assert.equal(filteredBody.requests[0].status, 'received')
+
+    const none = await adminFetch('/api/admin/customer-requests?q=ravi&status=quoted', { db })
+    const noneBody = await none.json()
+    assert.equal(noneBody.pagination.total, 0)
+
+    const unfilteredPage = await adminFetch('/api/admin/customer-requests?limit=1&page=1', { db })
+    const unfilteredBody = await unfilteredPage.json()
+    assert.equal(unfilteredBody.requests[0].customerName, 'Anita Rao')
+
+    const olderMatch = await adminFetch('/api/admin/customer-requests?q=Ravi&limit=1&page=1', { db })
+    const olderBody = await olderMatch.json()
+    assert.equal(olderBody.requests[0].customerName, 'Ravi Kumar')
+    assert.equal(olderBody.pagination.total, 1)
+  })
+
+  it('does not treat LIKE wildcards in the query as match-all', () => {
+    const filter = buildAdminCustomerRequestListFilter({ q: '%' })
+    assert.deepEqual(filter.binds, ['%\\%%', '%\\%%'])
+    assert.match(filter.whereSql, /ESCAPE '\\'/)
+  })
+})
+
+function sqlLikeMatch(value, pattern) {
+  let regex = ''
+  const source = String(pattern ?? '')
+  for (let i = 0; i < source.length; i++) {
+    const ch = source[i]
+    if (ch === '\\') {
+      const next = source[i + 1]
+      if (next === undefined) {
+        regex += '\\\\'
+        break
+      }
+      regex += next.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      i += 1
+      continue
+    }
+    if (ch === '%') {
+      regex += '[\\s\\S]*'
+      continue
+    }
+    if (ch === '_') {
+      regex += '[\\s\\S]'
+      continue
+    }
+    regex += ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  }
+  return new RegExp(`^${regex}$`, 'i').test(String(value ?? ''))
+}
+
+/**
+ * @param {object[]} rows
+ * @param {string} normalized
+ * @param {unknown[]} params
+ */
+function filterCustomerRequestRows(rows, normalized, params) {
+  let index = 0
+  let filtered = rows
+  if (normalized.includes('r.status = ?')) {
+    const status = params[index++]
+    filtered = filtered.filter((row) => row.status === status)
+  }
+  const likeCount = normalized.split('LIKE ?').length - 1
+  if (likeCount > 0) {
+    const namePattern = String(params[index++] ?? '')
+    const phonePattern = likeCount > 1 ? String(params[index++] ?? '') : null
+    filtered = filtered.filter((row) => {
+      if (sqlLikeMatch(row.customer_name, namePattern)) return true
+      if (!phonePattern) return false
+      return sqlLikeMatch(normalizeCustomerRequestPhoneSearch(row.customer_phone), phonePattern)
+    })
+  }
+  return { filtered, nextIndex: index }
+}
 
 function assertNoRateFields(obj) {
   const forbiddenKeys = new Set([
@@ -332,11 +536,12 @@ function createAdminMockDb(opts) {
                 return state.requests.get(String(params[0])) ?? null
               }
               if (normalized.includes('COUNT(*) AS total FROM customer_requests')) {
-                let rows = [...state.requests.values()]
-                if (normalized.includes('WHERE r.status = ?')) {
-                  rows = rows.filter((r) => r.status === params[0])
-                }
-                return { total: rows.length }
+                const { filtered } = filterCustomerRequestRows(
+                  [...state.requests.values()],
+                  normalized,
+                  params,
+                )
+                return { total: filtered.length }
               }
               return null
             },
@@ -356,16 +561,18 @@ function createAdminMockDb(opts) {
               }
               if (normalized.includes('FROM customer_requests r')) {
                 db.lastListBind = params
-                let rows = [...state.requests.values()]
-                if (normalized.includes('WHERE r.status = ?')) {
-                  rows = rows.filter((r) => r.status === params[0])
-                }
-                rows.sort((a, b) => {
+                db.lastListSql = normalized
+                const { filtered, nextIndex } = filterCustomerRequestRows(
+                  [...state.requests.values()],
+                  normalized,
+                  params,
+                )
+                const rows = filtered.sort((a, b) => {
                   const c = String(b.created_at).localeCompare(String(a.created_at))
                   return c !== 0 ? c : String(b.id).localeCompare(String(a.id))
                 })
-                const limit = normalized.includes('WHERE r.status = ?') ? params[1] : params[0]
-                const offset = normalized.includes('WHERE r.status = ?') ? params[2] : params[1]
+                const limit = params[nextIndex]
+                const offset = params[nextIndex + 1]
                 const slice = rows.slice(offset, offset + limit)
                 const results = slice.map((r) => ({
                   id: r.id,

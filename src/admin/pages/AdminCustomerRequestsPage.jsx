@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Loader2, RefreshCw } from 'lucide-react'
+import { Loader2, RefreshCw, Search, X } from 'lucide-react'
 import { fetchAdminCustomerRequests } from '../api/adminApi.js'
 import AdminCustomerRequestCard from '../components/AdminCustomerRequestCard.jsx'
-import { formatRequestCreatedAt, formatShortRequestId } from '../lib/adminCustomerRequestDisplay.js'
+import {
+  formatAdminPublicReference,
+  formatRequestCreatedAt,
+  formatShortRequestId,
+} from '../lib/adminCustomerRequestDisplay.js'
 import {
   CUSTOMER_REQUEST_STATUSES,
   customerRequestStatusBadgeClass,
@@ -16,16 +20,35 @@ export default function AdminCustomerRequestsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(/** @type {string | null} */ (null))
   const [statusFilter, setStatusFilter] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [debouncedQ, setDebouncedQ] = useState('')
   const [page, setPage] = useState(1)
+  const requestSeq = useRef(0)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQ(searchInput.trim()), 300)
+    return () => clearTimeout(timer)
+  }, [searchInput])
 
   useEffect(() => {
     setPage(1)
-  }, [statusFilter])
+  }, [statusFilter, debouncedQ])
+
+  const clearSearch = useCallback(() => {
+    setSearchInput('')
+    setDebouncedQ('')
+  }, [])
 
   const load = useCallback(async () => {
+    const seq = ++requestSeq.current
     setLoading(true)
     setError(null)
-    const result = await fetchAdminCustomerRequests({ page, status: statusFilter || undefined })
+    const result = await fetchAdminCustomerRequests({
+      page,
+      status: statusFilter || undefined,
+      q: debouncedQ || undefined,
+    })
+    if (seq !== requestSeq.current) return
     if (!result.ok) {
       setError(result.message)
       setRequests([])
@@ -41,17 +64,18 @@ export default function AdminCustomerRequestsPage() {
       totalPages: Number(p.totalPages ?? 0),
     })
     setLoading(false)
-  }, [page, statusFilter])
+  }, [page, statusFilter, debouncedQ])
 
   useEffect(() => {
     load()
   }, [load])
 
   const resultsSummary = useMemo(() => {
-    const totalPart = `${pagination.total} request${pagination.total === 1 ? '' : 's'}`
+    const noun = pagination.total === 1 ? 'request' : 'requests'
+    const totalPart = debouncedQ ? `${pagination.total} ${noun} found` : `${pagination.total} ${noun}`
     if (pagination.totalPages <= 1) return totalPart
     return `${totalPart} · Page ${pagination.page} of ${pagination.totalPages}`
-  }, [pagination])
+  }, [pagination, debouncedQ])
 
   return (
     <div className="admin-page admin-page--customer-requests">
@@ -63,36 +87,55 @@ export default function AdminCustomerRequestsPage() {
           </p>
         </div>
       </div>
-      <div className="admin-toolbar admin-requests-toolbar">
-        <label className="admin-field admin-requests-toolbar__status">
-          <span className="admin-label admin-show-desktop">Filter by status</span>
-          <select
-            className="admin-input"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            aria-label="Filter by status"
+      <div className="admin-toolbar admin-toolbar--stack admin-requests-toolbar">
+        <div className="admin-search admin-requests-toolbar__search">
+          <Search className="admin-search__icon" size={18} strokeWidth={1.75} aria-hidden="true" />
+          <input
+            type="search"
+            className={`admin-input admin-search__input${searchInput ? ' admin-search__input--clearable' : ''}`}
+            placeholder="Search by customer name or phone number..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            autoComplete="off"
+            aria-label="Search by customer name or phone number"
+          />
+          {searchInput ? (
+            <button type="button" className="admin-search__clear" onClick={clearSearch} aria-label="Clear search">
+              <X size={16} aria-hidden="true" />
+            </button>
+          ) : null}
+        </div>
+        <div className="admin-requests-toolbar__row">
+          <label className="admin-field admin-requests-toolbar__status">
+            <span className="admin-label admin-show-desktop">Filter by status</span>
+            <select
+              className="admin-input"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              aria-label="Filter by status"
+            >
+              <option value="">All statuses</option>
+              {CUSTOMER_REQUEST_STATUSES.map((value) => (
+                <option key={value} value={value}>
+                  {customerRequestStatusLabel(value)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="admin-requests-refresh-btn admin-show-mobile"
+            onClick={load}
+            disabled={loading}
+            aria-label="Refresh requests"
+            title="Refresh requests"
           >
-            <option value="">All statuses</option>
-            {CUSTOMER_REQUEST_STATUSES.map((value) => (
-              <option key={value} value={value}>
-                {customerRequestStatusLabel(value)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          className="admin-requests-refresh-btn admin-show-mobile"
-          onClick={load}
-          disabled={loading}
-          aria-label="Refresh requests"
-          title="Refresh requests"
-        >
-          <RefreshCw size={18} className={loading ? 'animate-spin' : undefined} aria-hidden="true" />
-        </button>
-        <button type="button" className="admin-link-button admin-show-desktop" onClick={load} disabled={loading}>
-          Refresh
-        </button>
+            <RefreshCw size={18} className={loading ? 'animate-spin' : undefined} aria-hidden="true" />
+          </button>
+          <button type="button" className="admin-link-button admin-show-desktop" onClick={load} disabled={loading}>
+            Refresh
+          </button>
+        </div>
       </div>
       {loading ? (
         <div className="admin-state">
@@ -107,12 +150,23 @@ export default function AdminCustomerRequestsPage() {
       ) : null}
       {!loading && !error && requests.length === 0 ? (
         <div className="admin-state">
-          <p>No requests match this filter.</p>
+          {debouncedQ ? (
+            <>
+              <p>No customer requests found. Try another name or phone number.</p>
+              <button type="button" className="admin-link-button" onClick={clearSearch}>
+                Clear search
+              </button>
+            </>
+          ) : (
+            <p>No requests match this filter.</p>
+          )}
         </div>
       ) : null}
       {!loading && !error && requests.length > 0 ? (
         <>
-          <p className="admin-hint admin-requests-results-meta">{resultsSummary}</p>
+          <p className="admin-hint admin-requests-results-meta" aria-live="polite">
+            {resultsSummary}
+          </p>
           <div className="admin-card-list admin-show-mobile" aria-label="Customer requests">
             {requests.map((r) => (
               <AdminCustomerRequestCard key={String(r.id ?? '')} request={r} />
@@ -122,6 +176,7 @@ export default function AdminCustomerRequestsPage() {
             <table className="admin-table">
               <thead>
                 <tr>
+                  <th>Reference</th>
                   <th>ID</th>
                   <th>Customer</th>
                   <th>Status</th>
@@ -136,6 +191,7 @@ export default function AdminCustomerRequestsPage() {
                   const rowStatus = String(r.status ?? '')
                   return (
                     <tr key={id}>
+                      <td className="admin-table__mono">{formatAdminPublicReference(r.publicReference)}</td>
                       <td className="admin-table__mono" title={id}>
                         {formatShortRequestId(id)}
                       </td>

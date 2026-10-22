@@ -72,6 +72,16 @@ export async function resetAdminUserPassword(id, password) {
   })
 }
 
+export async function updateAdminUserRole(id, role) {
+  const result = await apiRequest(`/api/admin/users/${encodeURIComponent(id)}/role`, {
+    method: 'POST',
+    body: JSON.stringify({ role }),
+  })
+  if (!result.ok) return result
+  const user = /** @type {{ user?: unknown }} */ (result.data ?? {}).user
+  return { ok: true, user }
+}
+
 /**
  * @param {{ includeArchived?: boolean, limit?: number, offset?: number }} [opts]
  */
@@ -157,6 +167,19 @@ export async function updateAdminProduct(id, body) {
   })
 }
 
+/** @param {string} id @param {boolean} active */
+export async function patchAdminProductStatus(id, active) {
+  return apiRequest(`/api/admin/products/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ active }),
+  })
+}
+
+/** @param {string} id */
+export async function deleteAdminProduct(id) {
+  return apiRequest(`/api/admin/products/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
 /**
  * @param {string} productId
  * @param {number} slot 1–20
@@ -186,6 +209,8 @@ export async function fetchAdminCustomerRequests(opts = {}) {
   const params = new URLSearchParams()
   params.set('page', String(opts.page ?? 1))
   if (opts.status) params.set('status', opts.status)
+  const q = typeof opts.q === 'string' ? opts.q.trim() : ''
+  if (q) params.set('q', q)
   const result = await apiRequest(`/api/admin/customer-requests?${params.toString()}`)
   if (!result.ok) return result
   const data = /** @type {{ requests?: unknown[], pagination?: Record<string, number> }} */ (result.data ?? {})
@@ -257,6 +282,13 @@ export async function fetchQuotationWhatsApp(quotationId) {
   return apiRequest(`/api/admin/quotations/${encodeURIComponent(quotationId)}/whatsapp`)
 }
 
+/** @param {string} requestId */
+export async function fetchOrderConfirmationWhatsApp(requestId) {
+  return apiRequest(
+    `/api/admin/customer-requests/${encodeURIComponent(requestId)}/order-confirmation/whatsapp`,
+  )
+}
+
 /** @param {{ productId: string, quantity: number }[]} items */
 export async function previewQuickBill(items) {
   const result = await apiRequest('/api/admin/quick-bill/preview', {
@@ -302,6 +334,57 @@ export async function requestUploadSign(productId, slot) {
     method: 'POST',
     body: JSON.stringify({ productId, slot }),
   })
+}
+
+export async function requestFamilyPackUploadSign(familyPackId, slot) {
+  return apiRequest('/api/admin/uploads/sign', {
+    method: 'POST',
+    body: JSON.stringify({ familyPackId, slot }),
+  })
+}
+
+export async function fetchAdminFamilyPacks(opts = {}) {
+  const params = new URLSearchParams()
+  if (opts.includeInactive === false) params.set('includeInactive', '0')
+  if (opts.q) params.set('q', opts.q)
+  const qs = params.toString()
+  const result = await apiRequest(`/api/admin/family-packs${qs ? `?${qs}` : ''}`)
+  if (!result.ok) return result
+  const familyPacks = /** @type {{ familyPacks?: unknown[] }} */ (result.data ?? {}).familyPacks
+  return { ok: true, familyPacks: Array.isArray(familyPacks) ? familyPacks : [] }
+}
+
+export async function fetchAdminFamilyPack(id) {
+  const result = await apiRequest(`/api/admin/family-packs/${encodeURIComponent(id)}`)
+  if (!result.ok) return result
+  const familyPack = /** @type {{ familyPack?: unknown }} */ (result.data ?? {}).familyPack
+  if (!familyPack) {
+    return { ok: false, status: result.status, error: 'invalid_response', message: 'Invalid family pack response.' }
+  }
+  return { ok: true, familyPack }
+}
+
+export async function createAdminFamilyPack(body) {
+  return apiRequest('/api/admin/family-packs', { method: 'POST', body: JSON.stringify(body) })
+}
+
+export async function updateAdminFamilyPack(id, body) {
+  return apiRequest(`/api/admin/family-packs/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
+}
+
+export async function patchAdminFamilyPackStatus(id, active) {
+  return apiRequest(`/api/admin/family-packs/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ active }),
+  })
+}
+
+/** @param {string} id */
+export async function deleteAdminFamilyPack(id) {
+  return apiRequest(`/api/admin/family-packs/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
 /**

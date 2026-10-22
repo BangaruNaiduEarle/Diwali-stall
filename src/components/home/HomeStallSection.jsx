@@ -1,19 +1,10 @@
-import {
-  CalendarDays,
-  Clock3,
-  MapPin,
-  MessageCircle,
-  Navigation,
-  Store,
-} from 'lucide-react'
+import { CalendarDays, MapPin, MessageCircle, Navigation } from 'lucide-react'
 import Button from '../ui/Button'
 import {
   getLocationHeroLine,
   getLocationMapUrl,
   getStallDatesSummary,
-  hasLocation,
   hasStallDates,
-  siteConfig,
 } from '../../data/siteConfig'
 
 const ICON = { strokeWidth: 1.8 }
@@ -36,7 +27,7 @@ export default function HomeStallSection({ whatsAppUrl }) {
               Your Diwali celebration
               <span className="mt-0.5 block text-[var(--color-ivory)]">starts at our stall.</span>
             </h2>
-            <dl className="mt-5 grid gap-4 sm:grid-cols-3 sm:gap-5">
+            <dl className="mt-5 grid gap-4 sm:grid-cols-2 sm:gap-5">
               <div>
                 <dt className="editorial-label flex items-center gap-2 text-[var(--color-gold)]">
                   <MapPin className="h-3.5 w-3.5" {...ICON} aria-hidden="true" />
@@ -57,22 +48,14 @@ export default function HomeStallSection({ whatsAppUrl }) {
                     : 'Dates will be posted on the Location page when confirmed.'}
                 </dd>
               </div>
-              <div>
-                <dt className="editorial-label flex items-center gap-2 text-[var(--color-gold)]">
-                  <Clock3 className="h-3.5 w-3.5" {...ICON} aria-hidden="true" />
-                  Timings
-                </dt>
-                <dd className="mt-1.5 text-sm text-[var(--color-ivory)]/90">
-                  {stallLine(siteConfig.stallTimings, 'Timings will be posted when the stall schedule is final.')}
-                </dd>
-              </div>
             </dl>
-            {hasLocation() ? (
-              <p className="mt-3 flex items-start gap-2 text-sm text-[var(--color-ivory)]/80">
-                <Store className="mt-0.5 h-4 w-4 shrink-0" {...ICON} aria-hidden="true" />
-                Pickup at the stall — no delivery through this website.
-              </p>
-            ) : null}
+            <p className="mt-4 text-sm leading-relaxed text-[var(--color-ivory)]/75">
+              We&apos;ll update the stall number soon!
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--color-ivory)]/80">
+              Free door delivery is available on qualifying website orders of ₹1,000 or more, subject to delivery
+              coverage in your area.
+            </p>
           </div>
           <div className="flex max-w-[360px] flex-col gap-2.5 sm:max-w-none md:flex-row lg:max-w-[280px] lg:flex-col">
             <Button to="/location" variant="secondary" surface="dark" size="md" icon={MapPin} fullWidth className="md:!w-auto lg:!w-full">

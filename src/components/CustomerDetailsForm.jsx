@@ -14,7 +14,7 @@ export default function CustomerDetailsForm({
   introTitle = 'Almost there',
   introText = 'Tell us where we can reach you.',
 }) {
-  const { details, errors, setField, markFieldTouched } = useCustomerDetails()
+  const { details, errors, setField, markFieldTouched, requireDeliveryLocation } = useCustomerDetails()
   const stallDates = getStallDatesList()
 
   return (
@@ -114,8 +114,85 @@ export default function CustomerDetailsForm({
             aria-describedby={`${id}-area-hint`}
           />
           <p id={`${id}-area-hint`} className="mt-1.5 text-xs text-[var(--color-muted)]">
-            Optional — helps us understand where you&apos;re visiting from.
+            {requireDeliveryLocation
+              ? 'Area or locality for door delivery (required if address below is empty).'
+              : 'Optional — helps us understand where you&apos;re visiting from.'}
           </p>
+        </div>
+
+        <div className="md:col-span-2">
+          <p className="mb-3 text-sm font-semibold text-[var(--color-maroon)]">Door delivery location</p>
+          <p className="mb-3 text-xs leading-relaxed text-[var(--color-muted)]">
+            Free door delivery applies to qualifying orders of ₹1,000 or more within our service area. Paste a Google
+            Maps link if you have one — GPS is not required.
+          </p>
+        </div>
+
+        <div className="md:col-span-2">
+          <label htmlFor={`${id}-delivery-address`} className="mb-1.5 block text-sm font-medium text-[var(--color-charcoal)]">
+            Delivery address{' '}
+            {requireDeliveryLocation ? (
+              <span className="text-[var(--color-red)]">*</span>
+            ) : (
+              <span className="font-normal text-[var(--color-muted)]">(optional)</span>
+            )}
+          </label>
+          <textarea
+            id={`${id}-delivery-address`}
+            rows={2}
+            placeholder="House / flat, street, colony"
+            value={details.deliveryAddress}
+            onChange={(e) => setField('deliveryAddress', e.target.value)}
+            onBlur={() => markFieldTouched('deliveryAddress')}
+            className={`${fieldClass} min-h-[4.5rem] resize-y py-3 ${errors.deliveryAddress ? fieldErrorClass : ''}`}
+            aria-invalid={Boolean(errors.deliveryAddress)}
+          />
+          {errors.deliveryAddress ? (
+            <p className="mt-1.5 text-xs font-medium text-[var(--color-red)]" role="alert">
+              {errors.deliveryAddress}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="md:col-span-1">
+          <label htmlFor={`${id}-landmark`} className="mb-1.5 block text-sm font-medium text-[var(--color-charcoal)]">
+            Landmark <span className="font-normal text-[var(--color-muted)]">(optional)</span>
+          </label>
+          <input
+            id={`${id}-landmark`}
+            type="text"
+            placeholder="Near temple, school, etc."
+            value={details.deliveryLandmark}
+            onChange={(e) => setField('deliveryLandmark', e.target.value)}
+            onBlur={() => markFieldTouched('deliveryLandmark')}
+            className={`${fieldClass} ${errors.deliveryLandmark ? fieldErrorClass : ''}`}
+          />
+          {errors.deliveryLandmark ? (
+            <p className="mt-1.5 text-xs font-medium text-[var(--color-red)]" role="alert">
+              {errors.deliveryLandmark}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="md:col-span-1">
+          <label htmlFor={`${id}-maps`} className="mb-1.5 block text-sm font-medium text-[var(--color-charcoal)]">
+            Google Maps link <span className="font-normal text-[var(--color-muted)]">(optional)</span>
+          </label>
+          <input
+            id={`${id}-maps`}
+            type="url"
+            inputMode="url"
+            placeholder="https://maps.google.com/..."
+            value={details.deliveryMapsUrl}
+            onChange={(e) => setField('deliveryMapsUrl', e.target.value)}
+            onBlur={() => markFieldTouched('deliveryMapsUrl')}
+            className={`${fieldClass} ${errors.deliveryMapsUrl ? fieldErrorClass : ''}`}
+          />
+          {errors.deliveryMapsUrl ? (
+            <p className="mt-1.5 text-xs font-medium text-[var(--color-red)]" role="alert">
+              {errors.deliveryMapsUrl}
+            </p>
+          ) : null}
         </div>
 
         <div className="md:col-span-1">

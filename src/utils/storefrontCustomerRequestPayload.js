@@ -4,22 +4,33 @@
  */
 
 /**
- * @param {{ name: string, mobile: string, area?: string, pickupDate?: string, note?: string }} customer
+ * @param {{ name: string, mobile: string, area?: string, deliveryAddress?: string, deliveryLandmark?: string, deliveryMapsUrl?: string, pickupDate?: string, note?: string }} customer
  * @param {{ productId: string, quantity: number }[]} estimateItems
  */
 export function buildCustomerRequestBodyFromParts(customer, estimateItems) {
   const items = [...estimateItems]
-    .map((entry) => ({
-      productId: String(entry.productId ?? '').trim(),
-      quantity: Math.floor(Number(entry.quantity)),
-    }))
-    .sort((a, b) => a.productId.localeCompare(b.productId))
+    .map((entry) => {
+      const familyPackId = String(entry.familyPackId ?? entry.family_pack_id ?? '').trim()
+      const productId = String(entry.productId ?? '').trim()
+      if (familyPackId) {
+        return { familyPackId, quantity: Math.floor(Number(entry.quantity)) }
+      }
+      return { productId, quantity: Math.floor(Number(entry.quantity)) }
+    })
+    .sort((a, b) => {
+      const keyA = a.familyPackId ? `fp:${a.familyPackId}` : `p:${a.productId}`
+      const keyB = b.familyPackId ? `fp:${b.familyPackId}` : `p:${b.productId}`
+      return keyA.localeCompare(keyB)
+    })
 
   return {
     customer: {
       name: String(customer.name ?? '').trim(),
       mobile: String(customer.mobile ?? '').replace(/\D/g, ''),
       area: String(customer.area ?? '').trim(),
+      deliveryAddress: String(customer.deliveryAddress ?? '').trim(),
+      deliveryLandmark: String(customer.deliveryLandmark ?? '').trim(),
+      deliveryMapsUrl: String(customer.deliveryMapsUrl ?? '').trim(),
       pickupDate: String(customer.pickupDate ?? '').trim(),
       note: String(customer.note ?? '').trim(),
     },
@@ -28,7 +39,7 @@ export function buildCustomerRequestBodyFromParts(customer, estimateItems) {
 }
 
 /**
- * @param {{ name: string, mobile: string, area?: string, pickupDate?: string, note?: string }} customer
+ * @param {{ name: string, mobile: string, area?: string, deliveryAddress?: string, deliveryLandmark?: string, deliveryMapsUrl?: string, pickupDate?: string, note?: string }} customer
  * @param {{ productId: string, quantity: number }[]} estimateItems
  */
 export function buildSubmissionFingerprintFromParts(customer, estimateItems) {

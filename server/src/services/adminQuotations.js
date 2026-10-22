@@ -1,15 +1,17 @@
 import { validateCustomerRequestStatusTransition } from '../lib/adminCustomerRequestValidation.js'
+import { buildOrderConfirmationWhatsAppMessage } from '../lib/orderConfirmationWhatsApp.js'
 import { buildQuotationWhatsAppMessage } from '../lib/quotationWhatsApp.js'
+import { mapAdminCustomerRequestDetail } from './adminCustomerRequests.js'
 import { lineTotalPaise, sumPaise } from './money.js'
 
 export const GET_REQUEST_FOR_QUOTE_SQL = `
-  SELECT id, status, customer_name, customer_phone, customer_area, pickup_preference, customer_note
+  SELECT id, status, source, customer_name, customer_phone, customer_area, pickup_preference, customer_note
   FROM customer_requests
   WHERE id = ?
 `.trim()
 
 export const GET_REQUEST_ITEMS_FOR_QUOTE_SQL = `
-  SELECT line_number, product_id, product_name, quantity
+  SELECT line_number, product_id, family_pack_id, product_name, quantity, unit_price_paise
   FROM customer_request_items
   WHERE request_id = ?
   ORDER BY line_number ASC
@@ -97,14 +99,61 @@ export async function buildQuoteLinesForRequestItems(db, requestItems) {
   const quoteLines = []
 
   for (const line of requestItems) {
+    const familyPackId = String(line.family_pack_id ?? '').trim()
     const productId = String(line.product_id ?? '').trim()
     const qty = Number(line.quantity)
+
+    if (familyPackId) {
+      if (!Number.isInteger(qty) || qty < 1 || qty > 99) {
+        return {
+          ok: false,
+          status: 400,
+          code: 'validation_error',
+          fields: { [`items[${line.line_number}]`]: 'Invalid quantity on request line.' },
+        }
+      }
+      let unitPaise = Number(line.unit_price_paise)
+      if (!Number.isInteger(unitPaise) || unitPaise <= 0) {
+        const pack = await db
+          .prepare('SELECT id, name, active, selling_price_paise FROM family_packs WHERE id = ?')
+          .bind(familyPackId)
+          .first()
+        if (!pack || Number(pack.active) !== 1) {
+          return {
+            ok: false,
+            status: 400,
+            code: 'validation_error',
+            fields: { [`items[${line.line_number}]`]: 'Family pack is not available.' },
+          }
+        }
+        unitPaise = Number(pack.selling_price_paise)
+      }
+      if (!Number.isInteger(unitPaise) || unitPaise <= 0) {
+        return {
+          ok: false,
+          status: 400,
+          code: 'validation_error',
+          fields: { [`items[${line.line_number}]`]: 'Family pack price is missing.' },
+        }
+      }
+      const lineTotal = lineTotalPaise(qty, unitPaise)
+      quoteLines.push({
+        line_number: Number(line.line_number),
+        product_id: null,
+        product_name: String(line.product_name ?? 'Family pack'),
+        quantity: qty,
+        unit_rate_paise: unitPaise,
+        line_total_paise: lineTotal,
+      })
+      continue
+    }
+
     if (!productId) {
       return {
         ok: false,
         status: 400,
         code: 'validation_error',
-        fields: { [`items[${line.line_number}]`]: 'Missing product id on request line.' },
+        fields: { [`items[${line.line_number}]`]: 'Missing product or family pack on request line.' },
       }
     }
     if (!Number.isInteger(qty) || qty < 1 || qty > 99) {
@@ -215,6 +264,7 @@ export async function createOrGetQuotationForRequest(db, requestId, opts = {}) {
       unitRatePaise: l.unit_rate_paise,
       lineTotalPaise: l.line_total_paise,
     })),
+    { requestSource: request.source },
   )
 
   /** @type {import('@cloudflare/workers-types').D1PreparedStatement[]} */
@@ -334,17 +384,59 @@ export async function getQuotationWhatsAppPayload(db, quotationId) {
   if (!quotation) {
     return { ok: false, status: 404, code: 'not_found', message: 'Quotation not found.' }
   }
-  const message = buildQuotationWhatsAppMessage(quotation, quotation.items)
   const request = quotation.customerRequestId
     ? await db
-        .prepare('SELECT customer_phone, pickup_preference FROM customer_requests WHERE id = ?')
+        .prepare('SELECT customer_phone, pickup_preference, source FROM customer_requests WHERE id = ?')
         .bind(quotation.customerRequestId)
         .first()
     : null
+  const message = buildQuotationWhatsAppMessage(quotation, quotation.items, {
+    requestSource: request?.source ?? null,
+  })
   return {
     ok: true,
     message,
     customerPhone: request?.customer_phone ?? quotation.customerPhone,
     quotationId: quotation.id,
+  }
+}
+
+/**
+ * @param {D1Database} db
+ * @param {string} requestId
+ */
+export async function getOrderConfirmationWhatsAppPayload(db, requestId) {
+  const row = await db
+    .prepare(
+      `SELECT id, public_reference, status, source, customer_name, customer_phone, customer_area,
+              pickup_preference, customer_note, delivery_address, delivery_landmark, delivery_maps_url,
+              created_at, updated_at
+       FROM customer_requests WHERE id = ?`,
+    )
+    .bind(requestId)
+    .first()
+  if (!row) {
+    return { ok: false, status: 404, code: 'not_found', message: 'Customer request not found.' }
+  }
+  const quotation = await getActiveQuotationForRequest(db, requestId)
+  if (!quotation) {
+    return { ok: false, status: 404, code: 'not_found', message: 'No quotation for this request.' }
+  }
+  const request = mapAdminCustomerRequestDetail(row, [])
+  const built = buildOrderConfirmationWhatsAppMessage(request, quotation)
+  if (!built.ok) {
+    return {
+      ok: false,
+      status: 400,
+      code: built.code ?? 'validation_error',
+      message: built.message ?? 'Cannot build order confirmation.',
+    }
+  }
+  return {
+    ok: true,
+    message: built.message,
+    customerPhone: request.customerPhone,
+    quotationId: quotation.id,
+    requestId,
   }
 }

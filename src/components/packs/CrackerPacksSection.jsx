@@ -1,12 +1,33 @@
 import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import PackPreviewCard from './PackPreviewCard'
-import { getResolvedCrackerPacks } from '../../utils/crackerPacks'
+import { useFamilyPacks } from '../../context/FamilyPacksContext.jsx'
+import { mapPublicPackForCard } from '../../utils/familyPackCatalogue.js'
 
 const ICON = { strokeWidth: 1.8 }
 
 export default function CrackerPacksSection() {
-  const packs = getResolvedCrackerPacks()
+  const { familyPacks, loading, error } = useFamilyPacks()
+  const packs = familyPacks.map(mapPublicPackForCard)
+
+  if (loading) {
+    return (
+      <section className="family-packs-section section-y-compact hairline-t bg-[var(--color-white)]" aria-busy="true">
+        <div className="container-page py-8 text-sm text-[var(--color-muted)]">Loading family packs…</div>
+      </section>
+    )
+  }
+
+  if (error) {
+    return (
+      <section className="family-packs-section section-y-compact hairline-t bg-[var(--color-white)]">
+        <div className="container-page py-8 text-sm text-[var(--color-red)]" role="alert">
+          {error}
+        </div>
+      </section>
+    )
+  }
+
   if (!packs.length) return null
 
   return (
@@ -22,7 +43,7 @@ export default function CrackerPacksSection() {
               Family Packs
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-[var(--color-muted)]">
-              Seven fixed-price combinations from our stall list. View exact contents, then add every item to your estimate.
+              Fixed-price combinations curated by our team. View exact contents, then add the whole pack to your estimate.
             </p>
           </div>
           <Link

@@ -17,8 +17,12 @@ import {
   upsertCurrentPurchaseRate,
   validatePurchaseRateInr,
 } from '../services/adminPurchaseRates.js'
+import { canViewSensitiveProductPricing } from '../lib/adminRoles.js'
+import { filterAdminProductForRole, filterAdminProductsForRole } from '../lib/adminProductResponse.js'
 import {
   archiveAdminProduct,
+  deleteAdminProduct,
+  setAdminProductActive,
   createAdminProduct,
   getAdminProductById,
   listAdminProducts,
@@ -27,12 +31,23 @@ import {
   updateAdminProduct,
 } from '../services/adminProducts.js'
 
+/** @param {unknown} role */
+function sensitivePricingForbiddenResponse(role) {
+  if (canViewSensitiveProductPricing(role)) return null
+  return Response.json(
+    { error: 'forbidden', message: 'Not allowed for this role.' },
+    { status: 403, headers: { ...JSON_HEADERS, 'Cache-Control': 'no-store' } },
+  )
+}
+
 /**
  * @param {Request} request
  * @param {{ DB: D1Database }} env
  * @param {URL} url
+ * @param {{ role?: string }} [identity]
  */
-export async function handleAdminCatalogueRoutes(request, env, url) {
+export async function handleAdminCatalogueRoutes(request, env, url, identity = {}) {
+  const adminRole = identity.role
   const { pathname } = url
   const method = request.method
   const db = env.DB
@@ -117,7 +132,10 @@ export async function handleAdminCatalogueRoutes(request, env, url) {
       })
       const totalPages = total === 0 ? 0 : Math.ceil(total / limit)
       return Response.json(
-        { products, pagination: { page, limit, total, totalPages } },
+        {
+          products: filterAdminProductsForRole(products, adminRole),
+          pagination: { page, limit, total, totalPages },
+        },
         { headers: { ...JSON_HEADERS, 'Cache-Control': 'no-store' } },
       )
     }
@@ -130,7 +148,10 @@ export async function handleAdminCatalogueRoutes(request, env, url) {
       limit: limit ? Number(limit) : undefined,
       offset: offset ? Number(offset) : undefined,
     })
-    return Response.json({ products }, { headers: { ...JSON_HEADERS, 'Cache-Control': 'no-store' } })
+    return Response.json(
+      { products: filterAdminProductsForRole(products, adminRole) },
+      { headers: { ...JSON_HEADERS, 'Cache-Control': 'no-store' } },
+    )
   }
 
   if (pathname === '/api/admin/products' && method === 'POST') {
@@ -146,13 +167,18 @@ export async function handleAdminCatalogueRoutes(request, env, url) {
     const payload = normalizeProductBody(body.data)
     const result = await createAdminProduct(db, payload)
     if (!result.ok) return validationErrorResponse(result.errors)
-    return Response.json({ product: result.product }, { status: 201, headers: { 'Cache-Control': 'no-store' } })
+    return Response.json(
+      { product: filterAdminProductForRole(result.product, adminRole) },
+      { status: 201, headers: { 'Cache-Control': 'no-store' } },
+    )
   }
 
   const sellingRateMatch = pathname.match(
     /^\/api\/admin\/products\/(P\d+)\/(?:private-rate|x4-selling-rate)\/?$/,
   )
   if (sellingRateMatch) {
+    const denied = sensitivePricingForbiddenResponse(adminRole)
+    if (denied) return denied
     const id = sellingRateMatch[1]
     if (method === 'GET') {
       const product = await getAdminProductById(db, id)
@@ -197,6 +223,8 @@ export async function handleAdminCatalogueRoutes(request, env, url) {
 
   const purchaseRateMatch = pathname.match(/^\/api\/admin\/products\/(P\d+)\/purchase-rate\/?$/)
   if (purchaseRateMatch) {
+    const denied = sensitivePricingForbiddenResponse(adminRole)
+    if (denied) return denied
     const id = purchaseRateMatch[1]
     if (method === 'GET') {
       const product = await getAdminProductById(db, id)
@@ -235,15 +263,54 @@ export async function handleAdminCatalogueRoutes(request, env, url) {
     }
   }
 
+  const productStatusMatch = pathname.match(/^\/api\/admin\/products\/(P\d+)\/status\/?$/)
+  if (productStatusMatch && method === 'PATCH') {
+    const parsed = await readJsonBody(request)
+    if (!parsed.ok) {
+      return Response.json(
+        { error: parsed.error, message: parsed.message },
+        { status: parsed.status, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+    const body = parseJsonObject(parsed.value)
+    if (!body.ok) return validationErrorResponse(body.errors)
+    const active = body.data.active === true || body.data.active === 1
+    const result = await setAdminProductActive(db, productStatusMatch[1], active)
+    if (!result.ok) {
+      if (result.status === 404) {
+        return Response.json({ error: result.code, message: 'Product not found.' }, { status: 404 })
+      }
+      return validationErrorResponse(result.errors ?? {})
+    }
+    return Response.json(
+      { product: filterAdminProductForRole(result.product, adminRole) },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
   const productMatch = pathname.match(/^\/api\/admin\/products\/(P\d+)\/?$/)
   if (productMatch) {
     const id = productMatch[1]
+    if (method === 'DELETE') {
+      const result = await deleteAdminProduct(db, id)
+      if (!result.ok) {
+        if (result.errors) return validationErrorResponse(result.errors)
+        return Response.json(
+          { error: result.error, message: result.message, referenceCount: result.referenceCount },
+          { status: result.status ?? 400, headers: { 'Cache-Control': 'no-store' } },
+        )
+      }
+      return Response.json({ ok: true, id: result.id, name: result.name }, { headers: { 'Cache-Control': 'no-store' } })
+    }
     if (method === 'GET') {
       const product = await getAdminProductById(db, id)
       if (!product) {
         return Response.json({ error: 'not_found', message: 'Product not found.' }, { status: 404 })
       }
-      return Response.json({ product }, { headers: { 'Cache-Control': 'no-store' } })
+      return Response.json(
+        { product: filterAdminProductForRole(product, adminRole) },
+        { headers: { 'Cache-Control': 'no-store' } },
+      )
     }
     if (method === 'PATCH') {
       const parsed = await readJsonBody(request)
@@ -262,7 +329,10 @@ export async function handleAdminCatalogueRoutes(request, env, url) {
         }
         return validationErrorResponse(result.errors)
       }
-      return Response.json({ product: result.product }, { headers: { 'Cache-Control': 'no-store' } })
+      return Response.json(
+        { product: filterAdminProductForRole(result.product, adminRole) },
+        { headers: { 'Cache-Control': 'no-store' } },
+      )
     }
   }
 
@@ -275,7 +345,10 @@ export async function handleAdminCatalogueRoutes(request, env, url) {
       }
       return validationErrorResponse(result.errors)
     }
-    return Response.json({ product: result.product }, { headers: { 'Cache-Control': 'no-store' } })
+    return Response.json(
+      { product: filterAdminProductForRole(result.product, adminRole) },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
   }
 
   const restoreMatch = pathname.match(/^\/api\/admin\/products\/(P\d+)\/restore$/)
@@ -287,7 +360,10 @@ export async function handleAdminCatalogueRoutes(request, env, url) {
       }
       return validationErrorResponse(result.errors)
     }
-    return Response.json({ product: result.product }, { headers: { 'Cache-Control': 'no-store' } })
+    return Response.json(
+      { product: filterAdminProductForRole(result.product, adminRole) },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
   }
 
   return null

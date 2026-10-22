@@ -1,5 +1,12 @@
+import { strictParseAdminRole } from '../lib/adminRoles.js'
 import { hashPassword, MAX_USERS, validatePasswordPolicy } from './adminPasswordAuth.js'
-import { countActiveAdminUsers, getAdminUserByEmail, getAdminUserById, listAdminUsers } from './adminUserStore.js'
+import {
+  countActiveAdminUsers,
+  countActiveOwners,
+  getAdminUserByEmail,
+  getAdminUserById,
+  listAdminUsers,
+} from './adminUserStore.js'
 import { randomBytesHex } from '../lib/passwordHash.js'
 
 /**
@@ -25,12 +32,17 @@ export async function createAdminUser(db, input) {
     return { ok: false, status: 400, code: 'validation_error', message: policyErr }
   }
 
-  if (String(input.role ?? '').trim().toLowerCase() === 'owner') {
+  const requestedRole = input.role != null && String(input.role).trim() !== '' ? input.role : 'admin'
+  const role = strictParseAdminRole(requestedRole)
+  if (!role) {
+    return { ok: false, status: 400, code: 'validation_error', message: 'Role must be owner, super_admin, or admin.' }
+  }
+  if (role === 'owner') {
     return {
       ok: false,
       status: 403,
       code: 'forbidden',
-      message: 'Only the initial bootstrap can create the owner account.',
+      message: 'Only the initial bootstrap can create the owner account. Promote an existing user to owner instead.',
     }
   }
 
@@ -38,8 +50,6 @@ export async function createAdminUser(db, input) {
   if (existing) {
     return { ok: false, status: 409, code: 'conflict', message: 'An account with this email already exists.' }
   }
-
-  const role = 'admin'
   const passwordHash = await hashPassword(String(input.password))
   const id = `admin-${randomBytesHex(8)}`
   const displayName = String(input.displayName ?? '').trim() || email
@@ -98,6 +108,66 @@ export async function setAdminUserDisabled(db, userId, disabled, actorUserId) {
   }
 
   return { ok: true }
+}
+
+/**
+ * @param {D1Database} db
+ * @param {string} userId
+ * @param {unknown} roleInput
+ */
+export async function updateAdminUserRole(db, userId, roleInput) {
+  const newRole = strictParseAdminRole(roleInput)
+  if (!newRole) {
+    return { ok: false, status: 400, code: 'validation_error', message: 'Role must be owner, super_admin, or admin.' }
+  }
+
+  const user = await getAdminUserById(db, userId)
+  if (!user) {
+    return { ok: false, status: 404, code: 'not_found', message: 'User not found.' }
+  }
+
+  if (user.role === newRole) {
+    return {
+      ok: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        role: user.role,
+        disabled: Boolean(user.disabledAt),
+      },
+    }
+  }
+
+  if (user.role === 'owner' && newRole !== 'owner') {
+    const otherOwners = await countActiveOwners(db, userId)
+    if (otherOwners === 0) {
+      return {
+        ok: false,
+        status: 400,
+        code: 'validation_error',
+        message: 'At least one active owner must remain.',
+      }
+    }
+  }
+
+  await db
+    .prepare(`UPDATE admin_users SET role = ?, updated_at = datetime('now') WHERE id = ?`)
+    .bind(newRole, userId)
+    .run()
+
+  await db.prepare('DELETE FROM admin_sessions WHERE admin_user_id = ?').bind(userId).run()
+
+  return {
+    ok: true,
+    user: {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      role: newRole,
+      disabled: Boolean(user.disabledAt),
+    },
+  }
 }
 
 /**

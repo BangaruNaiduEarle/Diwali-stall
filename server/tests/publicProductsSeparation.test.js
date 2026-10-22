@@ -43,6 +43,25 @@ describe('public product SQL separation', () => {
     assert.equal('price' in mapped, false)
     assert.equal('active' in mapped, false)
     assert.equal('company' in mapped, false)
+    assert.deepEqual(mapped.images, [])
+    assert.equal(mapped.coverImageUrl, null)
+  })
+
+  it('mapPublicProductRow exposes ordered images and cover URL', () => {
+    const mapped = mapPublicProductRow({
+      id: 'T2',
+      category_slug: 'others',
+      category_label: 'Others',
+      name: 'Gallery',
+      pack: '',
+      description: '',
+      featured: 0,
+      stock_status: 'available',
+      sort_order: 0,
+      images_json: '["https://cdn/a.webp","https://cdn/b.webp"]',
+    })
+    assert.deepEqual(mapped.images, ['https://cdn/a.webp', 'https://cdn/b.webp'])
+    assert.equal(mapped.coverImageUrl, 'https://cdn/a.webp')
   })
 
   it('clamps public list pagination: default 50, max 100', async () => {

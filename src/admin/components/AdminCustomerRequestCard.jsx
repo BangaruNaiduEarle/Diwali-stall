@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import {
+  formatAdminPublicReference,
   formatRequestCreatedAt,
   formatShortRequestId,
 } from '../lib/adminCustomerRequestDisplay.js'
@@ -17,6 +18,7 @@ export default function AdminCustomerRequestCard({ request }) {
   const name = String(request.customerName ?? '—')
   const itemCount = Number(request.itemCount ?? 0)
   const shortId = formatShortRequestId(id)
+  const publicRefLabel = formatAdminPublicReference(request.publicReference)
   const createdLabel = formatRequestCreatedAt(request.createdAt)
   const detailPath = `/admin/customer-requests/${encodeURIComponent(id)}`
 
@@ -40,8 +42,8 @@ export default function AdminCustomerRequestCard({ request }) {
         </span>
       </p>
       <div className="admin-request-card__foot">
-        <span className="admin-request-card__id" title={id}>
-          {shortId}
+        <span className="admin-request-card__id" title={publicRefLabel !== '—' ? publicRefLabel : id}>
+          {publicRefLabel !== '—' ? publicRefLabel : shortId}
         </span>
         <span className="admin-request-card__date">{createdLabel}</span>
         <ChevronRight className="admin-request-card__chevron" size={18} aria-hidden="true" />

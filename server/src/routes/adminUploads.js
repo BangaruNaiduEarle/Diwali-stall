@@ -1,6 +1,8 @@
 import { readJsonBody, validationErrorResponse, JSON_HEADERS } from '../lib/http.js'
 import { isValidProductId, parseJsonObject } from '../lib/validation.js'
+import { isValidFamilyPackId } from '../lib/familyPackValidation.js'
 import {
+  buildFamilyPackUploadTarget,
   buildProductUploadTarget,
   normalizeUploadSlot,
   readCloudinaryConfig,
@@ -37,17 +39,30 @@ export async function handleAdminUploadSign(request, env) {
   const body = parseJsonObject(parsed.value)
   if (!body.ok) return validationErrorResponse(body.errors)
 
+  const familyPackId = String(body.data.familyPackId ?? body.data.family_pack_id ?? '').trim()
   const productId = String(body.data.productId ?? body.data.product_id ?? '').trim()
-  if (!isValidProductId(productId)) {
-    return validationErrorResponse({ productId: 'Invalid product id (expected P###).' })
-  }
 
   const slot = normalizeUploadSlot(body.data.slot)
   if (!slot.ok) {
     return validationErrorResponse({ slot: 'slot must be an integer from 1 to 20.' })
   }
 
-  const { folder, publicId } = buildProductUploadTarget(productId, slot.value)
+  let folder
+  let publicId
+  if (familyPackId) {
+    if (productId) {
+      return validationErrorResponse({ _body: 'Provide productId or familyPackId, not both.' })
+    }
+    if (!isValidFamilyPackId(familyPackId)) {
+      return validationErrorResponse({ familyPackId: 'Invalid family pack id (expected FP###).' })
+    }
+    ;({ folder, publicId } = buildFamilyPackUploadTarget(familyPackId, slot.value))
+  } else {
+    if (!isValidProductId(productId)) {
+      return validationErrorResponse({ productId: 'Invalid product id (expected P###).' })
+    }
+    ;({ folder, publicId } = buildProductUploadTarget(productId, slot.value))
+  }
   const timestamp = Math.floor(Date.now() / 1000)
   const paramsToSign = {
     folder,

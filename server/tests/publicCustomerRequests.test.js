@@ -1,13 +1,21 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import worker from '../src/index.js'
+import { createMockCustomerRequestDb } from './helpers/mockCustomerRequestDb.js'
 import { validateCustomerRequestBody, normalizeIdempotencyKey } from '../src/lib/customerRequestValidation.js'
+import { isValidPublicReference } from '../src/lib/customerRequestPublicReference.js'
 import {
   RESOLVE_REQUEST_PRODUCTS_SQL,
   createPublicCustomerRequest,
   deriveRequestIdFromIdempotencyKey,
+  ensurePublicReferenceOnRequest,
   mapPublicRequestSummary,
 } from '../src/services/publicCustomerRequests.js'
+
+const TEST_PUBLIC_REFERENCE = 'DWL-23456789'
+async function fixedTestReference() {
+  return TEST_PUBLIC_REFERENCE
+}
 describe('customer request validation', () => {
   const validBody = {
     customer: { name: 'Ravi Kumar', mobile: '9876543210', area: 'Chennai', note: '' },
@@ -60,6 +68,15 @@ describe('customer request validation', () => {
     assert.equal(dup.ok, false)
   })
 
+  it('rejects client-supplied public reference fields', () => {
+    const body = validateCustomerRequestBody({
+      customer: { name: 'Ravi Kumar', mobile: '9876543210' },
+      items: [{ productId: 'P001', quantity: 1 }],
+      publicReference: 'DWL-23456789',
+    })
+    assert.equal(body.ok, false)
+  })
+
   it('rejects client-supplied price and total fields', () => {
     const body = validateCustomerRequestBody({
       customer: { name: 'Ravi Kumar', mobile: '9876543210' },
@@ -91,31 +108,167 @@ describe('public customer request SQL separation', () => {
     assert.equal('price' in mapped, false)
     assert.equal('x4' in mapped, false)
     assert.ok('id' in mapped && 'status' in mapped && 'itemCount' in mapped)
+    assert.equal(mapped.publicReference, null)
+  })
+
+  it('maps public_reference to publicReference', () => {
+    const mapped = mapPublicRequestSummary(
+      {
+        id: 'cr-abc',
+        public_reference: 'DWL-ABCDEFGH',
+        status: 'received',
+        source: 'web',
+        created_at: '2026-01-01 00:00:00',
+      },
+      1,
+    )
+    assert.equal(mapped.publicReference, 'DWL-ABCDEFGH')
   })
 })
 
 describe('public customer request service (in-memory D1 mock)', () => {
   it('creates request and items in one batch', async () => {
     const db = createMockDb({
-      products: [{ id: 'P001', name: 'Test Product', active: 1, stock_status: 'available' }],
+      products: [{ id: 'P005', name: 'Test Product', active: 1, stock_status: 'available' }],
     })
     const requestId = 'test-req-001'
     const result = await createPublicCustomerRequest(
       db,
       {
         customer: { name: 'Ravi', mobile: '9876543210', area: '', pickupPreference: '', note: '' },
-        items: [{ productId: 'P001', quantity: 3 }],
+        items: [{ productId: 'P005', quantity: 3 }],
       },
-      { requestId },
+      { requestId, generateReference: fixedTestReference },
     )
     assert.equal(result.ok, true)
     if (result.ok) {
       assert.equal(result.request.itemCount, 1)
       assert.equal(result.request.status, 'received')
+      assert.equal(result.request.publicReference, TEST_PUBLIC_REFERENCE)
+      assert.equal(isValidPublicReference(result.request.publicReference), true)
     }
     assert.equal(db.batchCalls, 1)
     assert.equal(db.state.requests.get(requestId)?.status, 'received')
+    assert.equal(db.state.requests.get(requestId)?.public_reference, TEST_PUBLIC_REFERENCE)
     assert.equal(db.state.items.length, 1)
+  })
+
+  it('requires delivery location when qualifying total meets free-delivery threshold', async () => {
+    const db = createMockDb({
+      products: [{ id: 'P001', name: 'Premium', active: 1, stock_status: 'available' }],
+    })
+    const blocked = await createPublicCustomerRequest(
+      db,
+      {
+        customer: { name: 'Ravi', mobile: '9876543210' },
+        items: [{ productId: 'P001', quantity: 1 }],
+      },
+      { requestId: 'test-req-delivery-block', generateReference: fixedTestReference },
+    )
+    assert.equal(blocked.ok, false)
+    if (!blocked.ok) {
+      assert.equal(blocked.error, 'validation_error')
+      assert.ok(blocked.fields?.['customer.deliveryAddress'])
+    }
+
+    const ok = await createPublicCustomerRequest(
+      db,
+      {
+        customer: {
+          name: 'Ravi',
+          mobile: '9876543210',
+          deliveryAddress: 'Flat 2, Example Street',
+        },
+        items: [{ productId: 'P001', quantity: 1 }],
+      },
+      { requestId: 'test-req-delivery-ok', generateReference: async () => 'DWL-3456789B' },
+    )
+    assert.equal(ok.ok, true)
+  })
+
+  it('retries reference generation on unique collision and succeeds', async () => {
+    const db = createMockDb({
+      products: [{ id: 'P005', name: 'Test Product', active: 1, stock_status: 'available' }],
+      rejectPublicReferences: new Set([TEST_PUBLIC_REFERENCE]),
+    })
+    let calls = 0
+    const result = await createPublicCustomerRequest(
+      db,
+      {
+        customer: { name: 'Ravi', mobile: '9876543210', area: '', pickupPreference: '', note: '' },
+        items: [{ productId: 'P005', quantity: 1 }],
+      },
+      {
+        requestId: 'test-req-collision',
+        generateReference: async () => {
+          calls += 1
+          return calls === 1 ? TEST_PUBLIC_REFERENCE : 'DWL-3456789A'
+        },
+      },
+    )
+    assert.equal(result.ok, true)
+    if (result.ok) {
+      assert.equal(result.request.publicReference, 'DWL-3456789A')
+    }
+    assert.equal(calls, 2)
+    assert.equal(db.batchCalls, 2)
+  })
+
+  it('returns reference_generation_failed when collisions are exhausted', async () => {
+    const db = createMockDb({
+      products: [{ id: 'P005', name: 'Test Product', active: 1, stock_status: 'available' }],
+      rejectPublicReferences: new Set([TEST_PUBLIC_REFERENCE]),
+    })
+    const result = await createPublicCustomerRequest(
+      db,
+      {
+        customer: { name: 'Ravi', mobile: '9876543210', area: '', pickupPreference: '', note: '' },
+        items: [{ productId: 'P005', quantity: 1 }],
+      },
+      {
+        requestId: 'test-req-exhausted',
+        generateReference: fixedTestReference,
+      },
+    )
+    assert.equal(result.ok, false)
+    if (!result.ok) {
+      assert.equal(result.error, 'reference_generation_failed')
+    }
+    assert.equal(db.state.requests.size, 0)
+    assert.equal(db.state.items.length, 0)
+  })
+
+  it('assigns public reference on legacy request missing public_reference', async () => {
+    const db = createMockDb({
+      products: [{ id: 'P001', name: 'Test Product', active: 1, stock_status: 'available' }],
+    })
+    const requestId = 'legacy-req-001'
+    db.state.requests.set(requestId, {
+      id: requestId,
+      public_reference: null,
+      status: 'received',
+      source: 'web',
+      customer_name: 'Ravi',
+      customer_phone: '9876543210',
+      customer_area: null,
+      pickup_preference: null,
+      customer_note: null,
+      created_at: '2026-10-15 00:00:00',
+      updated_at: '2026-10-15 00:00:00',
+    })
+    db.state.items.push({
+      request_id: requestId,
+      line_number: 1,
+      product_id: 'P001',
+      family_pack_id: null,
+      product_name: 'Test Product',
+      quantity: 1,
+      unit_price_paise: null,
+    })
+
+    const ensured = await ensurePublicReferenceOnRequest(db, requestId, fixedTestReference)
+    assert.ok(ensured && !('ok' in ensured))
+    assert.equal(ensured.publicReference, TEST_PUBLIC_REFERENCE)
   })
 
   it('rejects inactive and sold-out products', async () => {
@@ -175,7 +328,7 @@ describe('public customer request service (in-memory D1 mock)', () => {
 describe('POST /api/public/customer-requests (worker + mock DB)', () => {
   it('returns 201 for valid submission without auth', async () => {
     const db = createMockDb({
-      products: [{ id: 'P001', name: 'Gift', active: 1, stock_status: 'available' }],
+      products: [{ id: 'P005', name: 'Gift', active: 1, stock_status: 'available' }],
     })
     const res = await worker.fetch(
       new Request('https://example.com/api/public/customer-requests', {
@@ -183,7 +336,7 @@ describe('POST /api/public/customer-requests (worker + mock DB)', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customer: { name: 'Ravi Kumar', mobile: '9876543210' },
-          items: [{ productId: 'P001', quantity: 1 }],
+          items: [{ productId: 'P005', quantity: 1 }],
         }),
       }),
       { DB: db },
@@ -193,12 +346,13 @@ describe('POST /api/public/customer-requests (worker + mock DB)', () => {
     const body = await res.json()
     assert.equal(body.request.status, 'received')
     assert.equal(body.request.itemCount, 1)
+    assert.match(String(body.request.publicReference ?? ''), /^DWL-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{8}$/)
     assert.equal('unit_rate_paise' in body.request, false)
   })
 
   it('replays idempotent submission with same Idempotency-Key', async () => {
     const db = createMockDb({
-      products: [{ id: 'P001', name: 'Gift', active: 1, stock_status: 'available' }],
+      products: [{ id: 'P005', name: 'Gift', active: 1, stock_status: 'available' }],
     })
     const headers = {
       'Content-Type': 'application/json',
@@ -206,7 +360,7 @@ describe('POST /api/public/customer-requests (worker + mock DB)', () => {
     }
     const payload = {
       customer: { name: 'Ravi Kumar', mobile: '9876543210' },
-      items: [{ productId: 'P001', quantity: 1 }],
+      items: [{ productId: 'P005', quantity: 1 }],
     }
     const res1 = await worker.fetch(
       new Request('https://example.com/api/public/customer-requests', {
@@ -233,6 +387,7 @@ describe('POST /api/public/customer-requests (worker + mock DB)', () => {
     const body2 = await res2.json()
     assert.equal(body2.idempotentReplay, true)
     assert.equal(body2.request.id, body1.request.id)
+    assert.equal(body2.request.publicReference, body1.request.publicReference)
     assert.equal(db.batchCalls, 1)
   })
 
@@ -262,92 +417,5 @@ describe('idempotency key helper', () => {
 
 /** @param {{ products: object[], failOnItemLine?: number }} opts */
 function createMockDb(opts) {
-  const products = new Map(opts.products.map((p) => [p.id, p]))
-  const state = {
-    requests: new Map(),
-    items: /** @type {{ request_id: string, line_number: number, product_id: string, product_name: string, quantity: number }[]} */ ([]),
-  }
-  let batchCalls = 0
-  let itemInsertCount = 0
-
-  const db = {
-    batchCalls: 0,
-    state,
-    prepare(sql) {
-      const normalized = sql.replace(/\s+/g, ' ').trim()
-      return {
-        bind(...params) {
-          const stmt = {
-            _sql: normalized,
-            _params: params,
-            async first() {
-              if (normalized.includes('FROM products WHERE id')) {
-                return products.get(String(params[0])) ?? null
-              }
-              if (normalized.includes('FROM customer_requests WHERE id')) {
-                return state.requests.get(String(params[0])) ?? null
-              }
-              if (normalized.includes('COUNT(*) AS n FROM customer_request_items')) {
-                const n = state.items.filter((i) => i.request_id === params[0]).length
-                return { n }
-              }
-              return null
-            },
-            async all() {
-              return { results: [] }
-            },
-            async run() {
-              return { meta: { changes: 1 } }
-            },
-          }
-          return stmt
-        },
-      }
-    },
-    async batch(statements) {
-      batchCalls += 1
-      db.batchCalls = batchCalls
-      const snap = {
-        requests: new Map(state.requests),
-        items: [...state.items],
-      }
-      itemInsertCount = 0
-      try {
-        for (const stmt of statements) {
-          const sql = stmt._sql
-          const params = stmt._params
-          if (sql.startsWith('INSERT INTO customer_requests')) {
-            const [id, name, phone, area, pickup, note, source = 'web'] = params
-            if (state.requests.has(id)) {
-              throw new Error('UNIQUE constraint failed: customer_requests.id')
-            }
-            state.requests.set(id, {
-              id,
-              status: 'received',
-              source,
-              customer_name: name,
-              customer_phone: phone,
-              customer_area: area,
-              pickup_preference: pickup,
-              customer_note: note,
-              created_at: '2026-10-15 00:00:00',
-            })
-          } else if (sql.startsWith('INSERT INTO customer_request_items')) {
-            itemInsertCount += 1
-            if (opts.failOnItemLine && itemInsertCount === opts.failOnItemLine) {
-              throw new Error('SIMULATED_ITEM_INSERT_FAILURE')
-            }
-            const [requestId, lineNumber, productId, productName, quantity] = params
-            state.items.push({ request_id: requestId, line_number: lineNumber, product_id: productId, product_name: productName, quantity })
-          }
-        }
-      } catch (err) {
-        state.requests = snap.requests
-        state.items = snap.items
-        throw err
-      }
-    },
-  }
-
-  return db
+  return createMockCustomerRequestDb(opts)
 }

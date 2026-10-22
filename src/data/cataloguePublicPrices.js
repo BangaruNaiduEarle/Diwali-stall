@@ -1,0 +1,19 @@
+/**
+ * Storefront list prices for delivery-threshold estimates only (not private X4 rates).
+ * Mirrors server/data/catalogue-public-prices.json.
+ */
+import pricesDoc from '../../server/data/catalogue-public-prices.json' with { type: 'json' }
+
+/** @returns {Record<string, number>} */
+export function getCataloguePublicPriceMap() {
+  const prices = pricesDoc?.prices
+  if (!prices || typeof prices !== 'object') return {}
+  return /** @type {Record<string, number>} */ (prices)
+}
+
+/** @param {string} productId */
+export function getCataloguePublicPriceInr(productId) {
+  const map = getCataloguePublicPriceMap()
+  const v = map[String(productId ?? '').trim()]
+  return typeof v === 'number' && Number.isFinite(v) ? v : null
+}

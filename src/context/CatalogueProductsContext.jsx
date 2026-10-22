@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchAllPublicProducts } from '../api/publicProducts.js'
 import { mapAndSortPublicProducts } from '../utils/mapPublicProduct.js'
 import { setEstimateCatalogueProducts } from '../utils/estimateHelpers.js'
@@ -20,6 +20,7 @@ export function CatalogueProductsProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(/** @type {string | null} */ (null))
   const [refreshToken, setRefreshToken] = useState(0)
+  const productsRef = useRef(/** @type {StorefrontProduct[]} */ ([]))
 
   const refresh = useCallback(() => {
     setRefreshToken((n) => n + 1)
@@ -29,21 +30,23 @@ export function CatalogueProductsProvider({ children }) {
     let cancelled = false
 
     async function load() {
-      setLoading(true)
+      const hadCatalogue = productsRef.current.length > 0
+      if (!hadCatalogue) {
+        setLoading(true)
+      }
       setError(null)
 
       const result = await fetchAllPublicProducts()
       if (cancelled) return
 
       if (!result.ok) {
-        setProducts([])
-        setEstimateCatalogueProducts([])
         setError(result.message)
         setLoading(false)
         return
       }
 
       const mapped = mapAndSortPublicProducts(result.products)
+      productsRef.current = mapped
       setProducts(mapped)
       setEstimateCatalogueProducts(mapped)
       setLoading(false)

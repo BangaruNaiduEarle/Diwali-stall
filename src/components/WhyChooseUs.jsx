@@ -19,8 +19,8 @@ const BENEFITS = [
   },
   {
     icon: MapPin,
-    title: 'Convenient stall pickup',
-    text: 'Collect at our Diwali stall—location and timings on this page when configured.',
+    title: 'Pickup or free delivery',
+    text: 'Collect at our stall, or unlock free door delivery on qualifying orders of ₹1,000+ (coverage applies).',
   },
 ]
 

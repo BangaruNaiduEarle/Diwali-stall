@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { ChevronDown, ChevronUp, ImagePlus, Loader2, Trash2, X } from 'lucide-react'
 import { requestUploadSign } from '../api/adminApi.js'
 import {
@@ -7,6 +7,21 @@ import {
   parseUploadSignResponse,
   uploadFileToCloudinary,
 } from '../lib/cloudinaryUpload.js'
+import {
+  createLocalPreviewUrl,
+  isLocalPreviewUrl,
+  isPersistableImageUrl,
+  revokeLocalPreviewUrl,
+  snapshotFilesFromInputEvent,
+} from '../lib/adminImageUploadFlow.js'
+import { validateImageUploadFile } from '../lib/validateImageUploadFile.js'
+
+function productImageDisplaySrc(src) {
+  const s = String(src ?? '').trim()
+  if (!s) return ''
+  if (isLocalPreviewUrl(s)) return s
+  return imagePreviewSrc(s) || s
+}
 
 /**
  * @param {{
@@ -16,6 +31,8 @@ import {
  *   disabled?: boolean,
  *   onEnsureProduct: () => Promise<{ ok: true, productId: string } | { ok: false, message: string }>,
  *   onPersistImages: (images: string[]) => Promise<{ ok: true } | { ok: false, message: string }>,
+ *   uploadCoordinatorRef?: { current: { waitUntilIdle: () => Promise<void>, isBusy: () => boolean } | null },
+ *   onUploadBusyChange?: (busy: boolean) => void,
  * }} props
  */
 export default function ProductImageManager({
@@ -25,18 +42,57 @@ export default function ProductImageManager({
   disabled = false,
   onEnsureProduct,
   onPersistImages,
+  uploadCoordinatorRef,
+  onUploadBusyChange,
 }) {
   const inputId = useId()
   const fileRef = useRef(/** @type {HTMLInputElement | null} */ (null))
   const abortRef = useRef(/** @type {AbortController | null} */ (null))
+  const localPreviewUrlsRef = useRef(/** @type {Set<string>} */ (new Set()))
+  const imagesRef = useRef(images)
+  const uploadRunRef = useRef(/** @type {Promise<void> | null} */ (null))
+
+  useEffect(() => {
+    imagesRef.current = images
+  }, [images])
+
+  useEffect(() => {
+    const urls = localPreviewUrlsRef.current
+    return () => {
+      for (const url of urls) revokeLocalPreviewUrl(url)
+      urls.clear()
+    }
+  }, [])
 
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(/** @type {string | null} */ (null))
   const [uploadProgress, setUploadProgress] = useState(/** @type {string | null} */ (null))
   const [replaceIndex, setReplaceIndex] = useState(/** @type {number | null} */ (null))
 
+  useEffect(() => {
+    const busy =
+      uploading || images.some((url) => isLocalPreviewUrl(String(url ?? '')))
+    onUploadBusyChange?.(busy)
+    if (!uploadCoordinatorRef) return
+    uploadCoordinatorRef.current = {
+      waitUntilIdle: async () => {
+        if (uploadRunRef.current) await uploadRunRef.current
+      },
+      isBusy: () =>
+        uploading || imagesRef.current.some((url) => isLocalPreviewUrl(String(url ?? ''))),
+    }
+  }, [uploadCoordinatorRef, uploading, images, onUploadBusyChange])
+
   const atMax = images.length >= MAX_PRODUCT_IMAGES
   const busy = disabled || uploading
+
+  function setCover(index) {
+    if (index <= 0) return
+    const next = [...images]
+    const [picked] = next.splice(index, 1)
+    next.unshift(picked)
+    onImagesChange(next)
+  }
 
   function moveImage(index, direction) {
     const next = [...images]
@@ -49,6 +105,9 @@ export default function ProductImageManager({
   }
 
   function removeImage(index) {
+    const removed = images[index]
+    revokeLocalPreviewUrl(removed)
+    localPreviewUrlsRef.current.delete(removed)
     onImagesChange(images.filter((_, i) => i !== index))
     setUploadError(null)
   }
@@ -72,88 +131,130 @@ export default function ProductImageManager({
   }
 
   async function handleFileChange(e) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-
-    if (!file.type.startsWith('image/')) {
-      setUploadError('Please choose an image file.')
+    const pickedFiles = snapshotFilesFromInputEvent(e)
+    if (!pickedFiles.length || busy) {
+      if (!pickedFiles.length && !busy) setUploadError('No files were captured from the file picker. Try again.')
       return
+    }
+
+    const run = async () => {
+      /** @type {File[]} */
+      const validFiles = []
+      for (const file of pickedFiles) {
+        const valid = validateImageUploadFile(file)
+        if (!valid.ok) {
+          setUploadError(valid.message)
+          continue
+        }
+        validFiles.push(file)
+      }
+      if (!validFiles.length) return
+
+      setUploadError(null)
+      setUploadProgress('Showing local preview…')
+
+      let next = [...imagesRef.current]
+      /** @type {{ file: File, previewUrl: string }[]} */
+      const uploadJobs = []
+
+      for (let i = 0; i < validFiles.length; i++) {
+        const file = validFiles[i]
+        if (next.length >= MAX_PRODUCT_IMAGES && replaceIndex == null) {
+          setUploadError(`Maximum ${MAX_PRODUCT_IMAGES} images allowed.`)
+          break
+        }
+        const previewUrl = createLocalPreviewUrl(file)
+        localPreviewUrlsRef.current.add(previewUrl)
+        if (replaceIndex != null && i === 0 && replaceIndex < next.length) {
+          revokeLocalPreviewUrl(next[replaceIndex])
+          localPreviewUrlsRef.current.delete(next[replaceIndex])
+          next[replaceIndex] = previewUrl
+        } else {
+          next.push(previewUrl)
+        }
+        uploadJobs.push({ file, previewUrl })
+      }
+      onImagesChange(next)
+
+      try {
+        setUploadProgress('Preparing product…')
+        const ensured = await onEnsureProduct()
+        if (!ensured.ok) {
+          setUploadError(ensured.message)
+          return
+        }
+
+        const pid = ensured.productId
+        const seen = new Set(next.filter((url) => isPersistableImageUrl(url)))
+        let persistFailed = false
+
+        for (let i = 0; i < uploadJobs.length; i++) {
+          const { file, previewUrl } = uploadJobs[i]
+          const slot = Math.min(MAX_PRODUCT_IMAGES, next.filter((url) => isPersistableImageUrl(url)).length + 1)
+          setUploadProgress(`Requesting upload signature (${i + 1}/${uploadJobs.length})…`)
+          const signResult = await requestUploadSign(pid, slot)
+          if (!signResult.ok) {
+            setUploadError(signResult.message || 'Upload sign failed.')
+            break
+          }
+          const parsedSign = parseUploadSignResponse(signResult.data)
+          if (!parsedSign.ok) {
+            setUploadError(parsedSign.message)
+            break
+          }
+          setUploadProgress(`Uploading to Cloudinary (${i + 1}/${uploadJobs.length})…`)
+          const controller = new AbortController()
+          abortRef.current = controller
+          const uploadResult = await uploadFileToCloudinary(parsedSign.sign, file, { signal: controller.signal })
+          abortRef.current = null
+          if (!uploadResult.ok) {
+            setUploadError(uploadResult.message)
+            break
+          }
+          if (seen.has(uploadResult.secureUrl)) {
+            revokeLocalPreviewUrl(previewUrl)
+            localPreviewUrlsRef.current.delete(previewUrl)
+            next = next.filter((url) => url !== previewUrl)
+            onImagesChange(next)
+            continue
+          }
+          seen.add(uploadResult.secureUrl)
+          revokeLocalPreviewUrl(previewUrl)
+          localPreviewUrlsRef.current.delete(previewUrl)
+          next = next.map((url) => (url === previewUrl ? uploadResult.secureUrl : url))
+          onImagesChange(next)
+
+          const persistable = next.filter((url) => isPersistableImageUrl(url))
+          if (persistable.length) {
+            setUploadProgress(`Saving image ${i + 1} of ${uploadJobs.length} to product…`)
+            const saved = await onPersistImages(persistable)
+            if (!saved.ok) {
+              setUploadError(`Upload succeeded but save failed: ${saved.message}`)
+              persistFailed = true
+              break
+            }
+          }
+        }
+
+        if (!persistFailed && next.some((url) => isPersistableImageUrl(url))) {
+          setUploadProgress(null)
+        }
+      } catch (err) {
+        console.error('[ProductImageManager] image upload failed', err)
+        setUploadError(err instanceof Error ? err.message : 'Image upload failed unexpectedly.')
+      } finally {
+        setUploadProgress(null)
+        setReplaceIndex(null)
+      }
     }
 
     setUploading(true)
-    setUploadError(null)
-    setUploadProgress('Preparing product…')
-
-    const ensured = await onEnsureProduct()
-    if (!ensured.ok) {
+    uploadRunRef.current = run()
+    try {
+      await uploadRunRef.current
+    } finally {
+      uploadRunRef.current = null
       setUploading(false)
-      setUploadProgress(null)
-      setUploadError(ensured.message)
-      return
-    }
-
-    const pid = ensured.productId
-    const insertAt = replaceIndex != null ? replaceIndex : images.length
-    const slot = insertAt + 1
-    if (slot < 1 || slot > MAX_PRODUCT_IMAGES) {
-      setUploading(false)
-      setUploadProgress(null)
-      setUploadError('Invalid image slot.')
-      return
-    }
-
-    setUploadProgress(`Requesting upload signature (slot ${slot})…`)
-    const signResult = await requestUploadSign(pid, slot)
-    if (!signResult.ok) {
-      setUploading(false)
-      setUploadProgress(null)
-      setUploadError(signResult.message)
-      return
-    }
-
-    const parsedSign = parseUploadSignResponse(signResult.data)
-    if (!parsedSign.ok) {
-      setUploading(false)
-      setUploadProgress(null)
-      setUploadError(parsedSign.message)
-      return
-    }
-
-    const controller = new AbortController()
-    abortRef.current = controller
-    setUploadProgress('Uploading to Cloudinary…')
-
-    const uploadResult = await uploadFileToCloudinary(parsedSign.sign, file, {
-      signal: controller.signal,
-    })
-    abortRef.current = null
-
-    if (!uploadResult.ok) {
-      setUploading(false)
-      setUploadProgress(null)
-      setUploadError(uploadResult.message)
-      return
-    }
-
-    const next = [...images]
-    if (replaceIndex != null && replaceIndex < next.length) {
-      next[replaceIndex] = uploadResult.secureUrl
-    } else {
-      next.push(uploadResult.secureUrl)
-    }
-
-    onImagesChange(next)
-    setUploadProgress('Saving image order…')
-
-    const saved = await onPersistImages(next)
-    setUploading(false)
-    setUploadProgress(null)
-    setReplaceIndex(null)
-
-    if (!saved.ok) {
-      setUploadError(`Upload succeeded but save failed: ${saved.message}`)
-      return
     }
   }
 
@@ -187,7 +288,7 @@ export default function ProductImageManager({
             onClick={() => openFilePicker(null)}
           >
             <ImagePlus size={18} aria-hidden="true" />
-            Add image
+            Add images
           </button>
         </div>
       </div>
@@ -197,6 +298,7 @@ export default function ProductImageManager({
         id={inputId}
         type="file"
         accept="image/*"
+        multiple
         className="sr-only"
         disabled={busy}
         onChange={handleFileChange}
@@ -223,7 +325,7 @@ export default function ProductImageManager({
       ) : (
         <ul className="admin-image-list">
           {images.map((src, index) => {
-            const preview = imagePreviewSrc(src)
+            const preview = productImageDisplaySrc(src)
             return (
               <li key={`${index}-${src}`} className="admin-image-item">
                 <div className="admin-image-item__preview">
@@ -232,12 +334,22 @@ export default function ProductImageManager({
                   ) : (
                     <span className="admin-image-item__placeholder">No preview</span>
                   )}
-                  <span className="admin-image-item__slot">Slot {index + 1}</span>
+                  <span className="admin-image-item__slot">{index === 0 ? 'Cover' : `Slot ${index + 1}`}</span>
                 </div>
                 <p className="admin-image-item__url" title={src}>
                   {src}
                 </p>
                 <div className="admin-image-item__controls">
+                  {index > 0 ? (
+                    <button
+                      type="button"
+                      className="admin-link-button admin-image-item__cover-btn"
+                      disabled={busy}
+                      onClick={() => setCover(index)}
+                    >
+                      Set cover
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="admin-icon-btn"

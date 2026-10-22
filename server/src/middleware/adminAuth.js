@@ -1,3 +1,5 @@
+import { isDevJwtSuppressActive } from '../lib/adminSessionCookie.js'
+import { normalizeAdminRole } from '../lib/adminRoles.js'
 import { authenticateSessionFromRequest } from '../services/adminPasswordAuth.js'
 import { getAdminUserByEmail, isAdminUserActive } from '../services/adminUserStore.js'
 import { readAccessJwtFromRequest, verifyCloudflareAccessToken } from './accessJwt.js'
@@ -8,7 +10,7 @@ import {
 } from './localAdminDevAuth.js'
 
 /**
- * @typedef {{ email: string, sub?: string, userId?: string, role?: 'owner' | 'admin' }} AdminIdentity
+ * @typedef {{ email: string, sub?: string, userId?: string, role?: import('../lib/adminRoles.js').AdminRole }} AdminIdentity
  */
 
 /**
@@ -71,12 +73,20 @@ export async function authenticateAdmin(request, env) {
         email: verified.email,
         sub: verified.sub,
         userId: user.id,
-        role: user.role,
+        role: normalizeAdminRole(user.role),
       },
     }
   }
 
   if (isLocalAdminDevAuthEnabled(env, request)) {
+    if (isDevJwtSuppressActive(request)) {
+      return {
+        ok: false,
+        status: 401,
+        code: 'unauthorized',
+        message: 'Sign in required.',
+      }
+    }
     if (!token) {
       return {
         ok: false,
@@ -109,7 +119,7 @@ export async function authenticateAdmin(request, env) {
         email: localVerified.email,
         sub: localVerified.sub,
         userId: user?.id,
-        role: user?.role ?? 'admin',
+        role: normalizeAdminRole(user?.role),
       },
     }
   }

@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { before, describe, it } from 'node:test'
+import { isRetryableLocalD1Error } from '../scripts/lib/localD1Lock.mjs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { d1QueryLocal } from './helpers/d1Local.js'
 import { cleanupKnownTestRows } from './helpers/testDbCleanup.js'
@@ -12,12 +13,35 @@ const REPO_ROOT = path.resolve(SERVER_ROOT, '..')
 const IMPORT_JSON = path.join(SERVER_ROOT, 'data', 'catalogue-import.json')
 const SOURCE_MODULE = path.join(REPO_ROOT, 'src', 'data', 'products.js')
 
+function sleepMs(ms) {
+  const end = Date.now() + ms
+  while (Date.now() < end) {
+    /* sync backoff between import attempts */
+  }
+}
+
 function runImport() {
-  execFileSync('node', ['scripts/import-catalogue-local.mjs'], {
-    cwd: SERVER_ROOT,
-    stdio: 'pipe',
-    shell: process.platform === 'win32',
-  })
+  const maxAttempts = 5
+  let lastErr
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      execFileSync('node', ['scripts/import-catalogue-local.mjs'], {
+        cwd: SERVER_ROOT,
+        stdio: 'pipe',
+        shell: process.platform === 'win32',
+      })
+      return
+    } catch (err) {
+      lastErr = err
+      const detail = String(err.stderr ?? err.stdout ?? err.message ?? err)
+      if (attempt < maxAttempts && isRetryableLocalD1Error(detail)) {
+        sleepMs(200 * attempt)
+        continue
+      }
+      throw err
+    }
+  }
+  throw lastErr
 }
 
 before(() => {

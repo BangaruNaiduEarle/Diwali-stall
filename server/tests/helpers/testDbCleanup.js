@@ -9,6 +9,9 @@ export const LEGACY_ADMIN_FIXTURE_PRODUCT_ID = 'P900'
 export const ADMIN_ARCHIVE_PRODUCT_ID = 'P901'
 export const ADMIN_UPDATE_PRODUCT_ID = 'P902'
 export const ADMIN_IMAGE_ORDER_PRODUCT_ID = 'P903'
+/** @see adminProductDelete.test.js */
+export const ADMIN_DELETE_SAFE_PRODUCT_ID = 'P905'
+export const ADMIN_DELETE_REF_PRODUCT_ID = 'P906'
 
 export const SCHEMA_TEST_PRODUCT = 'TEST-PHASE2A-P001'
 export const SCHEMA_TEST_PRODUCT_BAD = 'TEST-PHASE2A-P001-bad'
@@ -20,6 +23,8 @@ const KNOWN_TEST_PRODUCT_IDS = [
   ADMIN_ARCHIVE_PRODUCT_ID,
   ADMIN_UPDATE_PRODUCT_ID,
   ADMIN_IMAGE_ORDER_PRODUCT_ID,
+  ADMIN_DELETE_SAFE_PRODUCT_ID,
+  ADMIN_DELETE_REF_PRODUCT_ID,
   SCHEMA_TEST_PRODUCT,
   SCHEMA_TEST_PRODUCT_BAD,
 ]
@@ -47,6 +52,10 @@ export function deleteTestProductsById(ids) {
     return { removedProductIds: [] }
   }
   const list = existing.map(sqlQuote).join(', ')
+  // Dependent rows (0009 family_pack_items; quotation/request lines reference products).
+  d1ExecLocal(`DELETE FROM quotation_items WHERE product_id IN (${list})`)
+  d1ExecLocal(`DELETE FROM customer_request_items WHERE product_id IN (${list})`)
+  d1ExecLocal(`DELETE FROM family_pack_items WHERE product_id IN (${list})`)
   d1ExecLocal(`DELETE FROM private_rates WHERE product_id IN (${list})`)
   d1ExecLocal(`DELETE FROM product_purchase_rates WHERE product_id IN (${list})`)
   d1ExecLocal(`DELETE FROM products WHERE id IN (${list})`)
@@ -56,12 +65,14 @@ export function deleteTestProductsById(ids) {
 /** Removes schema quotation/request rows for the known test ids only. */
 export function cleanupSchemaQuotationFixture() {
   d1ExecLocal(
-    `DELETE FROM quotation_items WHERE quotation_id IN (SELECT id FROM quotations WHERE customer_request_id = ${sqlQuote(SCHEMA_TEST_REQUEST)})`,
-  )
-  d1ExecLocal(`DELETE FROM quotations WHERE customer_request_id = ${sqlQuote(SCHEMA_TEST_REQUEST)}`)
-  d1ExecLocal(
     `DELETE FROM customer_request_items WHERE request_id = ${sqlQuote(SCHEMA_TEST_REQUEST)}`,
   )
+  d1ExecLocal(`DELETE FROM quotation_items WHERE quotation_id = ${sqlQuote(SCHEMA_TEST_QUOTE)}`)
+  d1ExecLocal(
+    `DELETE FROM quotation_items WHERE quotation_id IN (SELECT id FROM quotations WHERE customer_request_id = ${sqlQuote(SCHEMA_TEST_REQUEST)})`,
+  )
+  d1ExecLocal(`DELETE FROM quotations WHERE id = ${sqlQuote(SCHEMA_TEST_QUOTE)}`)
+  d1ExecLocal(`DELETE FROM quotations WHERE customer_request_id = ${sqlQuote(SCHEMA_TEST_REQUEST)}`)
   d1ExecLocal(`DELETE FROM customer_requests WHERE id = ${sqlQuote(SCHEMA_TEST_REQUEST)}`)
 }
 

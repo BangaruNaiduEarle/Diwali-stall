@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, MessageCircle, ReceiptText } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowLeft, ArrowRight, MessageCircle, ReceiptText, Sparkles } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { submitPublicCustomerRequest } from '../api/publicCustomerRequests'
 import CustomerDetailsForm from '../components/CustomerDetailsForm'
 import EmptyState from '../components/EmptyState'
 import EstimateItem from '../components/estimate/EstimateItem'
+import EstimateFamilyPackItem from '../components/estimate/EstimateFamilyPackItem'
 import EstimateProgress from '../components/estimate/EstimateProgress'
+import EstimateConfirmDialog from '../components/estimate/EstimateConfirmDialog'
 import EstimateSummaryPanel from '../components/estimate/EstimateSummaryPanel'
+import FreeDoorDeliveryNotice from '../components/estimate/FreeDoorDeliveryNotice.jsx'
 import PageContainer from '../components/PageContainer'
 import ComplimentaryGiftPromo from '../components/promo/ComplimentaryGiftPromo'
 import Button from '../components/ui/Button'
@@ -15,14 +19,51 @@ import { useCustomerDetails } from '../context/CustomerDetailsContext'
 import { useEstimate } from '../context/EstimateContext'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { getMobileDigits, validateCustomerDetails } from '../utils/customerDetailsHelpers'
+import { formatINR } from '../utils/currency.js'
+import {
+  computeQualifyingOrderTotalInr,
+  getFreeDoorDeliveryUiMessage,
+  isFreeDoorDeliveryEligibleInr,
+} from '../utils/freeDoorDelivery.js'
 import {
   buildCustomerRequestBody,
   buildSubmissionFingerprint,
   createSubmitGuard,
   idempotencyKeyFromFingerprint,
 } from '../utils/customerRequestPayload'
-import { getEstimateProducts } from '../utils/estimateHelpers'
+import {
+  getEstimateDisplayRows,
+  getProductById,
+  isFamilyPackEstimateItem,
+} from '../utils/estimateHelpers'
 import { getWhatsAppEstimateUrl } from '../utils/whatsapp'
+
+/** @param {Array<Record<string, unknown>>} items */
+function snapshotEstimateLinesForHistory(items) {
+  return items.map((entry) => {
+    if (isFamilyPackEstimateItem(entry)) {
+      const snapshotPricePaise = Number(entry.snapshotPricePaise)
+      return {
+        lineType: 'family_pack',
+        familyPackId: entry.familyPackId,
+        quantity: entry.quantity,
+        unit: 'Family pack',
+        label: entry.snapshotName ?? null,
+        ...(Number.isInteger(snapshotPricePaise) && snapshotPricePaise > 0
+          ? { snapshotPricePaise }
+          : {}),
+      }
+    }
+    const product = getProductById(entry.productId)
+    const pack = product?.pack?.trim()
+    return {
+      lineType: 'product',
+      productId: entry.productId,
+      quantity: entry.quantity,
+      unit: pack || null,
+    }
+  })
+}
 
 function displayUnit(product) {
   const pack = product?.pack?.trim()
@@ -62,13 +103,21 @@ function ReviewSection({
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ product, quantity }) => (
-                <tr key={product.id} className="border-b border-[var(--color-border)] last:border-0">
-                  <td className="py-2.5 pr-3 text-[var(--color-charcoal)]">{product.name}</td>
-                  <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{quantity}</td>
-                  <td className="py-2.5 text-[var(--color-muted)]">{displayUnit(product)}</td>
-                </tr>
-              ))}
+              {rows.map((row) =>
+                row.lineType === 'family_pack' ? (
+                  <tr key={row.familyPackId} className="border-b border-[var(--color-border)] last:border-0">
+                    <td className="py-2.5 pr-3 text-[var(--color-charcoal)]">{row.name}</td>
+                    <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{row.quantity}</td>
+                    <td className="py-2.5 text-[var(--color-muted)]">Family pack</td>
+                  </tr>
+                ) : (
+                  <tr key={row.product.id} className="border-b border-[var(--color-border)] last:border-0">
+                    <td className="py-2.5 pr-3 text-[var(--color-charcoal)]">{row.product.name}</td>
+                    <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{row.quantity}</td>
+                    <td className="py-2.5 text-[var(--color-muted)]">{displayUnit(row.product)}</td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
         </div>
@@ -148,6 +197,77 @@ function ReviewSection({
   )
 }
 
+function ConfirmSentSection({ publicReference, onConfirmSent, onNotYet }) {
+  return (
+    <div className="space-y-6">
+      <section
+        className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-white)] p-5 sm:p-6"
+        aria-labelledby="confirm-sent-heading"
+      >
+        <h2 id="confirm-sent-heading" className="text-lg font-semibold text-[var(--color-charcoal)]">
+          Did you send this estimate on WhatsApp?
+        </h2>
+        {publicReference ? (
+          <p className="mt-4 text-sm font-semibold text-[var(--color-maroon)]" role="status">
+            Your estimate reference is {publicReference}. It is included in your WhatsApp message — quote it if you
+            contact us again.
+          </p>
+        ) : null}
+        <p className="mt-3 text-sm text-[var(--color-muted)]">
+          WhatsApp should have opened with your list. We cannot tell whether the message was sent — confirm only after
+          you tap send in WhatsApp.
+        </p>
+        <p className="mt-3 text-sm text-[var(--color-charcoal)]">
+          Your cart was cleared after we saved your request. Start a new estimate when you want to build another list.
+        </p>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <Button type="button" variant="primary" fullWidth onClick={onConfirmSent}>
+            Yes, I sent it on WhatsApp
+          </Button>
+          <Button type="button" variant="secondary" surface="light" fullWidth onClick={onNotYet}>
+            Not yet
+          </Button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function PostShareSection({ onStartNewEstimate, historyCount, lastSavedReference }) {
+  return (
+    <div className="space-y-6">
+      <section
+        className="rounded-[var(--radius-lg)] border border-[var(--color-gold)]/40 bg-[var(--color-ivory)] p-5 sm:p-6"
+        aria-labelledby="post-share-heading"
+      >
+        <h2 id="post-share-heading" className="text-lg font-semibold text-[var(--color-charcoal)]">
+          Thanks — your draft is still on this device
+        </h2>
+        <p className="mt-3 text-sm text-[var(--color-muted)]">
+          When you start a new estimate, we&apos;ll save a copy of this list to your history and clear the active draft
+          so old and new items do not mix.
+        </p>
+        {lastSavedReference ? (
+          <p className="mt-4 text-sm font-medium text-[var(--color-maroon)]" role="status">
+            Saved to history as {lastSavedReference}.
+          </p>
+        ) : null}
+        <Button type="button" variant="primary" icon={Sparkles} fullWidth className="mt-6" onClick={onStartNewEstimate}>
+          Start new estimate
+        </Button>
+        {historyCount > 0 ? (
+          <Button to="/estimate/history" variant="secondary" surface="light" fullWidth className="mt-3">
+            View previous estimates ({historyCount})
+          </Button>
+        ) : null}
+        <Button to="/crackers" variant="ghost" fullWidth className="mt-3">
+          Keep browsing crackers
+        </Button>
+      </section>
+    </div>
+  )
+}
+
 export default function Estimate() {
   usePageTitle('My estimate')
   const [step, setStep] = useState('estimate')
@@ -158,11 +278,26 @@ export default function Estimate() {
     increaseQuantity,
     decreaseQuantity,
     removeFromEstimate,
+    removeFamilyPackFromEstimate,
+    setFamilyPackQuantity,
     clearEstimate,
+    startNewDraftEstimate,
+    archiveSharedEstimate,
+    sharedHistory,
   } = useEstimate()
-  const { details, isValid, markTouched } = useCustomerDetails()
+  const { details, isValid, markTouched, setRequireDeliveryLocation } = useCustomerDetails()
   const [submitting, setSubmitting] = useState(false)
   const [sendError, setSendError] = useState('')
+  const [clearDialogOpen, setClearDialogOpen] = useState(false)
+  const [startNewDialogOpen, setStartNewDialogOpen] = useState(false)
+  const [clearNotice, setClearNotice] = useState('')
+  const [lastSavedReference, setLastSavedReference] = useState('')
+  const [savedPublicReference, setSavedPublicReference] = useState('')
+  const whatsappSentConfirmedRef = useRef(false)
+  const whatsAppOpenedForReferenceRef = useRef(false)
+  const pendingShareRef = useRef(
+    /** @type {{ fingerprint: string, items: { productId: string, quantity: number }[] } | null} */ (null),
+  )
 
   const fingerprintRef = useRef('')
   const idempotencyKeyRef = useRef(/** @type {string | null} */ (null))
@@ -172,11 +307,50 @@ export default function Estimate() {
   }
 
   const { loading: catalogueLoading, error: catalogueError, refresh: refreshCatalogue } = useCatalogueProducts()
-  const rows = getEstimateProducts(estimateItems)
+  const rows = getEstimateDisplayRows(estimateItems)
+  const qualifyingTotalInr = useMemo(
+    () => computeQualifyingOrderTotalInr(estimateItems),
+    [estimateItems],
+  )
+  const deliveryUi = useMemo(
+    () => getFreeDoorDeliveryUiMessage(qualifyingTotalInr),
+    [qualifyingTotalInr],
+  )
+
+  useEffect(() => {
+    setRequireDeliveryLocation(isFreeDoorDeliveryEligibleInr(qualifyingTotalInr))
+  }, [qualifyingTotalInr, setRequireDeliveryLocation])
+
+  const adjustFamilyPackQuantity = useCallback(
+    (familyPackId, delta) => {
+      const current =
+        estimateItems.find((i) => isFamilyPackEstimateItem(i) && i.familyPackId === familyPackId)?.quantity ?? 0
+      setFamilyPackQuantity(familyPackId, current + delta)
+    },
+    [estimateItems, setFamilyPackQuantity],
+  )
+  const draftLineCount = estimateItems.length
+  const isShareFollowUp = step === 'confirm-sent' || step === 'post-share'
+
+  useEffect(() => {
+    if (!clearNotice) return
+    const t = window.setTimeout(() => setClearNotice(''), 4000)
+    return () => window.clearTimeout(t)
+  }, [clearNotice])
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [step])
+
+  useEffect(() => {
+    if (step !== 'confirm-sent') return
+    if (whatsAppOpenedForReferenceRef.current) return
+    const shareItems = pendingShareRef.current?.items?.length ? pendingShareRef.current.items : estimateItems
+    const url = getWhatsAppEstimateUrl(shareItems, details, savedPublicReference || null)
+    if (!url) return
+    whatsAppOpenedForReferenceRef.current = true
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }, [step, savedPublicReference, estimateItems, details])
 
   useEffect(() => {
     if (step !== 'review') return
@@ -219,24 +393,97 @@ export default function Estimate() {
         return
       }
 
-      const whatsAppUrl = getWhatsAppEstimateUrl(estimateItems, details)
-      if (whatsAppUrl) {
-        window.open(whatsAppUrl, '_blank', 'noopener,noreferrer')
+      const requestPayload =
+        result.request && typeof result.request === 'object'
+          ? /** @type {Record<string, unknown>} */ (result.request)
+          : {}
+      const publicReference =
+        typeof requestPayload.publicReference === 'string' ? requestPayload.publicReference.trim() : ''
+
+      const fingerprint = fingerprintRef.current
+      const itemsSnapshot = snapshotEstimateLinesForHistory(estimateItems)
+
+      pendingShareRef.current = {
+        fingerprint,
+        items: [...estimateItems],
       }
+
+      if (fingerprint && itemsSnapshot.length) {
+        const archived = archiveSharedEstimate({
+          submissionFingerprint: fingerprint,
+          items: itemsSnapshot,
+          ...(publicReference ? { reference: publicReference } : {}),
+        })
+        if (archived.record?.reference) {
+          setLastSavedReference(archived.record.reference)
+        }
+      }
+
+      clearEstimate()
+
+      whatsappSentConfirmedRef.current = false
+      whatsAppOpenedForReferenceRef.current = false
+      setLastSavedReference('')
+      setSavedPublicReference(publicReference)
+      setStep('confirm-sent')
     } catch {
       setSendError('Could not save your request. Please try again.')
     } finally {
       submitGuardRef.current.end()
       setSubmitting(false)
     }
-  }, [details, estimateItems, ensureIdempotencyKey, isValid, markTouched])
+  }, [
+    archiveSharedEstimate,
+    clearEstimate,
+    details,
+    estimateItems,
+    ensureIdempotencyKey,
+    isValid,
+    markTouched,
+  ])
 
-  const handleClear = () => {
-    if (window.confirm('Clear your entire estimate? This cannot be undone.')) {
-      clearEstimate()
-      setStep('estimate')
-    }
+  const handleClearRequest = () => setClearDialogOpen(true)
+
+  const handleClearConfirm = () => {
+    clearEstimate()
+    pendingShareRef.current = null
+    whatsappSentConfirmedRef.current = false
+    whatsAppOpenedForReferenceRef.current = false
+    setLastSavedReference('')
+    setSavedPublicReference('')
+    setStep('estimate')
+    setClearDialogOpen(false)
+    setClearNotice('Your draft estimate was cleared.')
   }
+
+  const handleConfirmSent = useCallback(() => {
+    whatsappSentConfirmedRef.current = true
+    setStep('post-share')
+  }, [])
+
+  const handleStartNewRequest = () => setStartNewDialogOpen(true)
+
+  const handleStartNewConfirm = useCallback(() => {
+    const pending = pendingShareRef.current
+    if (whatsappSentConfirmedRef.current && pending?.fingerprint && pending.items.length) {
+      const result = archiveSharedEstimate({
+        submissionFingerprint: pending.fingerprint,
+        items: snapshotEstimateLinesForHistory(pending.items),
+        ...(savedPublicReference ? { reference: savedPublicReference } : {}),
+      })
+      if (result.record?.reference) {
+        setLastSavedReference(result.record.reference)
+      }
+    }
+    startNewDraftEstimate()
+    pendingShareRef.current = null
+    whatsappSentConfirmedRef.current = false
+    whatsAppOpenedForReferenceRef.current = false
+    setSavedPublicReference('')
+    setStartNewDialogOpen(false)
+    setStep('estimate')
+    setClearNotice('Your new draft estimate is ready — add products when you are ready.')
+  }, [archiveSharedEstimate, savedPublicReference, startNewDraftEstimate])
 
   const goToDetails = () => setStep('details')
   const goToReview = () => {
@@ -274,15 +521,28 @@ export default function Estimate() {
     )
   }
 
-  if (rows.length === 0) {
+  if (!isShareFollowUp && draftLineCount === 0) {
     return (
       <PageContainer>
         <header className="max-w-xl">
           <p className="editorial-label-festive text-[var(--color-maroon)]">My estimate</p>
-          <h1 className="editorial-title mt-2">Your estimate is empty</h1>
+          <h1 className="editorial-title mt-2">Your draft estimate is empty</h1>
           <p className="mt-3 text-sm text-[var(--color-muted)]">
-            Start exploring our crackers and add your favourites here.
+            Start exploring our crackers and add your favourites here. Your draft is saved on this device as you browse.
           </p>
+          {clearNotice ? (
+            <p className="mt-3 text-sm font-medium text-[var(--color-maroon)]" role="status">
+              {clearNotice}
+            </p>
+          ) : null}
+          {sharedHistory.length > 0 ? (
+            <Link
+              to="/estimate/history"
+              className="focus-ring mt-4 inline-block text-sm font-medium text-[var(--color-brand)] underline-offset-2 hover:underline"
+            >
+              View previous estimates ({sharedHistory.length})
+            </Link>
+          ) : null}
         </header>
         <EmptyState
           icon={ReceiptText}
@@ -294,6 +554,47 @@ export default function Estimate() {
             </Button>
           }
         />
+        <EstimateConfirmDialog
+          open={clearDialogOpen}
+          title="Clear draft estimate?"
+          description="This removes every item from your active draft on this device. Previous estimates in history are not affected."
+          cancelLabel="Keep estimate"
+          confirmLabel="Clear estimate"
+          onCancel={() => setClearDialogOpen(false)}
+          onConfirm={handleClearConfirm}
+        />
+      </PageContainer>
+    )
+  }
+
+  if (!isShareFollowUp && draftLineCount > 0 && rows.length === 0 && !catalogueLoading) {
+    return (
+      <PageContainer>
+        <header className="max-w-xl">
+          <p className="editorial-label-festive text-[var(--color-maroon)]">My estimate</p>
+          <h1 className="editorial-title mt-2">Some saved items are unavailable</h1>
+          <p className="mt-3 text-sm text-[var(--color-muted)]">
+            Your draft still has {estimateCount} saved {estimateCount === 1 ? 'item' : 'items'}, but they cannot be shown
+            in the catalogue right now. Clear the draft to reset, or try again after refreshing the catalogue.
+          </p>
+        </header>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <Button type="button" variant="primary" onClick={handleClearRequest}>
+            Clear estimate
+          </Button>
+          <Button type="button" variant="secondary" surface="light" onClick={() => refreshCatalogue()}>
+            Refresh catalogue
+          </Button>
+        </div>
+        <EstimateConfirmDialog
+          open={clearDialogOpen}
+          title="Clear draft estimate?"
+          description="This removes every item from your active draft on this device. Previous estimates in history are not affected."
+          cancelLabel="Keep estimate"
+          confirmLabel="Clear estimate"
+          onCancel={() => setClearDialogOpen(false)}
+          onConfirm={handleClearConfirm}
+        />
       </PageContainer>
     )
   }
@@ -302,18 +603,43 @@ export default function Estimate() {
   const itemLabel = estimateCount === 1 ? 'item' : 'items'
 
   const headerEyebrow =
-    step === 'estimate' ? 'My estimate' : step === 'details' ? 'Your details' : 'Review your request'
+    step === 'estimate'
+      ? 'Draft estimate'
+      : step === 'details'
+        ? 'Your details'
+        : step === 'review'
+          ? 'Review your request'
+          : step === 'confirm-sent'
+            ? 'WhatsApp'
+            : 'Next steps'
   const headerTitle =
-    step === 'estimate' ? 'Your Diwali picks' : step === 'details' ? 'Almost there' : 'Everything looks good?'
+    step === 'estimate'
+      ? 'Your Diwali picks'
+      : step === 'details'
+        ? 'Almost there'
+        : step === 'review'
+          ? 'Everything looks good?'
+          : step === 'confirm-sent'
+            ? 'Confirm your WhatsApp message'
+            : 'Ready for a new list?'
   const headerSupport =
     step === 'estimate'
       ? "Review the crackers you've selected before sharing your request with us."
       : step === 'details'
         ? 'Tell us where we can reach you.'
-        : 'Check your estimate and contact details before sending your WhatsApp request.'
+        : step === 'review'
+          ? 'Check your estimate and contact details before sending your WhatsApp request.'
+          : step === 'confirm-sent'
+            ? 'Confirm whether you sent the message in WhatsApp.'
+            : 'Start a new estimate when ready — we save to history only when you confirm below.'
 
   return (
     <PageContainer>
+      {clearNotice ? (
+        <p className="mb-4 text-sm font-medium text-[var(--color-maroon)]" role="status">
+          {clearNotice}
+        </p>
+      ) : null}
       <header className="max-w-2xl">
         <p className="editorial-label-festive text-[var(--color-maroon)]">{headerEyebrow}</p>
         <h1 className="editorial-title mt-2">{headerTitle}</h1>
@@ -323,8 +649,18 @@ export default function Estimate() {
           </p>
         ) : null}
         <p className="mt-2 text-sm text-[var(--color-muted)]">{headerSupport}</p>
+        {sharedHistory.length > 0 && (step === 'estimate' || step === 'review') ? (
+          <Link
+            to="/estimate/history"
+            className="focus-ring mt-3 inline-block text-sm font-medium text-[var(--color-brand)] underline-offset-2 hover:underline"
+          >
+            View previous estimates ({sharedHistory.length})
+          </Link>
+        ) : null}
         {step === 'estimate' ? <ComplimentaryGiftPromo variant="inline" className="mt-4 max-w-md" /> : null}
-        <EstimateProgress currentStep={step} />
+        {step === 'estimate' || step === 'details' || step === 'review' ? (
+          <EstimateProgress currentStep={step} />
+        ) : null}
       </header>
 
       {step === 'estimate' ? (
@@ -344,21 +680,42 @@ export default function Estimate() {
 
             <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-white)] sm:rounded-t-none sm:border-t-0">
               <ul className="divide-y divide-[var(--color-border)]">
-                {rows.map((row) => (
-                  <li key={row.productId}>
-                    <EstimateItem
-                      row={row}
-                      onIncrease={increaseQuantity}
-                      onDecrease={decreaseQuantity}
-                      onRemove={removeFromEstimate}
-                    />
-                  </li>
-                ))}
+                {rows.map((row) =>
+                  row.lineType === 'family_pack' ? (
+                    <li key={row.familyPackId}>
+                      <EstimateFamilyPackItem
+                        row={row}
+                        onIncrease={(id) => adjustFamilyPackQuantity(id, 1)}
+                        onDecrease={(id) => adjustFamilyPackQuantity(id, -1)}
+                        onRemove={removeFamilyPackFromEstimate}
+                      />
+                    </li>
+                  ) : (
+                    <li key={row.productId}>
+                      <EstimateItem
+                        row={row}
+                        onIncrease={increaseQuantity}
+                        onDecrease={decreaseQuantity}
+                        onRemove={removeFromEstimate}
+                      />
+                    </li>
+                  ),
+                )}
               </ul>
             </div>
 
             <div className="mt-6 border-t border-[var(--color-border)] pt-6 lg:hidden">
-              <p className="text-xs leading-relaxed text-[var(--color-muted)]">
+              {qualifyingTotalInr > 0 ? (
+                <p className="text-sm font-semibold tabular-nums text-[var(--color-charcoal)]">
+                  Estimated total (listed prices): {formatINR(qualifyingTotalInr)}
+                </p>
+              ) : null}
+              <FreeDoorDeliveryNotice
+                message={deliveryUi.message}
+                qualified={deliveryUi.qualified}
+                qualifyingTotalInr={qualifyingTotalInr}
+              />
+              <p className="mt-3 text-xs leading-relaxed text-[var(--color-muted)]">
                 Pricing is confirmed on WhatsApp after we review your list.
               </p>
               <Button type="button" variant="primary" iconRight={ArrowRight} fullWidth className="mt-5" onClick={goToDetails}>
@@ -367,13 +724,13 @@ export default function Estimate() {
               <p className="mt-2 text-xs text-[var(--color-muted)]">
                 We&apos;ll use these details to send your estimate request on WhatsApp.
               </p>
-              <Button type="button" variant="ghost" size="sm" className="mt-4" onClick={handleClear}>
+              <Button type="button" variant="ghost" size="sm" className="mt-4" onClick={handleClearRequest}>
                 Clear estimate
               </Button>
             </div>
 
             <div className="mt-6 hidden lg:block">
-              <Button type="button" variant="ghost" size="sm" onClick={handleClear}>
+              <Button type="button" variant="ghost" size="sm" onClick={handleClearRequest}>
                 Clear estimate
               </Button>
             </div>
@@ -382,6 +739,9 @@ export default function Estimate() {
           <EstimateSummaryPanel
             uniqueProductCount={uniqueProductCount}
             estimateCount={estimateCount}
+            qualifyingTotalInr={qualifyingTotalInr}
+            deliveryMessage={deliveryUi.message}
+            deliveryQualified={deliveryUi.qualified}
             primaryLabel="Continue to your details"
             onPrimary={goToDetails}
             helperText="We'll use these details to send your estimate request on WhatsApp."
@@ -420,6 +780,46 @@ export default function Estimate() {
           </Button>
         </div>
       ) : null}
+
+      {step === 'confirm-sent' ? (
+        <div className="mt-6 max-w-2xl lg:mt-8">
+          <ConfirmSentSection
+            publicReference={savedPublicReference}
+            onConfirmSent={handleConfirmSent}
+            onNotYet={() => setStep('review')}
+          />
+        </div>
+      ) : null}
+
+      {step === 'post-share' ? (
+        <div className="mt-6 max-w-2xl lg:mt-8">
+          <PostShareSection
+            onStartNewEstimate={handleStartNewRequest}
+            historyCount={sharedHistory.length}
+            lastSavedReference={lastSavedReference}
+          />
+        </div>
+      ) : null}
+
+      <EstimateConfirmDialog
+        open={clearDialogOpen}
+        title="Clear draft estimate?"
+        description="This removes every item from your active draft on this device. Previous estimates in history are not affected."
+        cancelLabel="Keep estimate"
+        confirmLabel="Clear estimate"
+        onCancel={() => setClearDialogOpen(false)}
+        onConfirm={handleClearConfirm}
+      />
+
+      <EstimateConfirmDialog
+        open={startNewDialogOpen}
+        title="Start a new estimate?"
+        description="We will save this list to your estimate history (once), then clear the active draft so your next selections start fresh."
+        cancelLabel="Keep current draft"
+        confirmLabel="Start new estimate"
+        onCancel={() => setStartNewDialogOpen(false)}
+        onConfirm={handleStartNewConfirm}
+      />
     </PageContainer>
   )
 }

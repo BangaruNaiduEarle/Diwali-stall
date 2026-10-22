@@ -6,13 +6,24 @@ import { formatINR } from '../../utils/currency.js'
 import { fetchAdminCategories, fetchAdminProductsPage } from '../api/adminApi.js'
 import AdminProductCard from '../components/AdminProductCard.jsx'
 import AdminProductTableThumb from '../components/AdminProductTableThumb.jsx'
-import { formatAdminProductCompany, formatAdminProductPack } from '../lib/adminProductTableDisplay.js'
+import {
+  showAdminProductCatalogueReferenceColumn,
+  showAdminProductMappingColumn,
+  showAdminProductSensitiveColumns,
+  showAdminProductUnitColumn,
+} from '../lib/adminProductTableColumns.js'
+import {
+  adminProductListSellingPriceView,
+  formatAdminProductCompany,
+  formatAdminProductPack,
+} from '../lib/adminProductTableDisplay.js'
+import { useAdminSession } from '../context/AdminSessionContext.jsx'
 
 /** @param {{ active?: boolean }} props */
 function StatusBadge({ active = true }) {
   return (
     <span className={`admin-badge${active ? '' : ' admin-badge--muted'}`}>
-      {active ? 'Active' : 'Archived'}
+      {active ? 'Active' : 'Inactive'}
     </span>
   )
 }
@@ -25,6 +36,11 @@ function formatOptionalInr(value) {
 }
 
 export default function AdminProductsPage() {
+  const { role } = useAdminSession()
+  const showSensitiveColumns = showAdminProductSensitiveColumns(role)
+  const showUnitColumn = showAdminProductUnitColumn(role)
+  const showMappingColumn = showAdminProductMappingColumn(role)
+  const showCatalogueReferenceColumn = showAdminProductCatalogueReferenceColumn(role)
   const [products, setProducts] = useState(/** @type {Record<string, unknown>[]} */ ([]))
   const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, totalPages: 0 })
   const [loading, setLoading] = useState(true)
@@ -93,10 +109,11 @@ export default function AdminProductsPage() {
     return `Page ${pagination.page} of ${pagination.totalPages}`
   }, [pagination])
 
-  const activeFilterCount = useMemo(
-    () => [missingRateOnly, missingPurchaseRateOnly, includeArchived].filter(Boolean).length,
-    [missingRateOnly, missingPurchaseRateOnly, includeArchived],
-  )
+  const activeFilterCount = useMemo(() => {
+    const filters = [includeArchived]
+    if (showSensitiveColumns) filters.push(missingRateOnly, missingPurchaseRateOnly)
+    return filters.filter(Boolean).length
+  }, [missingRateOnly, missingPurchaseRateOnly, includeArchived, showSensitiveColumns])
 
   const resultsSummary = useMemo(() => {
     const totalPart = `${pagination.total} product${pagination.total === 1 ? '' : 's'}`
@@ -111,7 +128,9 @@ export default function AdminProductsPage() {
         <div className="admin-page__head-text">
           <h2 className="admin-page__title">Products</h2>
           <p className="admin-page__subtitle admin-page__subtitle--compact">
-            Manage purchase rates and X4 selling prices.
+            {showSensitiveColumns
+              ? 'Manage purchase rates and selling prices.'
+              : 'Manage catalogue products, images, and selling prices.'}
           </p>
         </div>
         <Button
@@ -153,26 +172,38 @@ export default function AdminProductsPage() {
               ))}
             </select>
           </div>
-          <div className="admin-products-toolbar__desktop-filters admin-show-desktop">
-            <label className="admin-check admin-check--inline">
-              <input type="checkbox" checked={missingRateOnly} onChange={(e) => setMissingRateOnly(e.target.checked)} />
-              Missing X4 selling
-            </label>
-            <label className="admin-check admin-check--inline">
-              <input
-                type="checkbox"
-                checked={missingPurchaseRateOnly}
-                onChange={(e) => setMissingPurchaseRateOnly(e.target.checked)}
-              />
-              Missing purchase rate
-            </label>
+          <div className="admin-products-toolbar__desktop-filters">
+            {showSensitiveColumns ? (
+              <label className="admin-check admin-check--inline">
+                <input type="checkbox" checked={missingRateOnly} onChange={(e) => setMissingRateOnly(e.target.checked)} />
+                <span>Missing selling price</span>
+              </label>
+            ) : null}
+            {showSensitiveColumns ? (
+              <label className="admin-check admin-check--inline">
+                <input
+                  type="checkbox"
+                  checked={missingPurchaseRateOnly}
+                  onChange={(e) => setMissingPurchaseRateOnly(e.target.checked)}
+                />
+                <span>Missing purchase rate</span>
+              </label>
+            ) : null}
             <label className="admin-check admin-check--inline">
               <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} />
-              Show archived
+              <span>Show inactive</span>
             </label>
-            <button type="button" className="admin-link-button" onClick={load} disabled={loading}>
-              Refresh
-            </button>
+            <div className="admin-products-toolbar__refresh-wrap">
+              <button
+                type="button"
+                className="admin-products-toolbar__refresh"
+                onClick={load}
+                disabled={loading}
+              >
+                <RefreshCw size={16} className={loading ? 'animate-spin' : undefined} aria-hidden="true" />
+                Refresh
+              </button>
+            </div>
           </div>
           <button
             type="button"
@@ -206,22 +237,35 @@ export default function AdminProductsPage() {
           className={`admin-products-filters-panel admin-show-mobile${mobileFiltersOpen ? ' admin-products-filters-panel--open' : ''}`}
           hidden={!mobileFiltersOpen}
         >
-          <label className="admin-check">
-            <input type="checkbox" checked={missingRateOnly} onChange={(e) => setMissingRateOnly(e.target.checked)} />
-            Missing X4 selling
-          </label>
-          <label className="admin-check">
-            <input
-              type="checkbox"
-              checked={missingPurchaseRateOnly}
-              onChange={(e) => setMissingPurchaseRateOnly(e.target.checked)}
-            />
-            Missing purchase rate
-          </label>
+          {showSensitiveColumns ? (
+            <label className="admin-check">
+              <input type="checkbox" checked={missingRateOnly} onChange={(e) => setMissingRateOnly(e.target.checked)} />
+              <span>Missing selling price</span>
+            </label>
+          ) : null}
+          {showSensitiveColumns ? (
+            <label className="admin-check">
+              <input
+                type="checkbox"
+                checked={missingPurchaseRateOnly}
+                onChange={(e) => setMissingPurchaseRateOnly(e.target.checked)}
+              />
+              <span>Missing purchase rate</span>
+            </label>
+          ) : null}
           <label className="admin-check">
             <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} />
-            Show archived
+            <span>Show inactive</span>
           </label>
+          <button
+            type="button"
+            className="admin-products-toolbar__refresh admin-products-toolbar__refresh--panel"
+            onClick={load}
+            disabled={loading}
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : undefined} aria-hidden="true" />
+            Refresh list
+          </button>
         </div>
       </div>
 
@@ -250,7 +294,12 @@ export default function AdminProductsPage() {
           <p className="admin-hint admin-products-results-meta">{resultsSummary}</p>
           <div className="admin-card-list admin-show-mobile" aria-label="Products">
             {products.map((p) => (
-              <AdminProductCard key={String(p.id ?? '')} product={p} />
+              <AdminProductCard
+                key={String(p.id ?? '')}
+                product={p}
+                showSensitiveColumns={showSensitiveColumns}
+                showUnitInSummary={showUnitColumn}
+              />
             ))}
           </div>
           <div className="admin-table-wrap admin-show-desktop">
@@ -263,11 +312,11 @@ export default function AdminProductsPage() {
                   <th scope="col">ID</th>
                   <th scope="col">Name</th>
                   <th scope="col">Company</th>
-                  <th scope="col">Unit</th>
-                  <th scope="col">Purchase</th>
-                  <th scope="col">X4</th>
-                  <th scope="col">Catalogue ref.</th>
-                  <th scope="col">Mapping</th>
+                  {showUnitColumn ? <th scope="col">Unit</th> : null}
+                  {showSensitiveColumns ? <th scope="col">Purchase</th> : null}
+                  <th scope="col">Selling Price</th>
+                  {showCatalogueReferenceColumn ? <th scope="col">Catalogue ref.</th> : null}
+                  {showMappingColumn ? <th scope="col">Mapping</th> : null}
                   <th scope="col">Status</th>
                   <th scope="col" className="admin-table__actions-col">
                     Actions
@@ -289,31 +338,37 @@ export default function AdminProductsPage() {
                         <span className="admin-table__meta">{String(p.categoryLabel ?? p.categorySlug ?? '')}</span>
                       </td>
                       <td>{formatAdminProductCompany(p.company)}</td>
-                      <td>{formatAdminProductPack(p.pack)}</td>
+                      {showUnitColumn ? <td>{formatAdminProductPack(p.pack)}</td> : null}
+                      {showSensitiveColumns ? (
+                        <td className="tabular-nums">
+                          {p.hasPurchaseRate ? (
+                            formatOptionalInr(p.purchaseRateInr)
+                          ) : (
+                            <span className="admin-table__meta admin-table__meta--warn">Missing</span>
+                          )}
+                        </td>
+                      ) : null}
                       <td className="tabular-nums">
-                        {p.hasPurchaseRate ? (
-                          formatOptionalInr(p.purchaseRateInr)
-                        ) : (
-                          <span className="admin-table__meta admin-table__meta--warn">Missing</span>
-                        )}
+                        {(() => {
+                          const view = adminProductListSellingPriceView(p)
+                          if (view.kind === 'value') return formatOptionalInr(view.inr)
+                          return <span className="admin-table__meta admin-table__meta--warn">Missing</span>
+                        })()}
                       </td>
-                      <td className="tabular-nums">
-                        {p.hasX4SellingRate || p.hasPrivateX4Rate ? (
-                          formatOptionalInr(p.x4SellingPriceInr ?? p.privateX4Inr)
-                        ) : (
-                          <span className="admin-table__meta admin-table__meta--warn">Missing</span>
-                        )}
-                      </td>
-                      <td className="tabular-nums">{formatOptionalInr(p.cataloguePublicPriceInr)}</td>
-                      <td>
-                        {mapping?.mappingStatus === 'review' ? (
-                          <span className="admin-table__meta admin-table__meta--warn">Review</span>
-                        ) : mapping?.mappingStatus === 'verified' ? (
-                          'Verified'
-                        ) : (
-                          <span className="admin-table__meta">—</span>
-                        )}
-                      </td>
+                      {showCatalogueReferenceColumn ? (
+                        <td className="tabular-nums">{formatOptionalInr(p.cataloguePublicPriceInr)}</td>
+                      ) : null}
+                      {showMappingColumn ? (
+                        <td>
+                          {mapping?.mappingStatus === 'review' ? (
+                            <span className="admin-table__meta admin-table__meta--warn">Review</span>
+                          ) : mapping?.mappingStatus === 'verified' ? (
+                            'Verified'
+                          ) : (
+                            <span className="admin-table__meta">—</span>
+                          )}
+                        </td>
+                      ) : null}
                       <td>
                         <StatusBadge active={p.active !== false} />
                       </td>

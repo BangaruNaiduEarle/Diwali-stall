@@ -9,12 +9,22 @@ import {
 
 const CustomerDetailsContext = createContext(null)
 
-const FIELD_KEYS = ['name', 'mobile', 'area', 'pickupDate', 'note']
+const FIELD_KEYS = [
+  'name',
+  'mobile',
+  'area',
+  'deliveryAddress',
+  'deliveryLandmark',
+  'deliveryMapsUrl',
+  'pickupDate',
+  'note',
+]
 
 export function CustomerDetailsProvider({ children }) {
   const [details, setDetailsState] = useState(() => loadCustomerDetailsFromStorage())
   const [touched, setTouched] = useState(false)
   const [fieldTouched, setFieldTouched] = useState({})
+  const [requireDeliveryLocation, setRequireDeliveryLocation] = useState(false)
 
   useEffect(() => {
     saveCustomerDetailsToStorage(details)
@@ -44,7 +54,10 @@ export function CustomerDetailsProvider({ children }) {
     setFieldTouched((prev) => ({ ...prev, [field]: true }))
   }, [])
 
-  const allErrors = useMemo(() => validateCustomerDetails(details), [details])
+  const allErrors = useMemo(
+    () => validateCustomerDetails(details, { requireDeliveryLocation }),
+    [details, requireDeliveryLocation],
+  )
 
   const errors = useMemo(() => {
     if (touched) return allErrors
@@ -69,8 +82,22 @@ export function CustomerDetailsProvider({ children }) {
       clearDetails,
       markTouched,
       markFieldTouched,
+      requireDeliveryLocation,
+      setRequireDeliveryLocation,
     }),
-    [details, errors, isValid, touched, fieldTouched, setField, setDetails, clearDetails, markTouched, markFieldTouched],
+    [
+      details,
+      errors,
+      isValid,
+      touched,
+      fieldTouched,
+      setField,
+      setDetails,
+      clearDetails,
+      markTouched,
+      markFieldTouched,
+      requireDeliveryLocation,
+    ],
   )
 
   return (

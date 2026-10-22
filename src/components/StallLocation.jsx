@@ -26,7 +26,7 @@ export default function StallLocation() {
           id="location-heading"
           eyebrow="Visit us"
           title="Stall location & pickup"
-          description="Collect your order at the stall. Details below come from your site configuration."
+          description="Visit our stall or request free door delivery on qualifying website orders of ₹1,000 or more—subject to delivery coverage. Stall details below."
         />
 
         <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,18rem)] lg:items-start">

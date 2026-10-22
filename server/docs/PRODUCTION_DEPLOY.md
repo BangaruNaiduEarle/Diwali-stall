@@ -22,9 +22,16 @@ Ensure `wrangler.toml` `database_name` matches the D1 database that already hold
 
 **Migration order** (Wrangler applies filenames in order; only pending files run):
 
-`0001` … `0006` → **`0007_admin_password_auth.sql`** → **`0008_admin_owner_bootstrap_lock.sql`**
+`0001` … `0006` → **`0007_admin_password_auth.sql`** → **`0008_admin_owner_bootstrap_lock.sql`** → **`0009_family_packs.sql`** → **`0010_customer_request_unit_price.sql`** → **`0011_admin_super_admin_role.sql`**
 
-`0007` / `0008` are additive (admin auth tables/columns only). They do **not** re-import products or rates.
+| Migration | Effect on populated DB |
+|-----------|-------------------------|
+| `0007` / `0008` | Additive admin auth tables/columns only. |
+| `0009` | Additive family-pack tables and indexes. |
+| `0010` | Additive column on `customer_request_items` (`unit_price_paise`). |
+| `0011` | Rebuilds `admin_users` with `super_admin` role CHECK — copies rows via `INSERT … SELECT`; brief table swap. **Requires verified backup first.** |
+
+**Before any remote apply:** run `npx wrangler d1 migrations list diwali-quotation --remote` and confirm which files are already applied. Export a **verified D1 backup** (see rollback section) before applying **`0011`**. Do **not** assume local and remote migration state match.
 
 **Dashboard (optional):** D1 → **diwali-quotation** → verify it is the production database before applying.
 
@@ -39,7 +46,7 @@ cd server
 npx wrangler d1 migrations apply diwali-quotation --remote
 ```
 
-Re-list until `0007` and `0008` show applied. **Do not run:** `catalogue:import:local`, `x4:rates:import:apply`, `purchase:rates:import:apply`, or `server/data/generated/*.sql` on remote.
+Re-list until **`0011`** (and all prior pending files) show applied. **Do not run:** `catalogue:import:local`, `x4:rates:import:apply`, `purchase:rates:import:apply`, or `server/data/generated/*.sql` on remote.
 
 Local equivalent (dev): `npm run db:migrate:local` / `npm run db:migrations:list:local`.
 
@@ -203,6 +210,11 @@ Direct Worker calls from Postman still work with cookies on the Worker origin; b
 - `/admin/login` → `/admin` → sign out.
 - Owner: `/admin/users` — create **admin** only (max **5** active including owner).
 - Customer request → quotation; admin product/rate edits unchanged.
+- `/admin/family-packs` — CRUD, images (Cloudinary folder `diwali/family-packs`), public `/packs` from `GET /api/public/family-packs`.
+
+**Family pack uploads:** Same Worker secrets as product uploads (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`). Without them, `POST /api/admin/uploads/sign` returns **503** and the admin form shows the error (no fake success).
+
+**Inactive packs:** Hidden from public APIs; existing estimate lines keep **name/price snapshots** in localStorage until the customer removes them. Customer requests revalidate availability server-side.
 
 ---
 
