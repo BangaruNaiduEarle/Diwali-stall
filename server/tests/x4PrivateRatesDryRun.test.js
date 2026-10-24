@@ -228,10 +228,10 @@ describe('d1LocalSelect (read-only guard)', () => {
 })
 
 describe('X4 dry-run public/private separation', () => {
-  it('public product field keys never include rate or paise fields', () => {
+  it('public product field keys never include private rate fields', () => {
     for (const key of PUBLIC_PRODUCT_FIELD_KEYS) {
-      assert.ok(!key.toLowerCase().includes('rate'))
-      assert.ok(!key.toLowerCase().includes('paise'))
+      assert.ok(!key.toLowerCase().includes('rate') || key === 'sellingPricePaise')
+      assert.ok(key === 'sellingPricePaise' || !key.toLowerCase().includes('paise'))
       assert.ok(!key.toLowerCase().includes('x4'))
       assert.ok(key !== 'price')
     }

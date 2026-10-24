@@ -8,12 +8,11 @@ import {
 } from '../src/services/publicProducts.js'
 
 describe('public product SQL separation', () => {
-  it('list SQL does not reference private_rates or rate columns', () => {
+  it('list SQL exposes D1 selling price only (no private_rates)', () => {
     const sql = PUBLIC_PRODUCT_LIST_SQL.toLowerCase()
     assert.ok(!sql.includes('private_rates'))
     assert.ok(!sql.includes('unit_rate'))
-    assert.ok(!sql.includes('paise'))
-    assert.ok(!sql.includes('price'))
+    assert.ok(sql.includes('selling_price_paise'))
   })
 
   it('by-id SQL does not reference private_rates', () => {
@@ -22,7 +21,7 @@ describe('public product SQL separation', () => {
     assert.ok(!sql.includes('unit_rate'))
   })
 
-  it('mapPublicProductRow omits rate fields', () => {
+  it('mapPublicProductRow omits private rate fields but includes D1 selling price', () => {
     const mapped = mapPublicProductRow({
       id: 'T1',
       category_slug: 'others',
@@ -34,13 +33,14 @@ describe('public product SQL separation', () => {
       stock_status: 'available',
       sort_order: 0,
       images_json: '[]',
+      selling_price_paise: 12500,
       unit_rate_paise: 9999,
       active: 1,
       company: 'Secret Co',
     })
     assert.equal(mapped.id, 'T1')
     assert.equal('unit_rate_paise' in mapped, false)
-    assert.equal('price' in mapped, false)
+    assert.equal(mapped.sellingPricePaise, 12500)
     assert.equal('active' in mapped, false)
     assert.equal('company' in mapped, false)
     assert.deepEqual(mapped.images, [])

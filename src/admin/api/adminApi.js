@@ -148,12 +148,30 @@ export async function fetchAdminCategories() {
   return { ok: true, categories: Array.isArray(categories) ? categories : [] }
 }
 
+/** @param {unknown} data */
+function productFromAdminWriteResponse(data) {
+  const product = /** @type {{ product?: unknown }} */ (data ?? {}).product
+  if (!product || typeof product !== 'object') return null
+  return /** @type {Record<string, unknown>} */ (product)
+}
+
 /** @param {Record<string, unknown>} body */
 export async function createAdminProduct(body) {
-  return apiRequest('/api/admin/products', {
+  const result = await apiRequest('/api/admin/products', {
     method: 'POST',
     body: JSON.stringify(body),
   })
+  if (!result.ok) return result
+  const product = productFromAdminWriteResponse(result.data)
+  if (!product) {
+    return {
+      ok: false,
+      status: result.status,
+      error: 'invalid_response',
+      message: 'Create product response was invalid.',
+    }
+  }
+  return { ok: true, status: result.status, product, data: result.data }
 }
 
 /**
@@ -161,10 +179,21 @@ export async function createAdminProduct(body) {
  * @param {Record<string, unknown>} body
  */
 export async function updateAdminProduct(id, body) {
-  return apiRequest(`/api/admin/products/${encodeURIComponent(id)}`, {
+  const result = await apiRequest(`/api/admin/products/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: JSON.stringify(body),
   })
+  if (!result.ok) return result
+  const product = productFromAdminWriteResponse(result.data)
+  if (!product) {
+    return {
+      ok: false,
+      status: result.status,
+      error: 'invalid_response',
+      message: 'Update product response was invalid.',
+    }
+  }
+  return { ok: true, status: result.status, product, data: result.data }
 }
 
 /** @param {string} id @param {boolean} active */

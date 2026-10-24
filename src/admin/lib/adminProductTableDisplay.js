@@ -28,7 +28,7 @@ export function formatAdminProductPack(pack) {
  */
 /**
  * Normal catalogue selling price for the products list (D1 products.selling_price_paise → sellingPriceInr).
- * Same value for every admin role; never substitutes X4 or catalogue-reference prices.
+ * Same value for every admin role; never substitutes X4/private rates.
  * @param {Record<string, unknown>} product
  * @returns {{ kind: 'value' | 'missing', inr: number | null }}
  */

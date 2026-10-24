@@ -216,7 +216,7 @@ describe('X4 import in-memory apply (isolated)', () => {
 describe('X4 import public API separation', () => {
   it('import SQL and plan do not expose public product field names as rates', () => {
     for (const key of PUBLIC_PRODUCT_FIELD_KEYS) {
-      assert.ok(!key.toLowerCase().includes('paise'))
+      assert.ok(key === 'sellingPricePaise' || !key.toLowerCase().includes('paise'))
       assert.ok(!key.toLowerCase().includes('x4'))
     }
     const sql = buildImportSqlBatch(

@@ -10,12 +10,11 @@ import {
 } from '../api/adminApi.js'
 import AdminConfirmDialog from '../components/AdminConfirmDialog.jsx'
 import Button from '../../components/ui/Button.jsx'
-import { updateAdminPurchaseRate, updateAdminX4SellingRate } from '../api/adminApi.js'
+import { updateAdminPurchaseRate } from '../api/adminApi.js'
 import ProductForm, {
   adminRateFieldChanged,
   buildProductPayload,
   getPurchaseRateInrFromForm,
-  getX4SellingInrFromForm,
   productToFormValues,
 } from '../components/ProductForm.jsx'
 import AdminFeedbackBanner from '../components/AdminFeedbackBanner.jsx'
@@ -46,6 +45,7 @@ export default function AdminProductEditPage() {
     /** @type {{ waitUntilIdle: () => Promise<void>, isBusy: () => boolean } | null} */ (null),
   )
   const [imageUploadBusy, setImageUploadBusy] = useState(false)
+  const [initialRevision, setInitialRevision] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -71,6 +71,7 @@ export default function AdminProductEditPage() {
         return
       }
       setInitial(productToFormValues(/** @type {Record<string, unknown>} */ (productRes.product)))
+      setInitialRevision((n) => n + 1)
       const mapped = catRes.categories
         .filter((c) => c && typeof c === 'object')
         .map((c) => ({
@@ -97,13 +98,17 @@ export default function AdminProductEditPage() {
   async function persistImages(images, _values) {
     const result = await updateAdminProduct(productId, { images })
     if (!result.ok) {
-      return { ok: false, message: result.message }
+      const fieldMsg = result.fields ? Object.values(result.fields).join(' ') : ''
+      return { ok: false, message: fieldMsg || result.message }
     }
-    const product = /** @type {{ product?: Record<string, unknown> }} */ (result.data ?? {}).product
+    const product = result.product
     if (product) {
       setInitial(productToFormValues(product))
     }
-    return { ok: true }
+    const savedImages = Array.isArray(product?.images)
+      ? product.images.map((entry) => String(entry ?? '').trim()).filter(Boolean)
+      : images
+    return { ok: true, images: savedImages }
   }
 
   async function handleSubmit(values) {
@@ -123,7 +128,7 @@ export default function AdminProductEditPage() {
     }
 
     setSubmitting(true)
-    const body = buildProductPayload(values)
+    const body = buildProductPayload(values, { includeSellingPrice: showSensitiveColumns })
     delete body.id
     const result = await updateAdminProduct(productId, body)
     if (!result.ok) {
@@ -133,18 +138,6 @@ export default function AdminProductEditPage() {
       return
     }
     if (showSensitiveColumns) {
-      if (adminRateFieldChanged(initial.x4SellingPriceInr, values.x4SellingPriceInr)) {
-        const x4Inr = getX4SellingInrFromForm(values)
-        if (x4Inr !== null && Number.isFinite(x4Inr)) {
-          const rateRes = await updateAdminX4SellingRate(productId, x4Inr)
-          if (!rateRes.ok) {
-            setSubmitting(false)
-            setServerError(rateRes.message)
-            setServerFields(rateRes.fields ?? null)
-            return
-          }
-        }
-      }
       if (adminRateFieldChanged(initial.purchaseRateInr, values.purchaseRateInr)) {
         const purchaseInr = getPurchaseRateInrFromForm(values)
         if (purchaseInr !== null && Number.isFinite(purchaseInr)) {
@@ -162,6 +155,7 @@ export default function AdminProductEditPage() {
     const refreshed = await fetchAdminProduct(productId)
     if (refreshed.ok) {
       setInitial(productToFormValues(/** @type {Record<string, unknown>} */ (refreshed.product)))
+      setInitialRevision((n) => n + 1)
     }
     setFlash({ type: 'success', message: 'Changes saved successfully.' })
   }
@@ -194,7 +188,10 @@ export default function AdminProductEditPage() {
       return
     }
     const product = /** @type {{ product?: Record<string, unknown> }} */ (result.data ?? {}).product
-    if (product) setInitial(productToFormValues(product))
+    if (product) {
+      setInitial(productToFormValues(/** @type {Record<string, unknown>} */ (product)))
+      setInitialRevision((n) => n + 1)
+    }
   }
 
   async function handleDeleteConfirm() {
@@ -227,6 +224,7 @@ export default function AdminProductEditPage() {
       <ProductForm
         mode="edit"
         initial={initial}
+        initialRevision={initialRevision}
         categories={categories}
         submitting={submitting}
         serverError={serverError}

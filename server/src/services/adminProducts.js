@@ -1,4 +1,3 @@
-import { getCataloguePublicPriceInr } from '../lib/cataloguePublicPrices.js'
 import { getPricingReconciliationMeta } from '../lib/pricingReconciliationMap.js'
 import {
   LIMITS,
@@ -42,15 +41,12 @@ export function mapAdminProductRow(row) {
   } catch {
     images = []
   }
-  const cataloguePublicPriceInr = getCataloguePublicPriceInr(String(row.id ?? ''))
   let sellingPricePaise =
     row.selling_price_paise === null || row.selling_price_paise === undefined
       ? null
       : Number(row.selling_price_paise)
-  // Catalogue price and admin Selling Price are the same; D1 column overrides when set.
-  if (sellingPricePaise === null && cataloguePublicPriceInr != null && Number.isFinite(cataloguePublicPriceInr)) {
-    sellingPricePaise = inrToPaise(cataloguePublicPriceInr)
-  }
+  const hasSellingPrice =
+    sellingPricePaise !== null && Number.isInteger(sellingPricePaise) && sellingPricePaise > 0
   const x4SellingPaise =
     row.x4_selling_paise === null || row.x4_selling_paise === undefined
       ? null
@@ -75,8 +71,8 @@ export function mapAdminProductRow(row) {
     images,
     company: row.company ?? null,
     sellingPricePaise,
-    sellingPriceInr: sellingPricePaise === null ? null : paiseToInr(sellingPricePaise),
-    cataloguePublicPriceInr,
+    sellingPriceInr: hasSellingPrice ? paiseToInr(sellingPricePaise) : null,
+    hasSellingPrice,
     x4SellingPricePaise: x4SellingPaise,
     x4SellingPriceInr: x4SellingPaise === null ? null : paiseToInr(x4SellingPaise),
     hasX4SellingRate: x4SellingPaise !== null,
@@ -134,7 +130,7 @@ export async function listAdminProductsPage(db, opts) {
   }
 
   if (opts.missingRateOnly) {
-    wheres.push('pr.id IS NULL')
+    wheres.push('(p.selling_price_paise IS NULL OR p.selling_price_paise <= 0)')
   }
 
   if (opts.missingPurchaseRateOnly) {

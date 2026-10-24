@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  showAdminProductCatalogueReferenceColumn,
   showAdminProductMappingColumn,
   showAdminProductSellingPriceColumn,
   showAdminProductSensitiveColumns,
@@ -9,7 +8,7 @@ import {
 } from './adminProductTableColumns.js'
 
 describe('adminProductTableColumns', () => {
-  it('shows catalogue selling price column for every admin role', () => {
+  it('shows D1 selling price column for every admin role', () => {
     assert.equal(showAdminProductSellingPriceColumn(), true)
   })
 
@@ -26,10 +25,4 @@ describe('adminProductTableColumns', () => {
     }
   })
 
-  it('shows Catalogue Reference table column for owner only', () => {
-    assert.equal(showAdminProductCatalogueReferenceColumn('owner'), true)
-    assert.equal(showAdminProductCatalogueReferenceColumn('super_admin'), false)
-    assert.equal(showAdminProductCatalogueReferenceColumn('admin'), false)
-    assert.equal(showAdminProductCatalogueReferenceColumn(undefined), false)
-  })
 })

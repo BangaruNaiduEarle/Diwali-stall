@@ -18,6 +18,7 @@ const PUBLIC_PRODUCT_FIELD_KEYS = [
   'stockStatus',
   'sortOrder',
   'images',
+  'sellingPricePaise',
 ]
 
 describe('mapPublicProductFromApi', () => {
@@ -38,6 +39,7 @@ describe('mapPublicProductFromApi', () => {
     })
 
     assert.ok(mapped)
+    assert.equal(mapped.price, 999.99)
     assert.equal(mapped.id, 'P005')
     assert.equal(mapped.category, 'Others')
     assert.equal(mapped.categorySlug, 'others')
@@ -45,7 +47,6 @@ describe('mapPublicProductFromApi', () => {
     assert.equal(mapped.sortOrder, 42)
     assert.equal(mapped.images.length, 2)
     assert.equal(mapped.active, true)
-    assert.equal('price' in mapped, false)
     assert.equal('sellingPricePaise' in mapped, false)
     assert.ok(assertNoPublicRateFields(mapped))
   })
@@ -63,7 +64,7 @@ describe('mapPublicProductFromApi', () => {
   })
 
   it('public API field allowlist excludes price and rate keys', () => {
-    const forbidden = ['price', 'sellingPricePaise', 'x4SellingPriceInr', 'purchaseRateInr', 'privateX4Inr']
+    const forbidden = ['x4SellingPriceInr', 'purchaseRateInr', 'privateX4Inr']
     for (const key of forbidden) {
       assert.equal(PUBLIC_PRODUCT_FIELD_KEYS.includes(key), false)
     }

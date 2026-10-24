@@ -7,7 +7,6 @@ import { fetchAdminCategories, fetchAdminProductsPage } from '../api/adminApi.js
 import AdminProductCard from '../components/AdminProductCard.jsx'
 import AdminProductTableThumb from '../components/AdminProductTableThumb.jsx'
 import {
-  showAdminProductCatalogueReferenceColumn,
   showAdminProductMappingColumn,
   showAdminProductSensitiveColumns,
   showAdminProductUnitColumn,
@@ -40,7 +39,6 @@ export default function AdminProductsPage() {
   const showSensitiveColumns = showAdminProductSensitiveColumns(role)
   const showUnitColumn = showAdminProductUnitColumn(role)
   const showMappingColumn = showAdminProductMappingColumn(role)
-  const showCatalogueReferenceColumn = showAdminProductCatalogueReferenceColumn(role)
   const [products, setProducts] = useState(/** @type {Record<string, unknown>[]} */ ([]))
   const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, totalPages: 0 })
   const [loading, setLoading] = useState(true)
@@ -315,7 +313,6 @@ export default function AdminProductsPage() {
                   {showUnitColumn ? <th scope="col">Unit</th> : null}
                   {showSensitiveColumns ? <th scope="col">Purchase</th> : null}
                   <th scope="col">Selling Price</th>
-                  {showCatalogueReferenceColumn ? <th scope="col">Catalogue ref.</th> : null}
                   {showMappingColumn ? <th scope="col">Mapping</th> : null}
                   <th scope="col">Status</th>
                   <th scope="col" className="admin-table__actions-col">
@@ -355,9 +352,6 @@ export default function AdminProductsPage() {
                           return <span className="admin-table__meta admin-table__meta--warn">Missing</span>
                         })()}
                       </td>
-                      {showCatalogueReferenceColumn ? (
-                        <td className="tabular-nums">{formatOptionalInr(p.cataloguePublicPriceInr)}</td>
-                      ) : null}
                       {showMappingColumn ? (
                         <td>
                           {mapping?.mappingStatus === 'review' ? (

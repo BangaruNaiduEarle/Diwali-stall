@@ -1,15 +1,9 @@
 import { canViewSensitiveProductPricing, normalizeAdminRole } from './adminRoles.js'
 
-/** Purchase and X4 config columns (owner / super_admin only). */
+/** Purchase rate and selling price form fields (owner / super_admin only). */
 /** @param {unknown} role */
 export function showAdminProductSensitiveColumns(role) {
   return canViewSensitiveProductPricing(role)
-}
-
-/** Catalogue Reference column in the products table (owner only). */
-/** @param {unknown} role */
-export function showAdminProductCatalogueReferenceColumn(role) {
-  return normalizeAdminRole(role) === 'owner'
 }
 
 /** Unit / pack column (owner / super_admin only). */
@@ -24,7 +18,7 @@ export function showAdminProductMappingColumn(role) {
   return canViewSensitiveProductPricing(role)
 }
 
-/** Catalogue selling price column (all admin roles; value source differs by role). */
+/** D1 selling price column (all admin roles; always `products.selling_price_paise`). */
 export function showAdminProductSellingPriceColumn() {
   return true
 }

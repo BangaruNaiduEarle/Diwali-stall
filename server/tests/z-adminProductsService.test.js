@@ -8,6 +8,7 @@ import {
   restoreAdminProduct,
   updateAdminProduct,
 } from '../src/services/adminProducts.js'
+import { listPublicProducts } from '../src/services/publicProducts.js'
 import { createLocalD1Database } from './helpers/localD1Database.js'
 import { d1QueryLocal } from './helpers/d1Local.js'
 import {
@@ -74,6 +75,26 @@ describe('admin product service', { concurrency: 1 }, () => {
     if (restored.ok) assert.equal(restored.product.active, true)
   })
 
+  it('persists sellingPriceInr on the product row for admin list display', async () => {
+    deleteTestProductsById([ADMIN_UPDATE_PRODUCT_ID])
+    const db = createLocalD1Database()
+    const created = await createAdminProduct(db, {
+      id: ADMIN_UPDATE_PRODUCT_ID,
+      name: 'Priced product',
+      categorySlug: 'others',
+      images: [],
+      stockStatus: 'available',
+      sellingPriceInr: 163,
+    })
+    assert.equal(created.ok, true, JSON.stringify(created))
+    if (created.ok) {
+      assert.equal(created.product?.sellingPriceInr, 163)
+    }
+    const listed = await listAdminProducts(db, { includeArchived: true })
+    const row = listed.find((p) => p.id === ADMIN_UPDATE_PRODUCT_ID)
+    assert.equal(row?.sellingPriceInr, 163)
+  })
+
   it('updates fields', async () => {
     deleteTestProductsById([ADMIN_UPDATE_PRODUCT_ID])
     const db = createLocalD1Database()
@@ -115,5 +136,11 @@ describe('admin product service', { concurrency: 1 }, () => {
     }
     const row = await getAdminProductById(db, ADMIN_IMAGE_ORDER_PRODUCT_ID)
     assert.deepEqual(row?.images, urls)
+
+    const publicRows = await listPublicProducts(db, { limit: 100, offset: 0 })
+    const pub = publicRows.find((p) => p.id === ADMIN_IMAGE_ORDER_PRODUCT_ID)
+    assert.ok(pub)
+    assert.deepEqual(pub.images, urls)
+    assert.equal(pub.coverImageUrl, urls[0])
   })
 })

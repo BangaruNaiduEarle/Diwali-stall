@@ -16,16 +16,14 @@ describe('filterAdminProductForRole', () => {
     sellingPriceInr: 50,
     purchaseRateInr: 10,
     hasPurchaseRate: true,
-    cataloguePublicPriceInr: 99,
     pricingMapping: { mappingStatus: 'verified', publicCataloguePriceDrift: true },
     x4SellingPriceInr: 120,
   }
 
-  it('strips purchase, X4 config, catalogue ref., and mapping for admin role', () => {
+  it('strips purchase, X4 config, and mapping for admin role', () => {
     const filtered = filterAdminProductForRole(sample, 'admin')
     assert.equal(filtered.sellingPriceInr, 50)
     assert.equal('purchaseRateInr' in filtered, false)
-    assert.equal('cataloguePublicPriceInr' in filtered, false)
     assert.equal('x4SellingPriceInr' in filtered, false)
     assert.equal('hasX4SellingRate' in filtered, false)
     assert.equal('pricingMapping' in filtered, false)
@@ -36,7 +34,6 @@ describe('filterAdminProductForRole', () => {
       const filtered = filterAdminProductForRole(sample, role)
       assert.equal(filtered.sellingPriceInr, 50)
       assert.equal(filtered.purchaseRateInr, 10)
-      assert.equal(filtered.cataloguePublicPriceInr, 99)
       assert.equal(filtered.x4SellingPriceInr, 120)
     }
   })
@@ -61,7 +58,6 @@ describe('admin products API role filtering', () => {
     assert.ok(body.products.length >= 1)
     const p = body.products[0]
     assert.equal('purchaseRateInr' in p, false)
-    assert.equal('cataloguePublicPriceInr' in p, false)
     assert.equal('x4SellingPriceInr' in p, false)
     assert.equal('hasX4SellingRate' in p, false)
     assert.equal('pricingMapping' in p, false)
@@ -132,7 +128,6 @@ describe('admin products API role filtering', () => {
     const p = body.products[0]
     assert.equal(p.sellingPriceInr, 50)
     assert.equal(typeof p.purchaseRateInr, 'number')
-    assert.ok(p.cataloguePublicPriceInr === null || typeof p.cataloguePublicPriceInr === 'number')
     assert.equal(p.x4SellingPriceInr, 120)
   })
 
@@ -434,32 +429,7 @@ function createX4RateApiMockDb(role) {
 }
 
 describe('mapAdminProductRow baseline', () => {
-  it('uses static catalogue price as selling price when D1 selling_price_paise is null', () => {
-    const mapped = mapAdminProductRow({
-      id: 'P002',
-      category_slug: 'others',
-      category_label: 'Others',
-      name: 'Sample',
-      pack: '1',
-      description: '',
-      featured: 0,
-      stock_status: 'available',
-      active: 1,
-      sort_order: 0,
-      images_json: '[]',
-      company: 'TST',
-      selling_price_paise: null,
-      x4_selling_paise: 12000,
-      purchase_rate_paise: null,
-      created_at: '2026-01-01',
-      updated_at: '2026-01-01',
-    })
-    assert.equal(mapped.sellingPriceInr, 2292)
-    assert.equal(mapped.sellingPricePaise, 229200)
-    assert.equal(mapped.x4SellingPriceInr, 120)
-  })
-
-  it('leaves selling price missing when D1 and catalogue both lack a price', () => {
+  it('leaves selling price missing when D1 selling_price_paise is null', () => {
     const mapped = mapAdminProductRow({
       id: 'P999',
       category_slug: 'others',
@@ -483,10 +453,9 @@ describe('mapAdminProductRow baseline', () => {
     assert.equal(mapped.sellingPricePaise, null)
     assert.equal(mapped.x4SellingPriceInr, 120)
     assert.equal(mapped.hasX4SellingRate, true)
-    assert.equal(mapped.cataloguePublicPriceInr, null)
   })
 
-  it('includes purchase and catalogue fields before role filter', () => {
+  it('includes purchase and mapping fields before role filter', () => {
     const mapped = mapAdminProductRow({
       id: 'P005',
       category_slug: 'others',
@@ -507,6 +476,6 @@ describe('mapAdminProductRow baseline', () => {
       updated_at: '2026-01-01',
     })
     assert.equal(mapped.purchaseRateInr, 30)
-    assert.ok(mapped.cataloguePublicPriceInr === null || typeof mapped.cataloguePublicPriceInr === 'number')
+    assert.equal(mapped.sellingPriceInr, 50)
   })
 })

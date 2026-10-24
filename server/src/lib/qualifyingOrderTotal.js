@@ -1,4 +1,3 @@
-import { getCataloguePublicPriceInr } from './cataloguePublicPrices.js'
 import { FREE_DOOR_DELIVERY_MIN_PAISE } from './freeDoorDelivery.js'
 import { lineTotalPaise } from '../services/money.js'
 
@@ -27,9 +26,13 @@ export async function computeQualifyingOrderTotalPaise(db, items) {
       continue
     }
     if (productId) {
-      const inr = getCataloguePublicPriceInr(productId)
-      if (inr != null && inr > 0) {
-        totalPaise += lineTotalPaise(Math.round(inr * 100), qty)
+      const product = await db
+        .prepare('SELECT selling_price_paise FROM products WHERE id = ?')
+        .bind(productId)
+        .first()
+      const unit = Number(product?.selling_price_paise)
+      if (Number.isInteger(unit) && unit > 0) {
+        totalPaise += lineTotalPaise(unit, qty)
       }
     }
   }

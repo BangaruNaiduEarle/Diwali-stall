@@ -1,7 +1,7 @@
 import { canViewSensitiveProductPricing } from './adminRoles.js'
 
 /**
- * Strip purchase-rate and catalogue-reference fields for restricted admin roles.
+ * Strip purchase-rate and Excel mapping fields for restricted admin roles.
  * @param {Record<string, unknown>} product
  * @param {unknown} role
  */
@@ -17,7 +17,6 @@ export function filterAdminProductForRole(product, role) {
   delete next.privateX4Paise
   delete next.privateX4Inr
   delete next.hasPrivateX4Rate
-  delete next.cataloguePublicPriceInr
   delete next.pricingMapping
   return next
 }

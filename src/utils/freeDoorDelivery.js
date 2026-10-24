@@ -1,4 +1,3 @@
-import { getCataloguePublicPriceInr } from '../data/cataloguePublicPrices.js'
 import { formatINR } from './currency.js'
 import { getEstimateProducts, getFamilyPackEstimateRows } from './estimateHelpers.js'
 
@@ -6,15 +5,14 @@ export const FREE_DOOR_DELIVERY_MIN_INR = 1000
 
 /**
  * Qualifying total for the free-delivery offer: family-pack selling prices plus
- * catalogue list prices where available (same public price map as stall listings).
+ * D1 catalogue selling prices on loaded public products (via estimate catalogue sync).
  * @param {{ productId?: string, familyPackId?: string, quantity: number }[]} estimateItems
  */
 export function computeQualifyingOrderTotalInr(estimateItems) {
   const productRows = getEstimateProducts(estimateItems)
   let total = 0
   for (const row of productRows) {
-    const listPrice = getCataloguePublicPriceInr(row.productId)
-    const unit = listPrice ?? (typeof row.product?.price === 'number' ? row.product.price : 0)
+    const unit = typeof row.product?.price === 'number' && row.product.price > 0 ? row.product.price : 0
     total += unit * row.quantity
   }
   for (const row of getFamilyPackEstimateRows(estimateItems)) {

@@ -33,14 +33,26 @@ describe('admin product rate flags', () => {
     assert.equal(both.x4SellingPriceInr, 120)
     assert.equal(both.purchaseRateInr, 30)
     assert.equal(both.sellingPriceInr, 50)
-    assert.ok(both.cataloguePublicPriceInr == null || typeof both.cataloguePublicPriceInr === 'number')
-
+    assert.equal(both.hasSellingPrice, true)
     const missing = mapAdminProductRow({
       ...baseRow,
+      selling_price_paise: null,
       x4_selling_paise: null,
       purchase_rate_paise: null,
     })
     assert.equal(missing.hasX4SellingRate, false)
     assert.equal(missing.hasPurchaseRate, false)
+    assert.equal(missing.hasSellingPrice, false)
+  })
+
+  it('treats zero selling_price_paise as missing for admin display', () => {
+    const zero = mapAdminProductRow({
+      ...baseRow,
+      selling_price_paise: 0,
+      x4_selling_paise: null,
+      purchase_rate_paise: null,
+    })
+    assert.equal(zero.hasSellingPrice, false)
+    assert.equal(zero.sellingPriceInr, null)
   })
 })

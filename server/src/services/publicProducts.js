@@ -14,7 +14,8 @@ export const PUBLIC_PRODUCT_LIST_SQL = `
     p.featured,
     p.stock_status,
     p.sort_order,
-    p.images_json
+    p.images_json,
+    p.selling_price_paise
   FROM products p
   INNER JOIN categories c ON c.slug = p.category_slug
   WHERE p.active = 1
@@ -33,7 +34,8 @@ export const PUBLIC_PRODUCT_BY_ID_SQL = `
     p.featured,
     p.stock_status,
     p.sort_order,
-    p.images_json
+    p.images_json,
+    p.selling_price_paise
   FROM products p
   INNER JOIN categories c ON c.slug = p.category_slug
   WHERE p.id = ? AND p.active = 1
@@ -52,6 +54,7 @@ export const PUBLIC_PRODUCT_FIELD_KEYS = [
   'sortOrder',
   'images',
   'coverImageUrl',
+  'sellingPricePaise',
 ]
 
 /** @param {Record<string, unknown>} row */
@@ -65,6 +68,10 @@ export function mapPublicProductRow(row) {
   }
 
   const normalizedImages = images.map((entry) => String(entry ?? '').trim()).filter(Boolean)
+  const sellingPricePaise =
+    row.selling_price_paise === null || row.selling_price_paise === undefined
+      ? null
+      : Number(row.selling_price_paise)
   return {
     id: row.id,
     categorySlug: row.category_slug,
@@ -77,6 +84,10 @@ export function mapPublicProductRow(row) {
     sortOrder: row.sort_order,
     images: normalizedImages,
     coverImageUrl: normalizedImages[0] ?? null,
+    sellingPricePaise:
+      sellingPricePaise === null || !Number.isInteger(sellingPricePaise) || sellingPricePaise < 0
+        ? null
+        : sellingPricePaise,
   }
 }
 

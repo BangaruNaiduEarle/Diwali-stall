@@ -111,7 +111,7 @@ export function getProductById(productId) {
 }
 
 /**
- * Public catalogue has no runtime price field. Subtotal stays 0 unless `price` is explicitly set later.
+ * Storefront price comes from public API `sellingPricePaise` mapped to `price` (D1 products.selling_price_paise).
  * @param {Record<string, unknown> | null | undefined} product
  */
 function unitPriceForEstimate(product) {

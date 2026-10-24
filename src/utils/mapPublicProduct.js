@@ -19,6 +19,15 @@ export function mapPublicProductFromApi(raw) {
   let stockStatus = String(o.stockStatus ?? o.stock_status ?? 'available').trim()
   if (!stockStatus) stockStatus = 'available'
 
+  const sellingPricePaiseRaw = o.sellingPricePaise ?? o.selling_price_paise
+  let price
+  if (sellingPricePaiseRaw !== null && sellingPricePaiseRaw !== undefined && sellingPricePaiseRaw !== '') {
+    const paise = Number(sellingPricePaiseRaw)
+    if (Number.isInteger(paise) && paise >= 0) {
+      price = paise / 100
+    }
+  }
+
   return {
     id,
     name: String(o.name ?? '').trim(),
@@ -31,6 +40,7 @@ export function mapPublicProductFromApi(raw) {
     active: true,
     sortOrder: Number(o.sortOrder ?? o.sort_order) || 0,
     images,
+    ...(price !== undefined ? { price } : {}),
   }
 }
 
@@ -49,11 +59,10 @@ export function mapAndSortPublicProducts(apiProducts) {
   return mapped
 }
 
-/** Ensure mapped catalogue rows never carry public price or rate fields. */
+/** Ensure mapped catalogue rows never carry private rate fields (D1 selling `price` INR is allowed). */
 export function assertNoPublicRateFields(product) {
   if (!product || typeof product !== 'object') return true
   const forbidden = [
-    'price',
     'x4',
     'sellingPriceInr',
     'sellingPricePaise',

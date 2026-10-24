@@ -1,13 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
 import { assertProductSaveNotBlockedByImages } from '../lib/adminProductImageSave.js'
 import { useNavigate } from 'react-router-dom'
-import { createAdminProduct, fetchAdminCategories, updateAdminProduct } from '../api/adminApi.js'
-import ProductForm, { buildProductPayload, emptyProductFormValues } from '../components/ProductForm.jsx'
+import {
+  createAdminProduct,
+  fetchAdminCategories,
+  updateAdminProduct,
+  updateAdminPurchaseRate,
+} from '../api/adminApi.js'
+import ProductForm, {
+  adminRateFieldChanged,
+  buildProductPayload,
+  emptyProductFormValues,
+  getPurchaseRateInrFromForm,
+} from '../components/ProductForm.jsx'
 import { adminNavigationFlashState } from '../lib/adminNavigationFlash.js'
+import { useAdminSession } from '../context/AdminSessionContext.jsx'
+import { showAdminProductSensitiveColumns } from '../lib/adminProductTableColumns.js'
 
 const PRODUCT_ID_RE = /^P\d{3,}$/
 
 export default function AdminProductCreatePage() {
+  const { role } = useAdminSession()
+  const showSensitiveColumns = showAdminProductSensitiveColumns(role)
   const navigate = useNavigate()
   const [categories, setCategories] = useState(/** @type {{ slug: string, label: string }[]} */ ([]))
   const [loadingCategories, setLoadingCategories] = useState(true)
@@ -21,6 +35,7 @@ export default function AdminProductCreatePage() {
     /** @type {{ waitUntilIdle: () => Promise<void>, isBusy: () => boolean } | null} */ (null),
   )
   const [imageUploadBusy, setImageUploadBusy] = useState(false)
+  const [formInitial] = useState(() => emptyProductFormValues())
 
   useEffect(() => {
     let cancelled = false
@@ -61,7 +76,9 @@ export default function AdminProductCreatePage() {
       return { ok: false, message: 'Select a category before uploading.' }
     }
 
-    const result = await createAdminProduct(buildProductPayload({ ...values, id }))
+    const result = await createAdminProduct(
+      buildProductPayload({ ...values, id }, { includeSellingPrice: showSensitiveColumns }),
+    )
     if (!result.ok) {
       const fieldMsg = result.fields ? Object.values(result.fields).join(' ') : ''
       return { ok: false, message: fieldMsg || result.message }
@@ -75,9 +92,14 @@ export default function AdminProductCreatePage() {
     if (!ensured.ok) return ensured
     const result = await updateAdminProduct(ensured.productId, { images })
     if (!result.ok) {
-      return { ok: false, message: result.message }
+      const fieldMsg = result.fields ? Object.values(result.fields).join(' ') : ''
+      return { ok: false, message: fieldMsg || result.message }
     }
-    return { ok: true }
+    const product = result.product
+    const savedImages = Array.isArray(product?.images)
+      ? product.images.map((entry) => String(entry ?? '').trim()).filter(Boolean)
+      : images
+    return { ok: true, images: savedImages }
   }
 
   async function handleSubmit(values) {
@@ -96,30 +118,36 @@ export default function AdminProductCreatePage() {
     }
 
     setSubmitting(true)
-    const body = buildProductPayload(values)
+    const body = buildProductPayload(values, { includeSellingPrice: showSensitiveColumns })
+    delete body.id
     const result =
       persistedProductId && persistedProductId === values.id
-        ? await updateAdminProduct(persistedProductId, {
-            categorySlug: body.categorySlug,
-            name: body.name,
-            pack: body.pack,
-            description: body.description,
-            featured: body.featured,
-            stockStatus: body.stockStatus,
-            active: body.active,
-            sortOrder: body.sortOrder,
-            images: body.images,
-          })
-        : await createAdminProduct(body)
+        ? await updateAdminProduct(persistedProductId, body)
+        : await createAdminProduct({ ...body, id: values.id })
 
-    setSubmitting(false)
     if (!result.ok) {
+      setSubmitting(false)
       setServerError(result.message)
       setServerFields(result.fields ?? null)
       return
     }
-    const product = /** @type {{ product?: { id?: string } }} */ (result.data ?? {}).product
+    const product = result.product
     const newId = product?.id ? String(product.id) : values.id
+    if (showSensitiveColumns && newId) {
+      if (adminRateFieldChanged('', values.purchaseRateInr)) {
+        const purchaseInr = getPurchaseRateInrFromForm(values)
+        if (purchaseInr !== null && Number.isFinite(purchaseInr)) {
+          const purchaseRes = await updateAdminPurchaseRate(newId, purchaseInr)
+          if (!purchaseRes.ok) {
+            setSubmitting(false)
+            setServerError(purchaseRes.message)
+            setServerFields(purchaseRes.fields ?? null)
+            return
+          }
+        }
+      }
+    }
+    setSubmitting(false)
     navigate(`/admin/products/${encodeURIComponent(newId)}/edit`, {
       replace: true,
       state: adminNavigationFlashState('Product created successfully.'),
@@ -149,7 +177,7 @@ export default function AdminProductCreatePage() {
       ) : null}
       <ProductForm
         mode="create"
-        initial={emptyProductFormValues()}
+        initial={formInitial}
         categories={categories}
         submitting={submitting}
         serverError={serverError}
@@ -161,6 +189,7 @@ export default function AdminProductCreatePage() {
         onPersistImages={persistImages}
         uploadCoordinatorRef={uploadCoordinatorRef}
         onUploadBusyChange={setImageUploadBusy}
+        showSensitiveColumns={showSensitiveColumns}
       />
     </div>
   )

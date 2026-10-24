@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Regenerate phase51-rate-x4-reconciliation.json from approved CSV + Excel + public catalogue refs.
+ * Regenerate phase51-rate-x4-reconciliation.json from approved CSV + Excel + legacy static price snapshot.
  * Read-only against Excel; writes report JSON only.
  */
 import fs from 'node:fs'
@@ -14,7 +14,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const SERVER_ROOT = path.resolve(__dirname, '..')
 const REPO_ROOT = path.resolve(SERVER_ROOT, '..')
 const APPROVED_CSV = path.join(REPO_ROOT, 'reports', 'x4_implemented.csv')
-const PUBLIC_PRICES = path.join(SERVER_ROOT, 'data', 'catalogue-public-prices.json')
+/** Legacy JSON snapshot (not used at runtime); drift vs Excel X4 only in this offline report. */
+const PUBLIC_PRICES = path.join(REPO_ROOT, 'src', 'data', 'catalogue-public-prices.json')
 const OUT_JSON = path.join(SERVER_ROOT, 'reports', 'phase51-rate-x4-reconciliation.json')
 const PYTHON_READER = path.join(__dirname, 'read-excel-rate-batch.py')
 

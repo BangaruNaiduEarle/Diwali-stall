@@ -1,8 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Button from '../../components/ui/Button.jsx'
 import ProductImageManager from './ProductImageManager.jsx'
 import { isLocalPreviewUrl } from '../lib/adminImageUploadFlow.js'
 import { MAX_PRODUCT_IMAGES } from '../lib/cloudinaryUpload.js'
+import { buildProductPayload } from '../lib/adminProductBuildPayload.js'
+
+export { buildProductPayload } from '../lib/adminProductBuildPayload.js'
 
 const STOCK_OPTIONS = [
   { value: 'available', label: 'Available' },
@@ -24,15 +27,19 @@ const PRODUCT_ID_RE = /^P\d{3,}$/
  *   onCancel: () => void,
  *   resolvedProductId: string | null,
  *   onEnsureProduct: (values: import('../components/ProductForm.jsx').ProductFormValues) => Promise<{ ok: true, productId: string } | { ok: false, message: string }>,
- *   onPersistImages: (images: string[], values: import('../components/ProductForm.jsx').ProductFormValues) => Promise<{ ok: true } | { ok: false, message: string }>,
+ *   onPersistImages: (images: string[], values: import('../components/ProductForm.jsx').ProductFormValues) => Promise<
+ *     { ok: true, images?: string[] } | { ok: false, message: string }
+ *   >,
  *   uploadCoordinatorRef?: { current: { waitUntilIdle: () => Promise<void>, isBusy: () => boolean } | null },
  *   onUploadBusyChange?: (busy: boolean) => void,
  *   showSensitiveColumns?: boolean,
+ *   initialRevision?: number,
  * }} props
  */
 export default function ProductForm({
   mode,
   initial,
+  initialRevision = 0,
   categories,
   submitting,
   serverError,
@@ -49,6 +56,12 @@ export default function ProductForm({
   const [values, setValues] = useState(initial)
   const [clientErrors, setClientErrors] = useState(/** @type {Record<string, string>} */ ({}))
   const [showManualImages, setShowManualImages] = useState(false)
+
+  useEffect(() => {
+    if (mode !== 'edit' || initialRevision <= 0) return
+    setValues(initial)
+    setClientErrors({})
+  }, [mode, initial, initialRevision])
 
   const fieldError = useMemo(() => {
     /** @type {Record<string, string>} */
@@ -133,7 +146,11 @@ export default function ProductForm({
   }
 
   async function handlePersistImages(images) {
-    return onPersistImages(images, normalizedValues())
+    const result = await onPersistImages(images, normalizedValues())
+    if (result.ok && Array.isArray(result.images)) {
+      setImages(result.images.map(String))
+    }
+    return result
   }
 
   function applyManualImages(text) {
@@ -214,7 +231,7 @@ export default function ProductForm({
         {fieldError.categorySlug ? <p className="admin-field-error">{fieldError.categorySlug}</p> : null}
       </div>
 
-      {mode === 'edit' && showSensitiveColumns ? (
+      {showSensitiveColumns ? (
         <div className="admin-form__row">
           <div className="admin-field">
             <label className="admin-label" htmlFor="product-purchase-rate">
@@ -232,44 +249,28 @@ export default function ProductForm({
               placeholder={values.hasPurchaseRate ? '' : 'Missing — set purchase rate'}
             />
             {fieldError.purchaseRateInr ? <p className="admin-field-error">{fieldError.purchaseRateInr}</p> : null}
-            {!values.hasPurchaseRate ? (
+            {mode === 'edit' && !values.hasPurchaseRate ? (
               <p className="admin-hint admin-hint--warn">No purchase rate stored in D1 yet.</p>
             ) : null}
           </div>
           <div className="admin-field">
-            <label className="admin-label" htmlFor="product-x4-selling">
+            <label className="admin-label" htmlFor="product-selling-price">
               Selling Price (INR)
             </label>
             <input
-              id="product-x4-selling"
+              id="product-selling-price"
               type="number"
               min="0"
               step="0.01"
               className="admin-input"
-              value={values.x4SellingPriceInr ?? ''}
-              onChange={(e) => setField('x4SellingPriceInr', e.target.value)}
+              value={values.sellingPriceInr ?? ''}
+              onChange={(e) => setField('sellingPriceInr', e.target.value)}
               disabled={formDisabled}
-              placeholder={values.hasX4SellingRate ? '' : 'Missing — set selling price'}
+              placeholder={values.hasSellingPrice ? '' : 'Missing — set selling price'}
             />
-            {fieldError.x4SellingPriceInr ? <p className="admin-field-error">{fieldError.x4SellingPriceInr}</p> : null}
-            {!values.hasX4SellingRate ? (
-              <p className="admin-hint admin-hint--warn">No current selling price in D1.</p>
-            ) : null}
-          </div>
-          <div className="admin-field">
-            {values.cataloguePublicPriceInr != null ? (
-              <p className="admin-hint">
-                Public site catalogue reference (static JS): ₹
-                {Number(values.cataloguePublicPriceInr).toLocaleString('en-IN')} — not auto-synced from D1.
-              </p>
-            ) : null}
-            {values.pricingMapping?.mappingStatus ? (
-              <p className="admin-hint">
-                Excel mapping: {String(values.pricingMapping.mappingStatus)}
-                {values.pricingMapping.publicCataloguePriceDrift === true
-                  ? ' · catalogue price differs from selling price (Excel)'
-                  : ''}
-              </p>
+            {fieldError.sellingPriceInr ? <p className="admin-field-error">{fieldError.sellingPriceInr}</p> : null}
+            {mode === 'edit' && !values.hasSellingPrice ? (
+              <p className="admin-hint admin-hint--warn">No selling price stored in D1 yet.</p>
             ) : null}
           </div>
         </div>
@@ -431,7 +432,9 @@ export default function ProductForm({
 
 /** @param {Record<string, unknown>} product */
 export function productToFormValues(product) {
-  const images = Array.isArray(product.images) ? product.images.map(String) : []
+  const images = Array.isArray(product.images)
+    ? product.images.map((entry) => String(entry ?? '').trim()).filter(Boolean)
+    : []
   return {
     id: String(product.id ?? ''),
     categorySlug: String(product.categorySlug ?? ''),
@@ -443,17 +446,12 @@ export function productToFormValues(product) {
     active: product.active !== false,
     sortOrder: Number(product.sortOrder) || 0,
     images,
-    cataloguePublicPriceInr: product.cataloguePublicPriceInr ?? null,
     purchaseRateInr: product.purchaseRateInr != null ? String(product.purchaseRateInr) : '',
     hasPurchaseRate: product.hasPurchaseRate === true,
-    x4SellingPriceInr:
-      product.x4SellingPriceInr != null
-        ? String(product.x4SellingPriceInr)
-        : product.privateX4Inr != null
-          ? String(product.privateX4Inr)
-          : '',
-    hasX4SellingRate: product.hasX4SellingRate === true || product.hasPrivateX4Rate === true,
-    pricingMapping: product.pricingMapping ?? null,
+    sellingPriceInr: product.sellingPriceInr != null ? String(product.sellingPriceInr) : '',
+    hasSellingPrice:
+      product.hasSellingPrice === true ||
+      (Number.isFinite(Number(product.sellingPriceInr)) && Number(product.sellingPriceInr) > 0),
   }
 }
 
@@ -469,34 +467,11 @@ export function emptyProductFormValues() {
     active: true,
     sortOrder: 0,
     images: [],
+    purchaseRateInr: '',
+    hasPurchaseRate: false,
+    sellingPriceInr: '',
+    hasSellingPrice: false,
   }
-}
-
-/** @param {import('../components/ProductForm.jsx').ProductFormValues} values */
-export function buildProductPayload(values) {
-  const payload = {
-    id: values.id,
-    categorySlug: values.categorySlug,
-    name: values.name,
-    pack: values.pack,
-    description: values.description,
-    featured: values.featured,
-    stockStatus: values.stockStatus,
-    active: values.active,
-    sortOrder: values.sortOrder,
-    images: (values.images ?? []).filter((url) => {
-      const s = String(url ?? '').trim()
-      return s && !isLocalPreviewUrl(s)
-    }),
-  }
-  return payload
-}
-
-/** @param {import('../components/ProductForm.jsx').ProductFormValues} values */
-export function getX4SellingInrFromForm(values) {
-  const raw = values.x4SellingPriceInr ?? values.privateX4Inr
-  if (raw === undefined || raw === '') return null
-  return Number(raw)
 }
 
 /** @param {import('../components/ProductForm.jsx').ProductFormValues} values */
