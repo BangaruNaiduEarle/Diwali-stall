@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Footer from './Footer'
 import Header from './Header'
+import FloatingWhatsAppButton from './FloatingWhatsAppButton.jsx'
 import MobileStickyEstimateBar from './MobileStickyEstimateBar'
 import { useEstimate } from '../context/EstimateContext'
 
@@ -22,6 +23,7 @@ export default function Layout() {
       </main>
       <Footer />
       <MobileStickyEstimateBar />
+      <FloatingWhatsAppButton aboveMobileStickyBar />
     </div>
   )
 }

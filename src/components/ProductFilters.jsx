@@ -1,10 +1,13 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import Button from './ui/Button'
 import { CATALOG_CATEGORIES } from '../data/categories'
 import { BUDGET_RANGES } from '../data/budgetRanges'
 
 const ICON = { strokeWidth: 1.8 }
+
+/** Visible category chips on catalogue mobile (/crackers routes). */
+const CATALOGUE_MOBILE_CHIP_PREVIEW = 6
 
 function SearchField({ search, onSearchChange, id, className = '' }) {
   return (
@@ -40,7 +43,7 @@ function SearchField({ search, onSearchChange, id, className = '' }) {
   )
 }
 
-function MobileSearchWithFilter({ search, onSearchChange, searchId, onOpenFilters, budgetFilterActive }) {
+function MobileSearchWithFilter({ search, onSearchChange, searchId, onOpenFilters, filtersActive }) {
   return (
     <div className="flex w-full overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-border-warm)] bg-[var(--color-white)] md:hidden">
       <div className="relative min-w-0 flex-1">
@@ -76,10 +79,10 @@ function MobileSearchWithFilter({ search, onSearchChange, searchId, onOpenFilter
         type="button"
         onClick={onOpenFilters}
         className="focus-ring relative inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center border-l border-[var(--color-border-warm)] text-[var(--color-charcoal)]"
-        aria-label={budgetFilterActive ? 'Filters, budget filter active' : 'Filters'}
+        aria-label={filtersActive ? 'Filters, selections active' : 'Filters'}
       >
         <SlidersHorizontal className="h-[18px] w-[18px] text-[var(--color-red)]" {...ICON} aria-hidden="true" />
-        {budgetFilterActive ? (
+        {filtersActive ? (
           <span className="absolute right-1.5 top-2 h-2 w-2 rounded-full bg-[var(--color-maroon)]" aria-hidden="true" />
         ) : null}
       </button>
@@ -106,7 +109,7 @@ function CategoryChip({ active, onClick, children }) {
 
 function MobileCategoryScroll({ categorySlug, onCategoryChange }) {
   return (
-    <div className="scroll-chips -mx-1 max-w-[100vw] px-1 md:hidden">
+    <div className="scroll-chips min-w-0 w-full md:hidden">
       <div className="flex w-max min-w-full gap-2 pb-0.5">
         {CATALOG_CATEGORIES.map(({ slug, label }) => (
           <CategoryChip
@@ -117,6 +120,45 @@ function MobileCategoryScroll({ categorySlug, onCategoryChange }) {
             {label}
           </CategoryChip>
         ))}
+      </div>
+    </div>
+  )
+}
+
+function MobileCategoryPreviewRow({
+  categorySlug,
+  onCategoryChange,
+  onOpenMoreFilters,
+  moreFiltersActive,
+  previewCategories,
+}) {
+  return (
+    <div className="scroll-chips min-w-0 w-full md:hidden">
+      <div className="flex w-max max-w-full items-center gap-2 pb-0.5">
+        {previewCategories.map(({ slug, label }) => (
+          <CategoryChip
+            key={slug}
+            active={categorySlug === slug}
+            onClick={() => onCategoryChange?.(slug)}
+          >
+            {label}
+          </CategoryChip>
+        ))}
+        <button
+          type="button"
+          onClick={onOpenMoreFilters}
+          className={`focus-ring relative shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-ui ${
+            moreFiltersActive
+              ? 'border-[var(--color-gold)] bg-[var(--color-white)] text-[var(--color-maroon)] shadow-sm'
+              : 'border-[var(--color-border)] bg-[var(--color-ivory)] text-[var(--color-muted)] hover:border-[var(--color-gold)]/60 hover:text-[var(--color-charcoal)]'
+          }`}
+          aria-pressed={moreFiltersActive}
+        >
+          More filters
+          {moreFiltersActive ? (
+            <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--color-maroon)]" aria-hidden="true" />
+          ) : null}
+        </button>
       </div>
     </div>
   )
@@ -146,16 +188,25 @@ function CategoryBudgetFiltersSheet({
   categoryGroupId,
   budgetGroupId,
   mobileBudgetOnly = false,
+  categorySlugs = null,
+  showBudget = true,
 }) {
+  const categories = useMemo(() => {
+    if (mobileBudgetOnly) return []
+    const list = CATALOG_CATEGORIES
+    if (!categorySlugs) return list
+    return list.filter((c) => categorySlugs.includes(c.slug))
+  }, [mobileBudgetOnly, categorySlugs])
+
   return (
     <div className="space-y-6">
-      {!mobileBudgetOnly ? (
+      {!mobileBudgetOnly && categories.length ? (
         <div>
           <p id={categoryGroupId} className="editorial-label mb-3 block text-[var(--color-charcoal)]">
             Category
           </p>
           <div className="space-y-0.5" role="radiogroup" aria-labelledby={categoryGroupId}>
-            {CATALOG_CATEGORIES.map(({ slug, label }) => (
+            {categories.map(({ slug, label }) => (
               <FilterRadio
                 key={slug}
                 name="filter-category"
@@ -170,32 +221,34 @@ function CategoryBudgetFiltersSheet({
         </div>
       ) : null}
 
-      <div>
-        <p id={budgetGroupId} className="editorial-label mb-3 block text-[var(--color-charcoal)]">
-          Budget
-        </p>
-        <div className="space-y-0.5" role="radiogroup" aria-labelledby={budgetGroupId}>
-          <FilterRadio
-            name="filter-budget"
-            value="all"
-            checked={!budgetId || budgetId === 'all'}
-            onChange={() => onBudgetChange('all')}
-          >
-            All
-          </FilterRadio>
-          {BUDGET_RANGES.map(({ id, label }) => (
+      {showBudget ? (
+        <div>
+          <p id={budgetGroupId} className="editorial-label mb-3 block text-[var(--color-charcoal)]">
+            Budget
+          </p>
+          <div className="space-y-0.5" role="radiogroup" aria-labelledby={budgetGroupId}>
             <FilterRadio
-              key={id}
               name="filter-budget"
-              value={id}
-              checked={budgetId === id}
-              onChange={() => onBudgetChange(id)}
+              value="all"
+              checked={!budgetId || budgetId === 'all'}
+              onChange={() => onBudgetChange('all')}
             >
-              {label}
+              All
             </FilterRadio>
-          ))}
+            {BUDGET_RANGES.map(({ id, label }) => (
+              <FilterRadio
+                key={id}
+                name="filter-budget"
+                value={id}
+                checked={budgetId === id}
+                onChange={() => onBudgetChange(id)}
+              >
+                {label}
+              </FilterRadio>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
     </div>
   )
 }
@@ -215,13 +268,19 @@ function FilterLink({ active, onClick, children }) {
   )
 }
 
-function CategoryBudgetFiltersDesktop({ categorySlug, onCategoryChange, budgetId, onBudgetChange }) {
+function CategoryBudgetFiltersDesktop({
+  categorySlug,
+  onCategoryChange,
+  budgetId,
+  onBudgetChange,
+  showBudget = true,
+}) {
   return (
-    <div className="space-y-4">
+    <div className={showBudget ? 'space-y-2.5 md:space-y-3' : ''}>
       <div>
         <p className="sr-only">Category</p>
         <div className="scroll-chips lg:overflow-visible">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 lg:flex-wrap">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 lg:flex-wrap">
             {CATALOG_CATEGORIES.map(({ slug, label }) => (
               <FilterLink key={slug} active={categorySlug === slug} onClick={() => onCategoryChange?.(slug)}>
                 {label}
@@ -231,20 +290,79 @@ function CategoryBudgetFiltersDesktop({ categorySlug, onCategoryChange, budgetId
         </div>
       </div>
 
-      <div>
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Budget</p>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <FilterLink active={!budgetId || budgetId === 'all'} onClick={() => onBudgetChange('all')}>
-            All
-          </FilterLink>
-          {BUDGET_RANGES.map(({ id, label }) => (
-            <FilterLink key={id} active={budgetId === id} onClick={() => onBudgetChange(id)}>
-              {label}
+      {showBudget ? (
+        <div>
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">Budget</p>
+          <div className="scroll-chips flex flex-wrap items-center gap-x-3 gap-y-1.5 lg:overflow-visible">
+            <FilterLink active={!budgetId || budgetId === 'all'} onClick={() => onBudgetChange('all')}>
+              All
             </FilterLink>
-          ))}
+            {BUDGET_RANGES.map(({ id, label }) => (
+              <FilterLink key={id} active={budgetId === id} onClick={() => onBudgetChange(id)}>
+                {label}
+              </FilterLink>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function FilterBottomSheet({
+  uid,
+  sheetRef,
+  title,
+  onClose,
+  children,
+  onClear,
+  clearLabel,
+  onApply,
+  applyLabel,
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        className="fixed inset-0 z-[48] bg-[var(--color-maroon)]/20 md:hidden"
+        aria-label="Close filters"
+        onClick={onClose}
+      />
+      <div
+        ref={sheetRef}
+        tabIndex={-1}
+        className="filter-sheet safe-bottom fixed inset-x-0 bottom-0 z-[52] flex max-h-[min(85svh,720px)] flex-col rounded-t-xl border border-[var(--color-border)] bg-[var(--color-ivory)] shadow-[var(--shadow-hover)] outline-none md:hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${uid}-filter-title`}
+      >
+        <div className="flex shrink-0 items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
+          <h2
+            id={`${uid}-filter-title`}
+            className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--color-charcoal)]"
+          >
+            {title}
+          </h2>
+          <button
+            type="button"
+            className="focus-ring inline-flex min-h-11 min-w-11 items-center justify-center"
+            onClick={onClose}
+            aria-label="Close filters"
+          >
+            <X className="h-5 w-5" {...ICON} />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">{children}</div>
+        <div className="shrink-0 space-y-3 border-t border-[var(--color-border)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <Button type="button" variant="ghost" fullWidth onClick={onClear}>
+            {clearLabel}
+          </Button>
+          <Button type="button" variant="primary" fullWidth onClick={onApply}>
+            {applyLabel}
+          </Button>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -258,6 +376,9 @@ export default function ProductFilters(props) {
     hasActiveFilters,
     search,
     onSearchChange,
+    showDesktopBudget = true,
+    /** /crackers routes: mobile chip preview + more-filters sheet; desktop toolbar pairs with aside gift. */
+    catalogueRouteLayout = false,
   } = props
 
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -267,6 +388,16 @@ export default function ProductFilters(props) {
   const uid = useId()
   const categoryGroupId = `${uid}-category`
   const budgetGroupId = `${uid}-budget`
+
+  const previewCategories = useMemo(
+    () => CATALOG_CATEGORIES.slice(0, CATALOGUE_MOBILE_CHIP_PREVIEW),
+    [],
+  )
+  const overflowCategorySlugs = useMemo(
+    () => CATALOG_CATEGORIES.slice(CATALOGUE_MOBILE_CHIP_PREVIEW).map((c) => c.slug),
+    [],
+  )
+
   useEffect(() => {
     if (!mobileOpen) return
     setDraftCategory(categorySlug)
@@ -287,26 +418,50 @@ export default function ProductFilters(props) {
     }
   }, [mobileOpen])
 
+  const budgetFilterActive = Boolean(budgetId && budgetId !== 'all')
+  const categoryInOverflow =
+    catalogueRouteLayout && overflowCategorySlugs.includes(String(categorySlug ?? ''))
+  const moreFiltersActive = catalogueRouteLayout && categoryInOverflow
+  const showBudgetFilters = !catalogueRouteLayout
+
   const applyMobileFilters = () => {
-    onBudgetChange?.(draftBudget)
+    if (catalogueRouteLayout) {
+      onCategoryChange?.(draftCategory)
+    } else {
+      onBudgetChange?.(draftBudget)
+    }
     setMobileOpen(false)
   }
 
   const clearDraftFilters = () => {
-    setDraftBudget('all')
+    if (catalogueRouteLayout) {
+      setDraftCategory(categorySlug)
+    } else {
+      setDraftBudget('all')
+    }
   }
 
-  const budgetFilterActive = Boolean(budgetId && budgetId !== 'all')
-
   return (
-    <div className="space-y-2 md:space-y-3">
-      <MobileSearchWithFilter
-        search={search}
-        onSearchChange={onSearchChange}
-        searchId="catalogue-search-mobile"
-        onOpenFilters={() => setMobileOpen(true)}
-        budgetFilterActive={budgetFilterActive}
-      />
+    <div
+      className={`catalogue-filters min-w-0 space-y-2 ${catalogueRouteLayout ? 'md:space-y-2.5' : 'md:space-y-2'}`}
+    >
+      {catalogueRouteLayout ? (
+        <SearchField
+          id="catalogue-search-mobile"
+          search={search}
+          onSearchChange={onSearchChange}
+          className="md:hidden"
+        />
+      ) : (
+        <MobileSearchWithFilter
+          search={search}
+          onSearchChange={onSearchChange}
+          searchId="catalogue-search-mobile"
+          onOpenFilters={() => setMobileOpen(true)}
+          filtersActive={budgetFilterActive}
+        />
+      )}
+
       <SearchField
         id="catalogue-search"
         search={search}
@@ -314,7 +469,17 @@ export default function ProductFilters(props) {
         className="hidden md:block"
       />
 
-      <MobileCategoryScroll categorySlug={categorySlug} onCategoryChange={onCategoryChange} />
+      {catalogueRouteLayout ? (
+        <MobileCategoryPreviewRow
+          categorySlug={categorySlug}
+          onCategoryChange={onCategoryChange}
+          onOpenMoreFilters={() => setMobileOpen(true)}
+          moreFiltersActive={moreFiltersActive}
+          previewCategories={previewCategories}
+        />
+      ) : (
+        <MobileCategoryScroll categorySlug={categorySlug} onCategoryChange={onCategoryChange} />
+      )}
 
       <div className="hidden md:block">
         <CategoryBudgetFiltersDesktop
@@ -322,11 +487,12 @@ export default function ProductFilters(props) {
           onCategoryChange={onCategoryChange}
           budgetId={budgetId}
           onBudgetChange={onBudgetChange}
+          showBudget={showBudgetFilters && showDesktopBudget}
         />
         {hasActiveFilters && onClearAll ? (
           <button
             type="button"
-            className="focus-ring mt-3 text-sm font-medium text-[var(--color-brand)] underline-offset-4 hover:underline"
+            className={`focus-ring text-sm font-medium text-[var(--color-brand)] underline-offset-4 hover:underline ${showBudgetFilters && showDesktopBudget ? 'mt-3' : 'mt-2.5'}`}
             onClick={onClearAll}
           >
             Clear all filters
@@ -335,58 +501,28 @@ export default function ProductFilters(props) {
       </div>
 
       {mobileOpen ? (
-        <>
-          <button
-            type="button"
-            className="fixed inset-0 z-40 bg-[var(--color-maroon)]/20 md:hidden"
-            aria-label="Close filters"
-            onClick={() => setMobileOpen(false)}
+        <FilterBottomSheet
+          uid={uid}
+          sheetRef={sheetRef}
+          title={catalogueRouteLayout ? 'More filters' : 'Filters'}
+          onClose={() => setMobileOpen(false)}
+          onClear={clearDraftFilters}
+          clearLabel={catalogueRouteLayout ? 'Reset selections' : 'Clear budget'}
+          onApply={applyMobileFilters}
+          applyLabel="Apply filters"
+        >
+          <CategoryBudgetFiltersSheet
+            categorySlug={draftCategory}
+            onCategoryChange={setDraftCategory}
+            budgetId={draftBudget}
+            onBudgetChange={setDraftBudget}
+            categoryGroupId={categoryGroupId}
+            budgetGroupId={budgetGroupId}
+            mobileBudgetOnly={!catalogueRouteLayout}
+            categorySlugs={catalogueRouteLayout ? overflowCategorySlugs : null}
+            showBudget={showBudgetFilters}
           />
-          <div
-            ref={sheetRef}
-            tabIndex={-1}
-            className="filter-sheet safe-bottom fixed inset-x-0 bottom-0 z-50 flex max-h-[85svh] flex-col rounded-t-xl border border-[var(--color-border)] bg-[var(--color-ivory)] shadow-[var(--shadow-hover)] outline-none md:hidden"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={`${uid}-filter-title`}
-          >
-            <div className="flex shrink-0 items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
-              <h2
-                id={`${uid}-filter-title`}
-                className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--color-charcoal)]"
-              >
-                Filters
-              </h2>
-              <button
-                type="button"
-                className="focus-ring inline-flex min-h-11 min-w-11 items-center justify-center"
-                onClick={() => setMobileOpen(false)}
-                aria-label="Close filters"
-              >
-                <X className="h-5 w-5" {...ICON} />
-              </button>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-              <CategoryBudgetFiltersSheet
-                categorySlug={draftCategory}
-                onCategoryChange={setDraftCategory}
-                budgetId={draftBudget}
-                onBudgetChange={setDraftBudget}
-                categoryGroupId={categoryGroupId}
-                budgetGroupId={budgetGroupId}
-                mobileBudgetOnly
-              />
-            </div>
-            <div className="shrink-0 space-y-3 border-t border-[var(--color-border)] p-4">
-              <Button type="button" variant="ghost" fullWidth onClick={clearDraftFilters}>
-                Clear budget
-              </Button>
-              <Button type="button" variant="primary" fullWidth onClick={applyMobileFilters}>
-                Apply filters
-              </Button>
-            </div>
-          </div>
-        </>
+        </FilterBottomSheet>
       ) : null}
     </div>
   )

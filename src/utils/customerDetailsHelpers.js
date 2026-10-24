@@ -25,7 +25,7 @@ export function normalizeCustomerDetails(raw) {
     deliveryLandmark: String(raw.deliveryLandmark ?? '').trim().slice(0, MAX.deliveryLandmark),
     deliveryMapsUrl: String(raw.deliveryMapsUrl ?? '').trim().slice(0, MAX.deliveryMapsUrl),
     pickupDate: String(raw.pickupDate ?? '').trim().slice(0, MAX.pickupDate),
-    note: String(raw.note ?? '').trim().slice(0, MAX.note),
+    note: String(raw.note ?? '').slice(0, MAX.note),
   }
 }
 
@@ -64,23 +64,6 @@ export function getMobileDigits(mobile) {
   return String(mobile ?? '').replace(/\D/g, '')
 }
 
-/** @param {ReturnType<typeof normalizeCustomerDetails>} normalized */
-export function validateDeliveryLocationFields(normalized) {
-  const errors = {}
-  if (normalized.deliveryAddress.length > MAX.deliveryAddress) {
-    errors.deliveryAddress = 'Delivery address is too long.'
-  }
-  if (normalized.deliveryLandmark.length > MAX.deliveryLandmark) {
-    errors.deliveryLandmark = 'Landmark is too long.'
-  }
-  if (normalized.deliveryMapsUrl.length > MAX.deliveryMapsUrl) {
-    errors.deliveryMapsUrl = 'Maps link is too long.'
-  } else   if (normalized.deliveryMapsUrl && !/^https?:\/\//i.test(normalized.deliveryMapsUrl)) {
-    errors.deliveryMapsUrl = 'Paste a full Google Maps link starting with https://'
-  }
-  return errors
-}
-
 /** @param {unknown} details */
 export function validateCustomerDetails(details) {
   const normalized = normalizeCustomerDetails(details)
@@ -99,9 +82,6 @@ export function validateCustomerDetails(details) {
     errors.mobile = 'Please enter a valid 10-digit mobile number.'
   }
 
-  if (normalized.area.length > MAX.area) {
-    errors.area = 'Area is too long.'
-  }
   if (normalized.note.length > MAX.note) {
     errors.note = 'Note is too long.'
   }
@@ -112,8 +92,6 @@ export function validateCustomerDetails(details) {
       errors.pickupDate = 'Please choose a stall date: November 6, 7, or 8, 2026.'
     }
   }
-
-  Object.assign(errors, validateDeliveryLocationFields(normalized))
 
   return errors
 }

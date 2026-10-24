@@ -9,7 +9,6 @@ import { paiseToInr } from '../utils/currencyPaise.js'
 import { getProductById } from '../utils/estimateHelpers'
 import { getFamilyPackById } from '../utils/familyPackCatalogue.js'
 import { historyLineKey } from '../utils/estimateHistory.js'
-import { resolveEstimateLineUnitLabel } from '../utils/productUnitLabel.js'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function formatSharedDate(iso) {
@@ -112,14 +111,12 @@ export default function EstimateHistory() {
                   <thead>
                     <tr className="border-b border-[var(--color-border)] text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">
                       <th className="pb-2 pr-3">Item</th>
-                      <th className="pb-2 pr-3 text-right">Qty</th>
-                      <th className="pb-2">Unit</th>
+                      <th className="pb-2 text-right">Qty</th>
                     </tr>
                   </thead>
                   <tbody>
                     {record.items.map((line) => {
                       const isPack = isFamilyPackHistoryLine(line)
-                      const product = isPack ? null : getProductById(line.productId)
                       const name = historyLineDisplayName(line)
                       const priceHint = historyLinePriceHint(line)
                       return (
@@ -133,12 +130,7 @@ export default function EstimateHistory() {
                               <p className="mt-0.5 text-xs text-[var(--color-muted)]">{priceHint}</p>
                             ) : null}
                           </td>
-                          <td className="py-2 pr-3 text-right tabular-nums font-medium">{line.quantity}</td>
-                          <td className="py-2 text-[var(--color-muted)]">
-                            {isPack
-                              ? resolveEstimateLineUnitLabel(line.unit, null)
-                              : resolveEstimateLineUnitLabel(line.unit, product)}
-                          </td>
+                          <td className="py-2 text-right tabular-nums font-medium">{line.quantity}</td>
                         </tr>
                       )
                     })}

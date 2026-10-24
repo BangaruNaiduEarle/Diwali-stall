@@ -8,16 +8,14 @@ export default function PackContentsTable({ items }) {
           <thead>
             <tr className="border-b border-[var(--color-border)] bg-[var(--color-ivory)]/60 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">
               <th className="px-4 py-3 font-semibold">Item</th>
-              <th className="px-3 py-3 text-right font-semibold">Qty</th>
-              <th className="px-4 py-3 font-semibold">Unit</th>
+              <th className="px-4 py-3 text-right font-semibold">Qty</th>
             </tr>
           </thead>
           <tbody>
             {items.map((row, index) => (
               <tr key={`${row.itemName}-${index}`} className="border-b border-[var(--color-border)] last:border-0">
                 <td className="px-4 py-2.5 text-[var(--color-charcoal)]">{row.itemName}</td>
-                <td className="px-3 py-2.5 text-right tabular-nums">{row.quantity}</td>
-                <td className="px-4 py-2.5 text-[var(--color-muted)]">{row.unit}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums">{row.quantity}</td>
               </tr>
             ))}
           </tbody>
@@ -32,9 +30,8 @@ export default function PackContentsTable({ items }) {
           >
             <p className="font-semibold text-[var(--color-charcoal)]">{row.itemName}</p>
             <p className="mt-1 text-xs text-[var(--color-muted)]">
-              <span className="tabular-nums text-[var(--color-charcoal)]">{row.quantity}</span>
-              {' · '}
-              {row.unit}
+              Qty{' '}
+              <span className="tabular-nums font-medium text-[var(--color-charcoal)]">{row.quantity}</span>
             </p>
           </li>
         ))}

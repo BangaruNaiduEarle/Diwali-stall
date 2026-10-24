@@ -56,38 +56,26 @@ function estimateItemKey(item) {
   return `p:${item.productId}`
 }
 
-export function loadEstimateFromStorage() {
+/** Remove legacy cart draft from localStorage (public estimate is session-only). */
+export function clearEstimateLocalStorage() {
   try {
-    const raw = localStorage.getItem(ESTIMATE_STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    const items = []
-    const seen = new Set()
-    for (const entry of parsed) {
-      const item = normalizeEstimateItem(entry)
-      if (!item) continue
-      const key = estimateItemKey(item)
-      if (seen.has(key)) continue
-      seen.add(key)
-      items.push(item)
-    }
-    return items
+    localStorage.removeItem(ESTIMATE_STORAGE_KEY)
   } catch {
-    return []
+    /* private mode / SSR */
   }
 }
 
-export function saveEstimateToStorage(items) {
-  try {
-    localStorage.setItem(ESTIMATE_STORAGE_KEY, JSON.stringify(items))
-  } catch {
-    /* quota / private mode */
-  }
+/** @deprecated Public estimate cart is session-only; always returns []. */
+export function loadEstimateFromStorage() {
+  return []
+}
+
+export function saveEstimateToStorage(_items) {
+  /* session-only — no localStorage persistence */
 }
 
 /**
- * Normalize draft lines and persist immediately (avoids StrictMode / effect timing restoring stale data).
+ * Normalize draft lines (session state only; not persisted to localStorage).
  * @param {{ productId: string, quantity: number }[]} items
  * @returns {{ productId: string, quantity: number }[]}
  */
@@ -102,7 +90,6 @@ export function persistDraftEstimateItems(items) {
     seen.add(key)
     normalized.push(item)
   }
-  saveEstimateToStorage(normalized)
   return normalized
 }
 

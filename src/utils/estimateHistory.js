@@ -132,26 +132,23 @@ export function normalizeSharedEstimateRecord(raw) {
   return { id, reference, sharedAt, status, submissionFingerprint, items }
 }
 
-/** @returns {SharedEstimateRecord[]} */
-export function loadEstimateHistoryFromStorage() {
+/** Remove legacy shared-estimate history from localStorage (session-only in UI). */
+export function clearEstimateHistoryLocalStorage() {
   try {
-    const raw = localStorage.getItem(ESTIMATE_HISTORY_STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed.map(normalizeSharedEstimateRecord).filter(Boolean)
+    localStorage.removeItem(ESTIMATE_HISTORY_STORAGE_KEY)
   } catch {
-    return []
+    /* private mode / SSR */
   }
 }
 
-/** @param {SharedEstimateRecord[]} records */
-export function saveEstimateHistoryToStorage(records) {
-  try {
-    localStorage.setItem(ESTIMATE_HISTORY_STORAGE_KEY, JSON.stringify(records))
-  } catch {
-    /* quota / private mode */
-  }
+/** @returns {SharedEstimateRecord[]} — session-only; always []. */
+export function loadEstimateHistoryFromStorage() {
+  return []
+}
+
+/** @param {SharedEstimateRecord[]} _records */
+export function saveEstimateHistoryToStorage(_records) {
+  /* session-only — no localStorage persistence */
 }
 
 /**

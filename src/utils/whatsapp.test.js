@@ -19,7 +19,8 @@ describe('buildWhatsAppEstimateMessage', () => {
       'DWL-ABCDEFGH',
     )
     assert.match(message, /Estimate Reference: DWL-ABCDEFGH/)
-    assert.match(message, /Demo/)
+    assert.match(message, /1\. Demo — Qty: 2/)
+    assert.match(message, /Please confirm availability and share your quotation\.$/)
   })
 
   it('omits reference line when not provided', () => {
@@ -30,9 +31,9 @@ describe('buildWhatsAppEstimateMessage', () => {
     assert.ok(!message.includes('Estimate Reference:'))
   })
 
-  it('omits unit segment when pack is missing and appends thank-you footer', () => {
+  it('lists items without unit segments and omits gift or thank-you footers', () => {
     setEstimateCatalogueProducts([
-      { id: 'P001', name: 'SILVER GIFT BOX', pack: '', stockStatus: 'available' },
+      { id: 'P001', name: 'SILVER GIFT BOX', pack: 'Box', stockStatus: 'available' },
       { id: 'P002', name: 'GC DELUXE', stockStatus: 'available' },
     ])
     const message = buildWhatsAppEstimateMessage(
@@ -44,18 +45,23 @@ describe('buildWhatsAppEstimateMessage', () => {
       'DWL-6XDEJM4P',
     )
     assert.match(message, /1\. SILVER GIFT BOX — Qty: 5\n/)
-    assert.ok(!message.includes('Unit: —'))
+    assert.match(message, /2\. GC DELUXE — Qty: 1/)
     assert.ok(!message.includes('Unit:'))
-    assert.match(message, /🎁 A complimentary gift is included with every order/)
-    assert.match(message, /Thank you for choosing Diwali Stall! 🙏✨/)
-    assert.ok(message.endsWith('Thank you for choosing Diwali Stall! 🙏✨'))
+    assert.ok(!message.includes('Area:'))
+    assert.ok(!message.includes('complimentary gift'))
+    assert.ok(!message.includes('Thank you for choosing Diwali Stall'))
+    assert.match(message, /Name: new3/)
+    assert.match(message, /Mobile: 9985076746/)
+    assert.ok(!message.includes('Estimated pack total'))
+    assert.ok(!message.includes('₹'))
   })
 
-  it('includes unit segment when pack is present', () => {
+  it('omits pack unit text even when product.pack is set', () => {
     setEstimateCatalogueProducts([
       { id: 'P001', name: 'Demo', pack: 'Box of 10', stockStatus: 'available' },
     ])
     const message = buildWhatsAppEstimateMessage([{ productId: 'P001', quantity: 2 }], null, null)
-    assert.match(message, /Demo — Qty: 2 — Unit: Box of 10/)
+    assert.match(message, /1\. Demo — Qty: 2/)
+    assert.ok(!message.includes('Unit:'))
   })
 })

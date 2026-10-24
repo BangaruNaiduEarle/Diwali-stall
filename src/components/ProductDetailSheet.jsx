@@ -91,10 +91,6 @@ export default function ProductDetailSheet({ product, open, onClose, initialImag
           <h2 id={titleId} className="mt-1 text-xl font-semibold text-[var(--color-charcoal)]">
             {product.name}
           </h2>
-          {product.pack?.trim() ? (
-            <p className="mt-1 text-sm text-[var(--color-muted)]">{product.pack.trim()}</p>
-          ) : null}
-
           {soldOut ? (
             <p className="mt-3 text-sm font-medium text-[var(--color-red)]">Sold out at the stall</p>
           ) : (

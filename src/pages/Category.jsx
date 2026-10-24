@@ -1,4 +1,4 @@
-import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import Breadcrumbs from '../components/Breadcrumbs'
 import CatalogueView from '../components/CatalogueView'
 import PageContainer from '../components/PageContainer'
@@ -10,8 +10,6 @@ import { cataloguePath } from '../utils/catalogueRoutes'
 export default function Category() {
   const { categorySlug } = useParams()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-
   const valid = isValidCategorySlug(categorySlug)
   const label = valid ? getCategoryLabelFromSlug(categorySlug) : ''
   usePageTitle(valid ? label : 'Page not found')
@@ -21,12 +19,11 @@ export default function Category() {
   }
 
   const handleCategoryChange = (slug) => {
-    const budget = searchParams.get('budget')
-    navigate(cataloguePath(slug, budget))
+    navigate(cataloguePath(slug))
   }
 
   return (
-    <PageContainer className="py-5 sm:py-10 md:py-12 lg:py-14">
+    <PageContainer className="catalogue-page">
       <CatalogueView
         categorySlug={categorySlug}
         onCategoryChange={handleCategoryChange}
@@ -34,9 +31,10 @@ export default function Category() {
         pageDescription="From our festive collection."
         kicker="Crackers"
         breadcrumbs={
-          <div className="mb-2 hidden sm:block">
+          <div className="hidden sm:block">
             <Breadcrumbs
               editorial
+              className="mb-1 md:mb-2"
               items={[
                 { label: 'Home', to: '/' },
                 { label: 'Crackers', to: '/crackers' },

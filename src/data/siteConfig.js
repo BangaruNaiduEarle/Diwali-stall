@@ -5,9 +5,9 @@ export const siteConfig = {
   brandName: '',
 
   /** Local WhatsApp/mobile number (10 digits, no country code in UI) */
-  whatsappNumber: '9581160835',
+  whatsappNumber: '9392748665',
 
-  phone: '9581160835',
+  phone: '9392748665',
 
   locationName: 'AU Exhibition Ground',
 

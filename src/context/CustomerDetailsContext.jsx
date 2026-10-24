@@ -9,16 +9,7 @@ import {
 
 const CustomerDetailsContext = createContext(null)
 
-const FIELD_KEYS = [
-  'name',
-  'mobile',
-  'area',
-  'deliveryAddress',
-  'deliveryLandmark',
-  'deliveryMapsUrl',
-  'pickupDate',
-  'note',
-]
+const FIELD_KEYS = ['name', 'mobile', 'pickupDate', 'note']
 
 export function CustomerDetailsProvider({ children }) {
   const [details, setDetailsState] = useState(() => loadCustomerDetailsFromStorage())

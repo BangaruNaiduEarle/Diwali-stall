@@ -7,11 +7,14 @@ import {
   getProductById,
   isFamilyPackEstimateItem,
   isProductSoldOut,
-  loadEstimateFromStorage,
+  clearEstimateLocalStorage,
   persistDraftEstimateItems,
 } from '../utils/estimateHelpers'
 import { isFamilyPackAvailableForEstimate } from '../utils/familyPackCatalogue.js'
-import { appendSharedEstimate, loadEstimateHistoryFromStorage } from '../utils/estimateHistory.js'
+import {
+  appendSharedEstimate,
+  clearEstimateHistoryLocalStorage,
+} from '../utils/estimateHistory.js'
 
 const EstimateContext = createContext(null)
 
@@ -21,12 +24,13 @@ function canAddProduct(productId) {
 }
 
 export function EstimateProvider({ children }) {
-  const [estimateItems, setEstimateItems] = useState(() => loadEstimateFromStorage())
-  const [sharedHistory, setSharedHistory] = useState(() => loadEstimateHistoryFromStorage())
+  const [estimateItems, setEstimateItems] = useState([])
+  const [sharedHistory, setSharedHistory] = useState([])
 
   useEffect(() => {
-    persistDraftEstimateItems(estimateItems)
-  }, [estimateItems])
+    clearEstimateLocalStorage()
+    clearEstimateHistoryLocalStorage()
+  }, [])
 
   const applyDraftItems = useCallback((updater) => {
     setEstimateItems((prev) => {
@@ -215,8 +219,11 @@ export function EstimateProvider({ children }) {
    * @param {{ submissionFingerprint: string, items: { productId: string, quantity: number, unit?: string | null }[], reference?: string }} payload
    */
   const archiveSharedEstimate = useCallback((payload) => {
-    const result = appendSharedEstimate(payload, loadEstimateHistoryFromStorage())
-    setSharedHistory(result.records)
+    let result = /** @type {ReturnType<typeof appendSharedEstimate> | null} */ (null)
+    setSharedHistory((prev) => {
+      result = appendSharedEstimate(payload, prev)
+      return result.records
+    })
     return result
   }, [])
 

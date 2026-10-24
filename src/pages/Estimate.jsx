@@ -87,8 +87,7 @@ function ReviewSection({
             <thead>
               <tr className="border-b border-[var(--color-border)] text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">
                 <th className="pb-2 pr-3 font-semibold">Item</th>
-                <th className="pb-2 pr-3 text-right font-semibold">Qty</th>
-                <th className="pb-2 font-semibold">Unit</th>
+                <th className="pb-2 text-right font-semibold">Qty</th>
               </tr>
             </thead>
             <tbody>
@@ -96,14 +95,12 @@ function ReviewSection({
                 row.lineType === 'family_pack' ? (
                   <tr key={row.familyPackId} className="border-b border-[var(--color-border)] last:border-0">
                     <td className="py-2.5 pr-3 text-[var(--color-charcoal)]">{row.name}</td>
-                    <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{row.quantity}</td>
-                    <td className="py-2.5 text-[var(--color-muted)]">Family pack</td>
+                    <td className="py-2.5 text-right tabular-nums font-medium">{row.quantity}</td>
                   </tr>
                 ) : (
                   <tr key={row.product.id} className="border-b border-[var(--color-border)] last:border-0">
                     <td className="py-2.5 pr-3 text-[var(--color-charcoal)]">{row.product.name}</td>
-                    <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{row.quantity}</td>
-                    <td className="py-2.5 text-[var(--color-muted)]">{getProductUnitLabel(row.product)}</td>
+                    <td className="py-2.5 text-right tabular-nums font-medium">{row.quantity}</td>
                   </tr>
                 ),
               )}
@@ -133,12 +130,6 @@ function ReviewSection({
             <dt className="text-[var(--color-muted)]">Mobile</dt>
             <dd className="mt-0.5 font-medium">{mobileDisplay}</dd>
           </div>
-          {details.area ? (
-            <div>
-              <dt className="text-[var(--color-muted)]">Area</dt>
-              <dd className="mt-0.5 font-medium">{details.area}</dd>
-            </div>
-          ) : null}
           {details.pickupDate ? (
             <div>
               <dt className="text-[var(--color-muted)]">Preferred pickup</dt>
@@ -647,10 +638,9 @@ export default function Estimate() {
             </h2>
 
             <div className="hidden overflow-x-auto rounded-t-[var(--radius-lg)] border border-b-0 border-[var(--color-border)] bg-[var(--color-ivory)]/60 px-4 py-2 sm:block">
-              <div className="grid grid-cols-[minmax(0,1fr)_5rem_6rem] gap-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">
+              <div className="grid grid-cols-[minmax(0,1fr)_5rem] gap-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">
                 <span>Item</span>
                 <span className="text-right">Qty</span>
-                <span>Unit</span>
               </div>
             </div>
 

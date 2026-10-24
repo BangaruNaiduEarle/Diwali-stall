@@ -22,25 +22,26 @@ export default function CatalogueView({
 }) {
   const [search, setSearch] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
-  const budgetFromUrl = searchParams.get('budget') || 'all'
-  const [budgetId, setBudgetId] = useState(budgetFromUrl)
   const [currentPage, setCurrentPage] = useState(1)
   const topRef = useRef(null)
   const { products, loading, error, refresh } = useCatalogueProducts()
 
   useEffect(() => {
-    setBudgetId(budgetFromUrl)
-  }, [budgetFromUrl])
+    if (!searchParams.has('budget')) return
+    const params = new URLSearchParams(searchParams)
+    params.delete('budget')
+    setSearchParams(params, { replace: true })
+  }, [searchParams, setSearchParams])
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, categorySlug, budgetId])
+  }, [search, categorySlug])
 
   const totalActive = countActiveProducts(products)
 
   const filtered = useMemo(
-    () => filterProducts(products, { search, categorySlug, budgetId }),
-    [products, search, categorySlug, budgetId],
+    () => filterProducts(products, { search, categorySlug }),
+    [products, search, categorySlug],
   )
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PRODUCTS_PER_PAGE))
@@ -60,17 +61,6 @@ export default function CatalogueView({
     [filtered, currentPage],
   )
 
-  const handleBudgetChange = (next) => {
-    setBudgetId(next)
-    const params = new URLSearchParams(searchParams)
-    if (!next || next === 'all') {
-      params.delete('budget')
-    } else {
-      params.set('budget', next)
-    }
-    setSearchParams(params, { replace: true })
-  }
-
   const handlePageChange = (page) => {
     setCurrentPage(page)
     topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -78,12 +68,10 @@ export default function CatalogueView({
 
   const isAllCategories = !categorySlug || categorySlug === 'all'
   const searchQuery = search.trim()
-  const hasActiveFilters =
-    searchQuery.length > 0 || (!isAllCategories && categorySlug !== 'all') || (budgetId && budgetId !== 'all')
+  const hasActiveFilters = searchQuery.length > 0 || (!isAllCategories && categorySlug !== 'all')
 
   const handleClearAllFilters = () => {
     setSearch('')
-    handleBudgetChange('all')
     onCategoryChange?.('all')
   }
 
@@ -98,51 +86,59 @@ export default function CatalogueView({
       {breadcrumbs}
 
       {!isAllCategories ? (
-        <Button to="/crackers" variant="ghost" size="sm" icon={ArrowLeft} className="mb-3 md:mb-4">
+        <Button to="/crackers" variant="ghost" size="sm" icon={ArrowLeft} className="mb-1.5 md:mb-2">
           All crackers
         </Button>
       ) : null}
 
-      <header className="mb-3 max-w-3xl md:mb-4">
+      <header className="catalogue-view__header mb-2 max-w-4xl md:mb-1.5">
         {isAllCategories ? (
           <>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-maroon)]">Crackers</p>
-            <h1 className="mt-1 text-xl font-semibold leading-tight tracking-tight text-[var(--color-charcoal)] sm:text-2xl md:editorial-title md:mt-2">
-              {pageDescription}
-            </h1>
+            <div className="mt-0.5 md:flex md:flex-wrap md:items-baseline md:gap-x-3">
+              <h1 className="text-xl font-semibold leading-tight tracking-tight text-[var(--color-charcoal)] sm:text-2xl md:editorial-title">
+                {pageDescription}
+              </h1>
+              <p className="mt-0.5 text-sm leading-snug text-[var(--color-muted)] md:mt-0">{`${totalActive} products`}</p>
+            </div>
           </>
         ) : (
           <>
             {kicker ? (
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-maroon)]">{kicker}</p>
             ) : null}
-            <h1
-              className={`text-xl font-semibold leading-tight tracking-tight text-[var(--color-charcoal)] sm:text-2xl md:editorial-title ${kicker ? 'mt-1 md:mt-2' : ''}`}
+            <div
+              className={`md:flex md:flex-wrap md:items-baseline md:gap-x-3 ${kicker ? 'mt-0.5' : ''}`}
             >
-              {pageTitle}
-            </h1>
-            <p className="mt-1 text-sm text-[var(--color-muted)] md:mt-2">{pageDescription}</p>
+              <h1 className="text-xl font-semibold leading-tight tracking-tight text-[var(--color-charcoal)] sm:text-2xl md:editorial-title">
+                {pageTitle}
+              </h1>
+              <p className="mt-0.5 text-sm leading-snug text-[var(--color-muted)] md:mt-0">
+                {pageDescription} · {totalActive} products
+              </p>
+            </div>
           </>
         )}
-        <p className="mt-1 text-sm text-[var(--color-muted)]">{`${totalActive} products`}</p>
       </header>
 
-      <ComplimentaryGiftPromo variant="strip" className="mb-4 md:mb-5" />
+      <ComplimentaryGiftPromo variant="strip" className="catalogue-gift-promo mb-2.5 md:hidden" />
 
-      <ProductFilters
-        search={search}
-        onSearchChange={setSearch}
-        categorySlug={categorySlug}
-        onCategoryChange={onCategoryChange}
-        budgetId={budgetId}
-        onBudgetChange={handleBudgetChange}
-        onClearAll={handleClearAllFilters}
-        hasActiveFilters={hasActiveFilters}
-      />
+      <div className="catalogue-view__toolbar mb-2 md:mb-3 md:grid md:grid-cols-[minmax(0,1fr)_min(15rem,17.5rem)] md:items-start md:gap-5 lg:gap-6">
+        <ProductFilters
+          search={search}
+          onSearchChange={setSearch}
+          categorySlug={categorySlug}
+          onCategoryChange={onCategoryChange}
+          onClearAll={handleClearAllFilters}
+          hasActiveFilters={hasActiveFilters}
+          catalogueRouteLayout
+        />
+        <ComplimentaryGiftPromo variant="aside" className="hidden w-full md:block md:justify-self-end" />
+      </div>
 
-      <div className="mt-2.5 md:mt-4">
+      <div className="catalogue-view__grid mt-2 md:mt-3">
         {searchQuery ? (
-          <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 md:mb-3">
+          <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 md:mb-2">
             <p className="text-sm text-[var(--color-charcoal)]" aria-live="polite">
               Showing {filtered.length} {filtered.length === 1 ? 'result' : 'results'} for &quot;{searchQuery}&quot;
             </p>
@@ -157,7 +153,7 @@ export default function CatalogueView({
             ) : null}
           </div>
         ) : hasActiveFilters || filtered.length !== totalActive ? (
-          <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 md:mb-3">
+          <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 md:mb-2">
             <p className="text-xs font-medium text-[var(--color-muted)] md:text-sm">{gridCountLabel}</p>
             {hasActiveFilters ? (
               <button

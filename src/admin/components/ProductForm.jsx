@@ -128,6 +128,7 @@ export default function ProductForm({
       id: String(values.id ?? '').trim(),
       name: String(values.name).trim(),
       categorySlug: String(values.categorySlug).trim(),
+      company: String(values.company ?? '').trim(),
       pack: String(values.pack ?? '').trim(),
       description: String(values.description ?? '').trim(),
       sortOrder: Number(values.sortOrder) || 0,
@@ -229,6 +230,23 @@ export default function ProductForm({
           ))}
         </select>
         {fieldError.categorySlug ? <p className="admin-field-error">{fieldError.categorySlug}</p> : null}
+      </div>
+
+      <div className="admin-field">
+        <label className="admin-label" htmlFor="product-company">
+          Company
+        </label>
+        <input
+          id="product-company"
+          className="admin-input"
+          value={values.company ?? ''}
+          onChange={(e) => setField('company', e.target.value)}
+          maxLength={120}
+          disabled={formDisabled}
+          placeholder="Optional manufacturer / brand"
+          autoComplete="organization"
+        />
+        {fieldError.company ? <p className="admin-field-error">{fieldError.company}</p> : null}
       </div>
 
       {showSensitiveColumns ? (
@@ -421,6 +439,7 @@ export default function ProductForm({
  * @property {string} id
  * @property {string} categorySlug
  * @property {string} name
+ * @property {string} company
  * @property {string} pack
  * @property {string} description
  * @property {boolean} featured
@@ -439,6 +458,7 @@ export function productToFormValues(product) {
     id: String(product.id ?? ''),
     categorySlug: String(product.categorySlug ?? ''),
     name: String(product.name ?? ''),
+    company: String(product.company ?? ''),
     pack: String(product.pack ?? ''),
     description: String(product.description ?? ''),
     featured: Boolean(product.featured),
@@ -460,6 +480,7 @@ export function emptyProductFormValues() {
     id: '',
     categorySlug: '',
     name: '',
+    company: '',
     pack: '',
     description: '',
     featured: false,

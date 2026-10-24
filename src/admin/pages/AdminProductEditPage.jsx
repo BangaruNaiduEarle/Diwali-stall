@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { assertProductSaveNotBlockedByImages } from '../lib/adminProductImageSave.js'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   deleteAdminProduct,
   fetchAdminCategories,
@@ -17,13 +17,16 @@ import ProductForm, {
   getPurchaseRateInrFromForm,
   productToFormValues,
 } from '../components/ProductForm.jsx'
-import AdminFeedbackBanner from '../components/AdminFeedbackBanner.jsx'
+import AdminToast from '../components/AdminToast.jsx'
 import { useAdminFlash } from '../lib/useAdminFlash.js'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
 import { showAdminProductSensitiveColumns } from '../lib/adminProductTableColumns.js'
 import { canDeleteAdminProducts } from '../lib/adminRoles.js'
 
 const PRODUCT_ID_RE = /^P\d{3,}$/
+
+const backToProductsClassName =
+  'focus-ring inline-flex min-h-11 items-center text-sm font-semibold text-[var(--color-maroon)] hover:text-[var(--color-maroon-deep)] hover:underline'
 
 export default function AdminProductEditPage() {
   const { role } = useAdminSession()
@@ -32,7 +35,7 @@ export default function AdminProductEditPage() {
   const { id: routeId } = useParams()
   const productId = String(routeId ?? '').trim()
   const navigate = useNavigate()
-  const { flash, setFlash, clearFlash } = useAdminFlash()
+  const { flash, setFlash, clearFlash } = useAdminFlash(5000)
 
   const [initial, setInitial] = useState(/** @type {import('../components/ProductForm.jsx').ProductFormValues | null} */ (null))
   const [categories, setCategories] = useState(/** @type {{ slug: string, label: string }[]} */ ([]))
@@ -159,7 +162,7 @@ export default function AdminProductEditPage() {
       setInitial(productToFormValues(/** @type {Record<string, unknown>} */ (refreshed.product)))
       setInitialRevision((n) => n + 1)
     }
-    setFlash({ type: 'success', message: 'Changes saved successfully.' })
+    setFlash({ type: 'success', message: 'Product updated successfully.' })
   }
 
   if (loading) {
@@ -176,9 +179,9 @@ export default function AdminProductEditPage() {
         <div className="admin-alert admin-alert--error" role="alert">
           {loadError ?? 'Product could not be loaded.'}
         </div>
-        <button type="button" className="admin-link-button" onClick={() => navigate('/admin/products')}>
-          Back to products
-        </button>
+        <Link to="/admin/products" className={backToProductsClassName}>
+          ← Back to Products
+        </Link>
       </div>
     )
   }
@@ -213,8 +216,11 @@ export default function AdminProductEditPage() {
   return (
     <div className="admin-page admin-page--wide">
       <div className="admin-page__head">
-        <div>
-          <h2 className="admin-page__title">Edit {productId}</h2>
+        <div className="min-w-0 flex-1">
+          <Link to="/admin/products" className={backToProductsClassName}>
+            ← Back to Products
+          </Link>
+          <h2 className="admin-page__title mt-3">Edit {productId}</h2>
           <p className="admin-page__subtitle">
             {showSensitiveColumns
               ? 'Edit catalogue fields, purchase rate (Excel Rate), and selling price independently.'
@@ -222,7 +228,7 @@ export default function AdminProductEditPage() {
           </p>
         </div>
       </div>
-      <AdminFeedbackBanner variant={flash?.type ?? 'success'} message={flash?.message} onDismiss={clearFlash} />
+      <AdminToast variant={flash?.type ?? 'success'} message={flash?.message} onDismiss={clearFlash} />
       <ProductForm
         mode="edit"
         initial={initial}

@@ -15,7 +15,7 @@ describe('persistDraftEstimateItems', () => {
     }
   })
 
-  it('writes an empty array to localStorage immediately', () => {
+  it('normalizes to empty array without localStorage persistence', () => {
     persistDraftEstimateItems([{ productId: 'P001', quantity: 2 }])
     const cleared = persistDraftEstimateItems([])
     assert.deepEqual(cleared, [])

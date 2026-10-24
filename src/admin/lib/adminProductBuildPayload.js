@@ -10,6 +10,7 @@ export function buildProductPayload(values, opts = {}) {
     id: values.id,
     categorySlug: values.categorySlug,
     name: values.name,
+    company: String(values.company ?? '').trim() || null,
     pack: values.pack,
     description: values.description,
     featured: values.featured,

@@ -6,7 +6,10 @@ import { formatINR } from '../../utils/currency.js'
 import { deleteAdminProduct, fetchAdminCategories, fetchAdminProductsPage } from '../api/adminApi.js'
 import AdminConfirmDialog from '../components/AdminConfirmDialog.jsx'
 import AdminProductCard from '../components/AdminProductCard.jsx'
+import AdminProductTableInlineCell from '../components/AdminProductTableInlineCell.jsx'
 import AdminProductTableThumb from '../components/AdminProductTableThumb.jsx'
+import AdminToast from '../components/AdminToast.jsx'
+import { mergeAdminProductRowAfterInlineSave } from '../lib/adminProductInlineSave.js'
 import {
   showAdminProductMappingColumn,
   showAdminProductSensitiveColumns,
@@ -57,6 +60,16 @@ export default function AdminProductsPage() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(/** @type {{ id: string, name: string } | null} */ (null))
   const [deleting, setDeleting] = useState(false)
+  const [activeInlineEdit, setActiveInlineEdit] = useState(
+    /** @type {{ id: string, field: import('../lib/adminProductInlineSave.js').AdminProductInlineField } | null} */ (null),
+  )
+  const [listToast, setListToast] = useState(/** @type {{ type: 'success' | 'error', message: string } | null} */ (null))
+
+  useEffect(() => {
+    if (!listToast) return undefined
+    const t = window.setTimeout(() => setListToast(null), 5000)
+    return () => window.clearTimeout(t)
+  }, [listToast])
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(searchInput.trim()), 300)
@@ -124,6 +137,22 @@ export default function AdminProductsPage() {
   }, [pagination.total, pageLabel])
 
   const mobileFiltersPanelId = 'admin-products-mobile-filters'
+
+  /** @param {string} productId @param {import('../lib/adminProductInlineSave.js').AdminProductInlineField} field */
+  function handleInlineSaved(productId, field, result, draft) {
+    if (result.ok) {
+      setProducts((prev) =>
+        prev.map((row) =>
+          String(row.id ?? '') === productId
+            ? mergeAdminProductRowAfterInlineSave(row, field, result, draft)
+            : row,
+        ),
+      )
+      setListToast({ type: 'success', message: 'Product updated.' })
+      return
+    }
+    setListToast({ type: 'error', message: result.message || 'Could not save changes.' })
+  }
 
   async function confirmDelete() {
     if (!deleteTarget || deleting) return
@@ -307,6 +336,12 @@ export default function AdminProductsPage() {
         </div>
       ) : null}
 
+      <AdminToast
+        variant={listToast?.type ?? 'success'}
+        message={listToast?.message}
+        onDismiss={() => setListToast(null)}
+      />
+
       {!loading && !error && products.length > 0 ? (
         <>
           <p className="admin-hint admin-products-results-meta">{resultsSummary}</p>
@@ -349,6 +384,15 @@ export default function AdminProductsPage() {
                 {products.map((p) => {
                   const id = String(p.id ?? '')
                   const mapping = p.pricingMapping && typeof p.pricingMapping === 'object' ? p.pricingMapping : null
+                  const sellingView = adminProductListSellingPriceView(p)
+                  const purchaseSeed =
+                    p.hasPurchaseRate && p.purchaseRateInr != null && p.purchaseRateInr !== ''
+                      ? String(p.purchaseRateInr)
+                      : ''
+                  const sellingSeed =
+                    sellingView.kind === 'value' && sellingView.inr != null ? String(sellingView.inr) : ''
+                  const isEditing = (field) =>
+                    activeInlineEdit?.id === id && activeInlineEdit?.field === field
                   return (
                     <tr key={id}>
                       <td className="admin-table__thumb-col">
@@ -356,26 +400,89 @@ export default function AdminProductsPage() {
                       </td>
                       <td className="admin-table__mono">{id}</td>
                       <td>
-                        <span className="admin-table__primary">{String(p.name ?? '')}</span>
+                        <AdminProductTableInlineCell
+                          productId={id}
+                          field="name"
+                          editable
+                          draftSeed={String(p.name ?? '')}
+                          isActive={isEditing('name')}
+                          onActivate={() => setActiveInlineEdit({ id, field: 'name' })}
+                          onDeactivate={() => setActiveInlineEdit(null)}
+                          onSaved={(result, draft) => handleInlineSaved(id, 'name', result, draft)}
+                          display={<span className="admin-table__primary">{String(p.name ?? '')}</span>}
+                        />
                         <span className="admin-table__meta">{String(p.categoryLabel ?? p.categorySlug ?? '')}</span>
                       </td>
-                      <td>{formatAdminProductCompany(p.company)}</td>
-                      {showUnitColumn ? <td>{formatAdminProductPack(p.pack)}</td> : null}
+                      <td>
+                        <AdminProductTableInlineCell
+                          productId={id}
+                          field="company"
+                          editable
+                          maxLength={120}
+                          draftSeed={String(p.company ?? '').trim()}
+                          isActive={isEditing('company')}
+                          onActivate={() => setActiveInlineEdit({ id, field: 'company' })}
+                          onDeactivate={() => setActiveInlineEdit(null)}
+                          onSaved={(result, draft) => handleInlineSaved(id, 'company', result, draft)}
+                          display={formatAdminProductCompany(p.company)}
+                        />
+                      </td>
+                      {showUnitColumn ? (
+                        <td>
+                          <AdminProductTableInlineCell
+                            productId={id}
+                            field="pack"
+                            editable
+                            draftSeed={String(p.pack ?? '')}
+                            isActive={isEditing('pack')}
+                            onActivate={() => setActiveInlineEdit({ id, field: 'pack' })}
+                            onDeactivate={() => setActiveInlineEdit(null)}
+                            onSaved={(result, draft) => handleInlineSaved(id, 'pack', result, draft)}
+                            display={formatAdminProductPack(p.pack)}
+                          />
+                        </td>
+                      ) : null}
                       {showSensitiveColumns ? (
                         <td className="tabular-nums">
-                          {p.hasPurchaseRate ? (
-                            formatOptionalInr(p.purchaseRateInr)
-                          ) : (
-                            <span className="admin-table__meta admin-table__meta--warn">Missing</span>
-                          )}
+                          <AdminProductTableInlineCell
+                            productId={id}
+                            field="purchaseRateInr"
+                            editable
+                            inputMode="decimal"
+                            draftSeed={purchaseSeed}
+                            isActive={isEditing('purchaseRateInr')}
+                            onActivate={() => setActiveInlineEdit({ id, field: 'purchaseRateInr' })}
+                            onDeactivate={() => setActiveInlineEdit(null)}
+                            onSaved={(result, draft) => handleInlineSaved(id, 'purchaseRateInr', result, draft)}
+                            display={
+                              p.hasPurchaseRate ? (
+                                formatOptionalInr(p.purchaseRateInr)
+                              ) : (
+                                <span className="admin-table__meta admin-table__meta--warn">Missing</span>
+                              )
+                            }
+                          />
                         </td>
                       ) : null}
                       <td className="tabular-nums">
-                        {(() => {
-                          const view = adminProductListSellingPriceView(p)
-                          if (view.kind === 'value') return formatOptionalInr(view.inr)
-                          return <span className="admin-table__meta admin-table__meta--warn">Missing</span>
-                        })()}
+                        <AdminProductTableInlineCell
+                          productId={id}
+                          field="sellingPriceInr"
+                          editable={showSensitiveColumns}
+                          inputMode="decimal"
+                          draftSeed={sellingSeed}
+                          isActive={isEditing('sellingPriceInr')}
+                          onActivate={() => setActiveInlineEdit({ id, field: 'sellingPriceInr' })}
+                          onDeactivate={() => setActiveInlineEdit(null)}
+                          onSaved={(result, draft) => handleInlineSaved(id, 'sellingPriceInr', result, draft)}
+                          display={
+                            sellingView.kind === 'value' ? (
+                              formatOptionalInr(sellingView.inr)
+                            ) : (
+                              <span className="admin-table__meta admin-table__meta--warn">Missing</span>
+                            )
+                          }
+                        />
                       </td>
                       {showMappingColumn ? (
                         <td>

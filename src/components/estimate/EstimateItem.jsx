@@ -1,14 +1,12 @@
 import { Package, Trash2 } from 'lucide-react'
 import QuantityControl from '../QuantityControl'
 import { resolveProductImageList } from '../../utils/productImage'
-import { getProductUnitLabel } from '../../utils/productUnitLabel.js'
 
 const ICON = { strokeWidth: 1.8 }
 
 export default function EstimateItem({ row, onIncrease, onDecrease, onRemove }) {
   const { product, quantity } = row
   const imageUrl = resolveProductImageList(product)[0]
-  const unit = getProductUnitLabel(product)
 
   return (
     <article className="p-4 sm:p-5">
@@ -35,18 +33,12 @@ export default function EstimateItem({ row, onIncrease, onDecrease, onRemove }) 
           <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm sm:hidden">
             <dt className="text-[var(--color-muted)]">Qty</dt>
             <dd className="font-medium tabular-nums text-[var(--color-charcoal)]">{quantity}</dd>
-            <dt className="text-[var(--color-muted)]">Unit</dt>
-            <dd className="text-[var(--color-charcoal)]">{unit}</dd>
           </dl>
         </div>
 
         <div className="hidden shrink-0 text-right text-sm sm:block sm:min-w-[5rem]">
           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">Qty</p>
           <p className="mt-0.5 font-semibold tabular-nums text-[var(--color-charcoal)]">{quantity}</p>
-        </div>
-        <div className="hidden shrink-0 text-right text-sm sm:block sm:min-w-[6rem]">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">Unit</p>
-          <p className="mt-0.5 text-[var(--color-charcoal)]">{unit}</p>
         </div>
       </div>
 

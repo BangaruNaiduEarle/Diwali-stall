@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import Button from '../../components/ui/Button.jsx'
+import FloatingWhatsAppButton from '../../components/FloatingWhatsAppButton.jsx'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
 import { adminRoleDisplayLabel, canManageAdminUsers } from '../lib/adminRoles.js'
 import { closeMobileNavForSignOut } from './adminSignOut.js'
@@ -138,6 +139,7 @@ export default function AdminLayout() {
       <main className="admin-main">
         <Outlet />
       </main>
+      <FloatingWhatsAppButton />
     </div>
   )
 }

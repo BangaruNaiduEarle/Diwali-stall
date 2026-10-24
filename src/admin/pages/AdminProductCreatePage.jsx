@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { assertProductSaveNotBlockedByImages } from '../lib/adminProductImageSave.js'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   createAdminProduct,
   fetchAdminCategories,
@@ -18,6 +18,9 @@ import { useAdminSession } from '../context/AdminSessionContext.jsx'
 import { showAdminProductSensitiveColumns } from '../lib/adminProductTableColumns.js'
 
 const PRODUCT_ID_RE = /^P\d{3,}$/
+
+const backToProductsClassName =
+  'focus-ring inline-flex min-h-11 items-center text-sm font-semibold text-[var(--color-maroon)] hover:text-[var(--color-maroon-deep)] hover:underline'
 
 export default function AdminProductCreatePage() {
   const { role } = useAdminSession()
@@ -150,7 +153,7 @@ export default function AdminProductCreatePage() {
     setSubmitting(false)
     navigate(`/admin/products/${encodeURIComponent(newId)}/edit`, {
       replace: true,
-      state: adminNavigationFlashState('Product created successfully.'),
+      state: adminNavigationFlashState('Product added successfully.'),
     })
   }
 
@@ -165,8 +168,11 @@ export default function AdminProductCreatePage() {
   return (
     <div className="admin-page admin-page--wide">
       <div className="admin-page__head">
-        <div>
-          <h2 className="admin-page__title">New product</h2>
+        <div className="min-w-0 flex-1">
+          <Link to="/admin/products" className={backToProductsClassName}>
+            ← Back to Products
+          </Link>
+          <h2 className="admin-page__title mt-3">New product</h2>
           <p className="admin-page__subtitle">Create a catalogue row in D1.</p>
         </div>
       </div>

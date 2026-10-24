@@ -41,12 +41,6 @@ export default function ProductCard({ product }) {
           >
             {product.name}
           </button>
-          {product.pack?.trim() ? (
-            <p className="mt-0.5 line-clamp-1 text-[10px] text-[var(--color-muted)] md:text-[11px]">
-              {product.pack.trim()}
-            </p>
-          ) : null}
-
           {soldOut ? (
             <p className="mt-1 text-[10px] text-[var(--color-red)] md:mt-2 md:text-[11px]">Sold out</p>
           ) : null}

@@ -3,9 +3,9 @@ import { ChevronRight } from 'lucide-react'
 
 const ICON = { strokeWidth: 1.8 }
 
-export default function Breadcrumbs({ items, editorial = false }) {
+export default function Breadcrumbs({ items, editorial = false, className = '' }) {
   return (
-    <nav aria-label="Breadcrumb" className="mb-8">
+    <nav aria-label="Breadcrumb" className={`mb-8 ${className}`.trim()}>
       <ol
         className={`flex flex-wrap items-center gap-1.5 ${
           editorial ? 'editorial-label text-[var(--color-muted)]' : 'text-sm text-[var(--color-muted)]'

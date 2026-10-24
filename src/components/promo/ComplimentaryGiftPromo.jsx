@@ -14,7 +14,7 @@ function MarqueeItem() {
 }
 
 /**
- * @param {'marquee' | 'strip' | 'inline'} variant
+ * @param {'marquee' | 'strip' | 'inline' | 'aside'} variant
  */
 export default function ComplimentaryGiftPromo({ variant = 'strip', className = '' }) {
   if (variant === 'marquee') {
@@ -41,15 +41,33 @@ export default function ComplimentaryGiftPromo({ variant = 'strip', className = 
     )
   }
 
+  if (variant === 'aside') {
+    return (
+      <aside
+        className={`gift-promo-aside min-w-0 rounded-[var(--radius-md)] border border-[var(--color-gold)]/35 bg-gradient-to-br from-[var(--color-maroon-deep)] to-[#4a1219] text-[var(--color-gold-light)] shadow-sm ${className}`.trim()}
+        aria-label="Complimentary gift offer"
+      >
+        <p className="gift-promo-aside__heading text-sm font-semibold leading-snug md:text-[15px] md:leading-snug">
+          {GIFT_PROMO_PRIMARY}
+        </p>
+        <p className="gift-promo-aside__support text-[13px] font-medium leading-snug text-[var(--color-gold-light)]/88 md:text-sm md:leading-relaxed">
+          {GIFT_PROMO_SUPPORT}
+        </p>
+      </aside>
+    )
+  }
+
   if (variant === 'inline') {
     return (
-      <div
-        className={`gift-promo-inline rounded-[var(--radius-md)] border border-[var(--color-gold)]/35 bg-[var(--color-maroon-deep)]/95 px-3 py-2.5 text-[13px] leading-snug text-[var(--color-gold-light)] md:px-4 md:text-sm ${className}`.trim()}
-        role="note"
+      <aside
+        className={`gift-promo-inline rounded-[var(--radius-md)] border border-[var(--color-gold)]/35 bg-gradient-to-br from-[var(--color-maroon-deep)] to-[#4a1219] px-3 py-3 text-[13px] leading-snug text-[var(--color-gold-light)] shadow-sm md:px-3.5 md:py-3.5 md:text-sm ${className}`.trim()}
+        aria-label="Complimentary gift offer"
       >
-        <p className="font-semibold">{GIFT_PROMO_PRIMARY}</p>
-        <p className="mt-0.5 text-[12px] font-medium text-[var(--color-gold-light)]/88 md:text-[13px]">{GIFT_PROMO_SUPPORT}</p>
-      </div>
+        <p className="font-semibold leading-snug">{GIFT_PROMO_PRIMARY}</p>
+        <p className="mt-1 text-[12px] font-medium leading-snug text-[var(--color-gold-light)]/88 md:text-[13px]">
+          {GIFT_PROMO_SUPPORT}
+        </p>
+      </aside>
     )
   }
 
