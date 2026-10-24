@@ -13,12 +13,14 @@ describe('public product SQL separation', () => {
     assert.ok(!sql.includes('private_rates'))
     assert.ok(!sql.includes('unit_rate'))
     assert.ok(sql.includes('selling_price_paise'))
+    assert.ok(sql.includes('selling_price_paise > 0'))
   })
 
   it('by-id SQL does not reference private_rates', () => {
     const sql = PUBLIC_PRODUCT_BY_ID_SQL.toLowerCase()
     assert.ok(!sql.includes('private_rates'))
     assert.ok(!sql.includes('unit_rate'))
+    assert.ok(sql.includes('selling_price_paise > 0'))
   })
 
   it('mapPublicProductRow omits private rate fields but includes D1 selling price', () => {
@@ -45,6 +47,23 @@ describe('public product SQL separation', () => {
     assert.equal('company' in mapped, false)
     assert.deepEqual(mapped.images, [])
     assert.equal(mapped.coverImageUrl, null)
+  })
+
+  it('mapPublicProductRow treats zero selling_price_paise as missing', () => {
+    const mapped = mapPublicProductRow({
+      id: 'T0',
+      category_slug: 'others',
+      category_label: 'Others',
+      name: 'Zero',
+      pack: '',
+      description: '',
+      featured: 0,
+      stock_status: 'available',
+      sort_order: 0,
+      images_json: '[]',
+      selling_price_paise: 0,
+    })
+    assert.equal(mapped.sellingPricePaise, null)
   })
 
   it('mapPublicProductRow exposes ordered images and cover URL', () => {

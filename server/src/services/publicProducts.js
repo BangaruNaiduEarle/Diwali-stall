@@ -18,7 +18,7 @@ export const PUBLIC_PRODUCT_LIST_SQL = `
     p.selling_price_paise
   FROM products p
   INNER JOIN categories c ON c.slug = p.category_slug
-  WHERE p.active = 1
+  WHERE p.active = 1 AND p.selling_price_paise > 0
   ORDER BY p.sort_order ASC, p.id ASC
   LIMIT ? OFFSET ?
 `.trim()
@@ -38,7 +38,7 @@ export const PUBLIC_PRODUCT_BY_ID_SQL = `
     p.selling_price_paise
   FROM products p
   INNER JOIN categories c ON c.slug = p.category_slug
-  WHERE p.id = ? AND p.active = 1
+  WHERE p.id = ? AND p.active = 1 AND p.selling_price_paise > 0
 `.trim()
 
 /** Approved public API fields only. */
@@ -85,7 +85,7 @@ export function mapPublicProductRow(row) {
     images: normalizedImages,
     coverImageUrl: normalizedImages[0] ?? null,
     sellingPricePaise:
-      sellingPricePaise === null || !Number.isInteger(sellingPricePaise) || sellingPricePaise < 0
+      sellingPricePaise === null || !Number.isInteger(sellingPricePaise) || sellingPricePaise <= 0
         ? null
         : sellingPricePaise,
   }

@@ -126,6 +126,7 @@ describe('admin product service', { concurrency: 1 }, () => {
       categorySlug: 'others',
       images: [urls[0]],
       stockStatus: 'available',
+      sellingPriceInr: 50,
     })
     assert.equal(created.ok, true, JSON.stringify(created))
 
