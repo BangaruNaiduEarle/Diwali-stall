@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, MessageCircle, ReceiptText, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { submitPublicCustomerRequest } from '../api/publicCustomerRequests'
@@ -9,7 +9,6 @@ import EstimateFamilyPackItem from '../components/estimate/EstimateFamilyPackIte
 import EstimateProgress from '../components/estimate/EstimateProgress'
 import EstimateConfirmDialog from '../components/estimate/EstimateConfirmDialog'
 import EstimateSummaryPanel from '../components/estimate/EstimateSummaryPanel'
-import FreeDoorDeliveryNotice from '../components/estimate/FreeDoorDeliveryNotice.jsx'
 import PageContainer from '../components/PageContainer'
 import ComplimentaryGiftPromo from '../components/promo/ComplimentaryGiftPromo'
 import Button from '../components/ui/Button'
@@ -19,12 +18,6 @@ import { useCustomerDetails } from '../context/CustomerDetailsContext'
 import { useEstimate } from '../context/EstimateContext'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { getMobileDigits, validateCustomerDetails } from '../utils/customerDetailsHelpers'
-import { formatINR } from '../utils/currency.js'
-import {
-  computeQualifyingOrderTotalInr,
-  getFreeDoorDeliveryUiMessage,
-  isFreeDoorDeliveryEligibleInr,
-} from '../utils/freeDoorDelivery.js'
 import {
   buildCustomerRequestBody,
   buildSubmissionFingerprint,
@@ -36,6 +29,7 @@ import {
   getProductById,
   isFamilyPackEstimateItem,
 } from '../utils/estimateHelpers'
+import { getProductUnitLabel } from '../utils/productUnitLabel.js'
 import { getWhatsAppEstimateUrl } from '../utils/whatsapp'
 
 /** @param {Array<Record<string, unknown>>} items */
@@ -55,19 +49,14 @@ function snapshotEstimateLinesForHistory(items) {
       }
     }
     const product = getProductById(entry.productId)
-    const pack = product?.pack?.trim()
+    const unitLabel = getProductUnitLabel(product)
     return {
       lineType: 'product',
       productId: entry.productId,
       quantity: entry.quantity,
-      unit: pack || null,
+      unit: unitLabel || null,
     }
   })
-}
-
-function displayUnit(product) {
-  const pack = product?.pack?.trim()
-  return pack || '—'
 }
 
 function ReviewSection({
@@ -114,7 +103,7 @@ function ReviewSection({
                   <tr key={row.product.id} className="border-b border-[var(--color-border)] last:border-0">
                     <td className="py-2.5 pr-3 text-[var(--color-charcoal)]">{row.product.name}</td>
                     <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{row.quantity}</td>
-                    <td className="py-2.5 text-[var(--color-muted)]">{displayUnit(row.product)}</td>
+                    <td className="py-2.5 text-[var(--color-muted)]">{getProductUnitLabel(row.product)}</td>
                   </tr>
                 ),
               )}
@@ -285,7 +274,7 @@ export default function Estimate() {
     archiveSharedEstimate,
     sharedHistory,
   } = useEstimate()
-  const { details, isValid, markTouched, setRequireDeliveryLocation } = useCustomerDetails()
+  const { details, isValid, markTouched } = useCustomerDetails()
   const [submitting, setSubmitting] = useState(false)
   const [sendError, setSendError] = useState('')
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
@@ -308,19 +297,6 @@ export default function Estimate() {
 
   const { loading: catalogueLoading, error: catalogueError, refresh: refreshCatalogue } = useCatalogueProducts()
   const rows = getEstimateDisplayRows(estimateItems)
-  const qualifyingTotalInr = useMemo(
-    () => computeQualifyingOrderTotalInr(estimateItems),
-    [estimateItems],
-  )
-  const deliveryUi = useMemo(
-    () => getFreeDoorDeliveryUiMessage(qualifyingTotalInr),
-    [qualifyingTotalInr],
-  )
-
-  useEffect(() => {
-    setRequireDeliveryLocation(isFreeDoorDeliveryEligibleInr(qualifyingTotalInr))
-  }, [qualifyingTotalInr, setRequireDeliveryLocation])
-
   const adjustFamilyPackQuantity = useCallback(
     (familyPackId, delta) => {
       const current =
@@ -705,17 +681,7 @@ export default function Estimate() {
             </div>
 
             <div className="mt-6 border-t border-[var(--color-border)] pt-6 lg:hidden">
-              {qualifyingTotalInr > 0 ? (
-                <p className="text-sm font-semibold tabular-nums text-[var(--color-charcoal)]">
-                  Estimated total (listed prices): {formatINR(qualifyingTotalInr)}
-                </p>
-              ) : null}
-              <FreeDoorDeliveryNotice
-                message={deliveryUi.message}
-                qualified={deliveryUi.qualified}
-                qualifyingTotalInr={qualifyingTotalInr}
-              />
-              <p className="mt-3 text-xs leading-relaxed text-[var(--color-muted)]">
+              <p className="text-xs leading-relaxed text-[var(--color-muted)]">
                 Pricing is confirmed on WhatsApp after we review your list.
               </p>
               <Button type="button" variant="primary" iconRight={ArrowRight} fullWidth className="mt-5" onClick={goToDetails}>
@@ -739,9 +705,6 @@ export default function Estimate() {
           <EstimateSummaryPanel
             uniqueProductCount={uniqueProductCount}
             estimateCount={estimateCount}
-            qualifyingTotalInr={qualifyingTotalInr}
-            deliveryMessage={deliveryUi.message}
-            deliveryQualified={deliveryUi.qualified}
             primaryLabel="Continue to your details"
             onPrimary={goToDetails}
             helperText="We'll use these details to send your estimate request on WhatsApp."

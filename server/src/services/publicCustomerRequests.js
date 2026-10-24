@@ -5,10 +5,6 @@ import {
   PUBLIC_REFERENCE_MAX_GENERATION_ATTEMPTS,
 } from '../lib/customerRequestPublicReference.js'
 import { assertFamilyPackAvailableForRequest } from './publicFamilyPacks.js'
-import {
-  computeQualifyingOrderTotalPaise,
-  isQualifyingForFreeDoorDeliveryPaise,
-} from '../lib/qualifyingOrderTotal.js'
 
 /**
  * Public customer quotation requests — never reads private_rates.
@@ -153,25 +149,6 @@ export async function createManualCustomerRequest(db, data, meta) {
 async function createCustomerRequestWithSource(db, data, meta) {
   const { requestId, source } = meta
   const generateReference = meta.generateReference ?? generatePublicReference
-
-  if (source === 'web') {
-    const qualifyingPaise = await computeQualifyingOrderTotalPaise(db, data.items)
-    if (isQualifyingForFreeDoorDeliveryPaise(qualifyingPaise)) {
-      const hasLocation =
-        Boolean(data.customer.deliveryAddress?.trim()) || Boolean(data.customer.area?.trim())
-      if (!hasLocation) {
-        return {
-          ok: false,
-          status: 400,
-          error: 'validation_error',
-          fields: {
-            'customer.deliveryAddress':
-              'Delivery address or area is required for orders that qualify for free door delivery.',
-          },
-        }
-      }
-    }
-  }
 
   const lineRows = await resolveRequestLines(db, data.items)
   if (!lineRows.ok) {

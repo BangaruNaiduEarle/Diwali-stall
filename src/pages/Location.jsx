@@ -1,7 +1,6 @@
 import {
   ArrowRight,
   CalendarDays,
-  Clock,
   Map,
   MapPin,
   Navigation,
@@ -15,13 +14,25 @@ import {
   getLocationHeroLine,
   getLocationMapUrl,
   getStallDatesList,
-  getStallDatesRangeLabel,
+  getStallDatesSummary,
   hasGoogleMapsUrl,
-  siteConfig,
+  hasStallDates,
 } from '../data/siteConfig'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const ICON = { strokeWidth: 1.8 }
+
+const HOME_STALL_LOCATION_FALLBACK =
+  'Address will be shared on the Location page and WhatsApp.'
+const HOME_STALL_DATES_FALLBACK = 'Dates will be posted on the Location page when confirmed.'
+const HOME_STALL_NUMBER_NOTE = "We'll update the stall number soon!"
+const HOME_FREE_DOOR_DELIVERY_NOTE =
+  'Free door delivery is available on qualifying website orders of ₹1,000 or more, subject to delivery coverage in your area.'
+
+function stallLine(value, fallback) {
+  const text = value?.trim()
+  return text || fallback
+}
 
 function formatDateCardHeading(dateLabel) {
   const match = dateLabel.match(/^(\w+)\s+(\d{1,2})/)
@@ -33,9 +44,8 @@ export default function Location() {
   usePageTitle('Diwali stall location')
   const mapsUrl = getLocationMapUrl()
   const stallDates = getStallDatesList()
-  const timings = siteConfig.stallTimings?.trim() ?? ''
-  const dateRange = getStallDatesRangeLabel()
-  const detailLines = siteConfig.locationDetailLines ?? []
+  const locationLine = stallLine(getLocationHeroLine(), HOME_STALL_LOCATION_FALLBACK)
+  const datesLine = hasStallDates() ? getStallDatesSummary() : HOME_STALL_DATES_FALLBACK
 
   return (
     <PageContainer className="pb-12 md:pb-16">
@@ -54,12 +64,17 @@ export default function Location() {
           {...ICON}
           aria-hidden="true"
         />
-        <p className="editorial-label-festive relative text-[var(--color-maroon)]">Visit our stall</p>
-        <h1 className="editorial-title relative mt-3 max-w-2xl">Your Diwali celebration starts here.</h1>
+        <p className="editorial-label-festive relative text-[var(--color-maroon)]">Visit us</p>
+        <h1 className="editorial-title relative mt-3 max-w-2xl">
+          Your Diwali celebration
+          <span className="mt-1 block">starts at our stall.</span>
+        </h1>
         <p className="relative mt-4 max-w-xl text-sm leading-relaxed text-[var(--color-muted)] sm:text-base">
-          Find us at{' '}
-          <span className="font-semibold text-[var(--color-charcoal)]">{getLocationHeroLine()}</span> and explore
-          our complete range of Diwali crackers.
+          {locationLine}
+        </p>
+        <p className="relative mt-3 max-w-xl text-sm leading-relaxed text-[var(--color-muted)]">{HOME_STALL_NUMBER_NOTE}</p>
+        <p className="relative mt-2 max-w-xl text-sm leading-relaxed text-[var(--color-muted)]">
+          {HOME_FREE_DOOR_DELIVERY_NOTE}
         </p>
       </header>
 
@@ -78,16 +93,7 @@ export default function Location() {
             </span>
             <div className="min-w-0">
               <p className="editorial-label text-[var(--color-red)]">Location</p>
-              <h3 className="mt-1 text-lg font-semibold text-[var(--color-charcoal)] sm:text-xl">
-                {siteConfig.locationName}
-              </h3>
-              <address className="mt-3 space-y-1 not-italic text-sm leading-relaxed text-[var(--color-muted)]">
-                {detailLines.map((line) => (
-                  <span key={line} className="block">
-                    {line}
-                  </span>
-                ))}
-              </address>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--color-charcoal)] sm:text-base">{locationLine}</p>
             </div>
           </div>
 
@@ -96,14 +102,7 @@ export default function Location() {
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-gold)]" {...ICON} aria-hidden="true" />
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">Dates</dt>
-                <dd className="mt-1 text-base font-semibold text-[var(--color-maroon)]">{dateRange}</dd>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-gold)]" {...ICON} aria-hidden="true" />
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">Timings</dt>
-                <dd className="mt-1 text-base font-semibold text-[var(--color-charcoal)]">{timings}</dd>
+                <dd className="mt-1 text-base font-semibold text-[var(--color-maroon)]">{datesLine}</dd>
               </div>
             </div>
           </dl>
@@ -145,11 +144,7 @@ export default function Location() {
             <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-ivory)] text-[var(--color-red)] shadow-sm">
               <MapPin className="h-7 w-7" {...ICON} aria-hidden="true" />
             </span>
-            <p className="mt-4 text-lg font-semibold text-[var(--color-charcoal)]">{siteConfig.locationName}</p>
-            {detailLines[0] ? (
-              <p className="mt-1 text-sm text-[var(--color-muted)]">{detailLines[0]}</p>
-            ) : null}
-            <p className="mt-0.5 text-sm font-medium text-[var(--color-maroon)]">Visakhapatnam</p>
+            <p className="mt-4 text-lg font-semibold text-[var(--color-charcoal)]">{locationLine}</p>
             {hasGoogleMapsUrl() ? (
               <Button
                 href={mapsUrl}
@@ -169,13 +164,11 @@ export default function Location() {
 
       {/* Calendar */}
       <section className="mt-10 md:mt-12" aria-labelledby="calendar-heading">
-        <p className="editorial-label">Dates &amp; timings</p>
+        <p className="editorial-label">Dates</p>
         <h2 id="calendar-heading" className="editorial-title mt-2">
           Mark Your Calendar
         </h2>
-        <p className="mt-2 max-w-lg text-sm text-[var(--color-muted)] sm:text-base">
-          We&apos;re open for three days of Diwali shopping.
-        </p>
+        <p className="mt-2 max-w-lg text-sm text-[var(--color-muted)] sm:text-base">{datesLine}</p>
 
         <ul className="mt-6 grid gap-3 sm:grid-cols-3 sm:gap-4">
           {stallDates.map((dateLabel) => (
@@ -194,10 +187,7 @@ export default function Location() {
               <h3 className="mt-3 text-base font-semibold text-[var(--color-charcoal)]">
                 {formatDateCardHeading(dateLabel)}
               </h3>
-              <p className="mt-2 flex items-center gap-2 text-sm text-[var(--color-muted)]">
-                <Clock className="h-3.5 w-3.5 shrink-0 text-[var(--color-gold)]" {...ICON} aria-hidden="true" />
-                <span>{timings}</span>
-              </p>
+              <p className="mt-2 text-sm text-[var(--color-muted)]">{dateLabel}</p>
             </li>
           ))}
         </ul>
@@ -212,10 +202,9 @@ export default function Location() {
           Planning a visit?
         </h2>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--color-muted)] sm:text-base">
-          Come by anytime between <span className="font-medium text-[var(--color-charcoal)]">{timings}</span> during
-          our three-day stall. Browse the catalogue before visiting and build your{' '}
+          Visit during our stall dates ({datesLine}). {HOME_FREE_DOOR_DELIVERY_NOTE} Browse the catalogue before visiting and build your{' '}
           <span className="font-medium text-[var(--color-maroon)]">My Estimate</span> so you know what you&apos;d like
-          to purchase.
+          to purchase, or collect at the stall.
         </p>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <Button to="/crackers" variant="primary" iconRight={ArrowRight} className="w-full sm:w-auto">

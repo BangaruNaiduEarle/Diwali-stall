@@ -14,7 +14,7 @@ export default function CustomerDetailsForm({
   introTitle = 'Almost there',
   introText = 'Tell us where we can reach you.',
 }) {
-  const { details, errors, setField, markFieldTouched, requireDeliveryLocation } = useCustomerDetails()
+  const { details, errors, setField, markFieldTouched } = useCustomerDetails()
   const stallDates = getStallDatesList()
 
   return (
@@ -114,28 +114,20 @@ export default function CustomerDetailsForm({
             aria-describedby={`${id}-area-hint`}
           />
           <p id={`${id}-area-hint`} className="mt-1.5 text-xs text-[var(--color-muted)]">
-            {requireDeliveryLocation
-              ? 'Area or locality for door delivery (required if address below is empty).'
-              : 'Optional — helps us understand where you&apos;re visiting from.'}
+            Optional — our team can collect delivery details later if needed.
           </p>
         </div>
 
         <div className="md:col-span-2">
           <p className="mb-3 text-sm font-semibold text-[var(--color-maroon)]">Door delivery location</p>
           <p className="mb-3 text-xs leading-relaxed text-[var(--color-muted)]">
-            Free door delivery applies to qualifying orders of ₹1,000 or more within our service area. Paste a Google
-            Maps link if you have one — GPS is not required.
+            Optional — share a delivery address or Google Maps link if you already know where you&apos;d like delivery.
           </p>
         </div>
 
         <div className="md:col-span-2">
           <label htmlFor={`${id}-delivery-address`} className="mb-1.5 block text-sm font-medium text-[var(--color-charcoal)]">
-            Delivery address{' '}
-            {requireDeliveryLocation ? (
-              <span className="text-[var(--color-red)]">*</span>
-            ) : (
-              <span className="font-normal text-[var(--color-muted)]">(optional)</span>
-            )}
+            Delivery address <span className="font-normal text-[var(--color-muted)]">(optional)</span>
           </label>
           <textarea
             id={`${id}-delivery-address`}

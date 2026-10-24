@@ -3,7 +3,6 @@ import {
   getStallDatesSummary,
   hasLocation,
   hasStallDates,
-  siteConfig,
 } from './siteConfig'
 
 function stallDatesAnswer() {
@@ -12,17 +11,15 @@ function stallDatesAnswer() {
     : 'Stall dates will be posted on the Location page when confirmed. You can also message us on WhatsApp.'
 }
 
-function stallTimingsAnswer() {
-  const timings = siteConfig.stallTimings?.trim()
-  return timings
-    ? `Stall timings: ${timings}. Pickup is at our Diwali stall unless we agree otherwise on WhatsApp.`
-    : 'Timings will be posted on the Location page when confirmed.'
-}
-
-function locationAnswer() {
-  return hasLocation()
-    ? `Pickup is at our Diwali stall: ${getLocationHeroLine()}. Open the Location page for maps and directions.`
-    : 'Pickup is at our Diwali stall. The address is on the Location page when available, or message us on WhatsApp for directions.'
+function collectOrderAnswer() {
+  const delivery =
+    'Purchases of ₹1,000 or more qualify for free door delivery, subject to delivery coverage in your area.'
+  const pickup = hasLocation()
+    ? `Purchases below ₹1,000 must be collected from our Diwali stall: ${getLocationHeroLine()}.`
+    : 'Purchases below ₹1,000 must be collected from our Diwali stall.'
+  const directions =
+    'See the Location page for maps and directions, or message us on WhatsApp if you need help.'
+  return `${delivery} ${pickup} ${directions}`
 }
 
 export const FAQ_ITEMS = [
@@ -66,12 +63,8 @@ export const FAQ_ITEMS = [
     answer: stallDatesAnswer(),
   },
   {
-    question: 'What are the stall timings?',
-    answer: stallTimingsAnswer(),
-  },
-  {
     question: 'Where do I collect my order?',
-    answer: locationAnswer(),
+    answer: collectOrderAnswer(),
   },
   {
     question: 'How do I contact the stall?',

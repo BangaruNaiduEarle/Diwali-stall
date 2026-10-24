@@ -1,18 +1,14 @@
 import { Package, Trash2 } from 'lucide-react'
 import QuantityControl from '../QuantityControl'
 import { resolveProductImageList } from '../../utils/productImage'
+import { getProductUnitLabel } from '../../utils/productUnitLabel.js'
 
 const ICON = { strokeWidth: 1.8 }
-
-function displayUnit(product) {
-  const pack = product?.pack?.trim()
-  return pack || '—'
-}
 
 export default function EstimateItem({ row, onIncrease, onDecrease, onRemove }) {
   const { product, quantity } = row
   const imageUrl = resolveProductImageList(product)[0]
-  const unit = displayUnit(product)
+  const unit = getProductUnitLabel(product)
 
   return (
     <article className="p-4 sm:p-5">

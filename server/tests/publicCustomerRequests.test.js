@@ -153,37 +153,19 @@ describe('public customer request service (in-memory D1 mock)', () => {
     assert.equal(db.state.items.length, 1)
   })
 
-  it('requires delivery location when qualifying total meets free-delivery threshold', async () => {
+  it('accepts web requests without delivery location regardless of qualifying total', async () => {
     const db = createMockDb({
       products: [{ id: 'P001', name: 'Premium', active: 1, stock_status: 'available' }],
     })
-    const blocked = await createPublicCustomerRequest(
+    const result = await createPublicCustomerRequest(
       db,
       {
         customer: { name: 'Ravi', mobile: '9876543210' },
         items: [{ productId: 'P001', quantity: 1 }],
       },
-      { requestId: 'test-req-delivery-block', generateReference: fixedTestReference },
+      { requestId: 'test-req-no-delivery-location', generateReference: fixedTestReference },
     )
-    assert.equal(blocked.ok, false)
-    if (!blocked.ok) {
-      assert.equal(blocked.error, 'validation_error')
-      assert.ok(blocked.fields?.['customer.deliveryAddress'])
-    }
-
-    const ok = await createPublicCustomerRequest(
-      db,
-      {
-        customer: {
-          name: 'Ravi',
-          mobile: '9876543210',
-          deliveryAddress: 'Flat 2, Example Street',
-        },
-        items: [{ productId: 'P001', quantity: 1 }],
-      },
-      { requestId: 'test-req-delivery-ok', generateReference: async () => 'DWL-3456789B' },
-    )
-    assert.equal(ok.ok, true)
+    assert.equal(result.ok, true)
   })
 
   it('retries reference generation on unique collision and succeeds', async () => {

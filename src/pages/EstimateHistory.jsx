@@ -9,6 +9,7 @@ import { paiseToInr } from '../utils/currencyPaise.js'
 import { getProductById } from '../utils/estimateHelpers'
 import { getFamilyPackById } from '../utils/familyPackCatalogue.js'
 import { historyLineKey } from '../utils/estimateHistory.js'
+import { resolveEstimateLineUnitLabel } from '../utils/productUnitLabel.js'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function formatSharedDate(iso) {
@@ -20,12 +21,6 @@ function formatSharedDate(iso) {
   } catch {
     return iso
   }
-}
-
-function lineUnit(storedUnit, product) {
-  if (storedUnit) return storedUnit
-  const pack = product?.pack?.trim()
-  return pack || '—'
 }
 
 function isFamilyPackHistoryLine(line) {
@@ -140,7 +135,9 @@ export default function EstimateHistory() {
                           </td>
                           <td className="py-2 pr-3 text-right tabular-nums font-medium">{line.quantity}</td>
                           <td className="py-2 text-[var(--color-muted)]">
-                            {isPack ? lineUnit(line.unit, null) : lineUnit(line.unit, product)}
+                            {isPack
+                              ? resolveEstimateLineUnitLabel(line.unit, null)
+                              : resolveEstimateLineUnitLabel(line.unit, product)}
                           </td>
                         </tr>
                       )

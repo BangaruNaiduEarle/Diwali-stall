@@ -75,20 +75,14 @@ export function validateDeliveryLocationFields(normalized) {
   }
   if (normalized.deliveryMapsUrl.length > MAX.deliveryMapsUrl) {
     errors.deliveryMapsUrl = 'Maps link is too long.'
-  } else if (normalized.deliveryMapsUrl && !/^https?:\/\//i.test(normalized.deliveryMapsUrl)) {
+  } else   if (normalized.deliveryMapsUrl && !/^https?:\/\//i.test(normalized.deliveryMapsUrl)) {
     errors.deliveryMapsUrl = 'Paste a full Google Maps link starting with https://'
-  }
-  if (!normalized.deliveryAddress && !normalized.area) {
-    errors.deliveryAddress = 'Enter your delivery address or area/locality for door delivery.'
   }
   return errors
 }
 
-/**
- * @param {unknown} details
- * @param {{ requireDeliveryLocation?: boolean }} [options]
- */
-export function validateCustomerDetails(details, options = {}) {
+/** @param {unknown} details */
+export function validateCustomerDetails(details) {
   const normalized = normalizeCustomerDetails(details)
   const errors = {}
 
@@ -119,13 +113,7 @@ export function validateCustomerDetails(details, options = {}) {
     }
   }
 
-  if (options.requireDeliveryLocation) {
-    Object.assign(errors, validateDeliveryLocationFields(normalized))
-  } else {
-    const optionalDelivery = validateDeliveryLocationFields(normalized)
-    delete optionalDelivery.deliveryAddress
-    Object.assign(errors, optionalDelivery)
-  }
+  Object.assign(errors, validateDeliveryLocationFields(normalized))
 
   return errors
 }

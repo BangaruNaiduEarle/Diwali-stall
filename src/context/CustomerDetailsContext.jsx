@@ -24,8 +24,6 @@ export function CustomerDetailsProvider({ children }) {
   const [details, setDetailsState] = useState(() => loadCustomerDetailsFromStorage())
   const [touched, setTouched] = useState(false)
   const [fieldTouched, setFieldTouched] = useState({})
-  const [requireDeliveryLocation, setRequireDeliveryLocation] = useState(false)
-
   useEffect(() => {
     saveCustomerDetailsToStorage(details)
   }, [details])
@@ -54,10 +52,7 @@ export function CustomerDetailsProvider({ children }) {
     setFieldTouched((prev) => ({ ...prev, [field]: true }))
   }, [])
 
-  const allErrors = useMemo(
-    () => validateCustomerDetails(details, { requireDeliveryLocation }),
-    [details, requireDeliveryLocation],
-  )
+  const allErrors = useMemo(() => validateCustomerDetails(details), [details])
 
   const errors = useMemo(() => {
     if (touched) return allErrors
@@ -82,8 +77,6 @@ export function CustomerDetailsProvider({ children }) {
       clearDetails,
       markTouched,
       markFieldTouched,
-      requireDeliveryLocation,
-      setRequireDeliveryLocation,
     }),
     [
       details,
@@ -96,7 +89,6 @@ export function CustomerDetailsProvider({ children }) {
       clearDetails,
       markTouched,
       markFieldTouched,
-      requireDeliveryLocation,
     ],
   )
 
