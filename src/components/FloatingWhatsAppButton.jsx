@@ -25,7 +25,7 @@ export default function FloatingWhatsAppButton({ aboveMobileStickyBar = false })
       aria-label="Chat with us on WhatsApp"
     >
       <img
-        src="/images/whatsapp-icon.jpg"
+        src="/images/whatsapp-icon-transparent.png"
         alt=""
         className="floating-whatsapp__icon"
         width={84}
