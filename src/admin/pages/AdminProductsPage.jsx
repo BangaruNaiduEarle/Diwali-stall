@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { Loader2, PackageOpen, Plus, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
 import Button from '../../components/ui/Button.jsx'
 import { formatINR } from '../../utils/currency.js'
-import { fetchAdminCategories, fetchAdminProductsPage } from '../api/adminApi.js'
+import { deleteAdminProduct, fetchAdminCategories, fetchAdminProductsPage } from '../api/adminApi.js'
+import AdminConfirmDialog from '../components/AdminConfirmDialog.jsx'
 import AdminProductCard from '../components/AdminProductCard.jsx'
 import AdminProductTableThumb from '../components/AdminProductTableThumb.jsx'
 import {
@@ -17,6 +18,7 @@ import {
   formatAdminProductPack,
 } from '../lib/adminProductTableDisplay.js'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
+import { canDeleteAdminProducts } from '../lib/adminRoles.js'
 
 /** @param {{ active?: boolean }} props */
 function StatusBadge({ active = true }) {
@@ -39,6 +41,7 @@ export default function AdminProductsPage() {
   const showSensitiveColumns = showAdminProductSensitiveColumns(role)
   const showUnitColumn = showAdminProductUnitColumn(role)
   const showMappingColumn = showAdminProductMappingColumn(role)
+  const canDeleteProduct = canDeleteAdminProducts(role)
   const [products, setProducts] = useState(/** @type {Record<string, unknown>[]} */ ([]))
   const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, totalPages: 0 })
   const [loading, setLoading] = useState(true)
@@ -52,6 +55,8 @@ export default function AdminProductsPage() {
   const [categories, setCategories] = useState(/** @type {{ slug: string, label: string }[]} */ ([]))
   const [page, setPage] = useState(1)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(/** @type {{ id: string, name: string } | null} */ (null))
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(searchInput.trim()), 300)
@@ -119,6 +124,21 @@ export default function AdminProductsPage() {
   }, [pagination.total, pageLabel])
 
   const mobileFiltersPanelId = 'admin-products-mobile-filters'
+
+  async function confirmDelete() {
+    if (!deleteTarget || deleting) return
+    setDeleting(true)
+    setError(null)
+    const result = await deleteAdminProduct(deleteTarget.id)
+    setDeleting(false)
+    if (!result.ok) {
+      setError(result.message)
+      setDeleteTarget(null)
+      return
+    }
+    setDeleteTarget(null)
+    await load()
+  }
 
   return (
     <div className="admin-page admin-page--products">
@@ -297,6 +317,11 @@ export default function AdminProductsPage() {
                 product={p}
                 showSensitiveColumns={showSensitiveColumns}
                 showUnitInSummary={showUnitColumn}
+                onDelete={
+                  canDeleteProduct
+                    ? (target) => setDeleteTarget({ id: target.id, name: target.name })
+                    : undefined
+                }
               />
             ))}
           </div>
@@ -367,9 +392,23 @@ export default function AdminProductsPage() {
                         <StatusBadge active={p.active !== false} />
                       </td>
                       <td className="admin-table__actions-col">
-                        <Link to={`/admin/products/${encodeURIComponent(id)}/edit`} className="admin-table__link">
-                          Edit
-                        </Link>
+                        <div className="admin-table__actions">
+                          <Link to={`/admin/products/${encodeURIComponent(id)}/edit`} className="admin-table__link">
+                            Edit
+                          </Link>
+                          {canDeleteProduct ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setDeleteTarget({ id, name: String(p.name ?? id) })
+                              }
+                            >
+                              Delete
+                            </Button>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   )
@@ -399,6 +438,19 @@ export default function AdminProductsPage() {
           ) : null}
         </>
       ) : null}
+
+      <AdminConfirmDialog
+        open={Boolean(deleteTarget)}
+        title={deleteTarget ? `Delete “${deleteTarget.name}”?` : 'Delete product?'}
+        description="Permanent deletion cannot be undone. If this product appears on customer requests, quotations, or family packs, deletion will be blocked — deactivate the product instead."
+        cancelLabel="Keep product"
+        confirmLabel="Delete permanently"
+        confirming={deleting}
+        onCancel={() => {
+          if (!deleting) setDeleteTarget(null)
+        }}
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }

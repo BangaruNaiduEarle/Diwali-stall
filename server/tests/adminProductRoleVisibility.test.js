@@ -131,6 +131,26 @@ describe('admin products API role filtering', () => {
     assert.equal(p.x4SellingPriceInr, 120)
   })
 
+  it('blocks DELETE product for admin and super_admin roles', async () => {
+    for (const role of ['admin', 'super_admin']) {
+      const email = role === 'super_admin' ? SUPER_EMAIL : ADMIN_EMAIL
+      const db = createRoleAwareMockDb(role)
+      const token = await signLocalDevAdminJwt(
+        { ADMIN_LOCAL_DEV_SECRET: LOCAL_SECRET, ADMIN_LOCAL_DEV_EMAIL: email },
+        { email },
+      )
+      const res = await worker.fetch(
+        new Request('http://127.0.0.1/api/admin/products/P001', {
+          method: 'DELETE',
+          headers: { 'Cf-Access-Jwt-Assertion': token },
+        }),
+        roleEnv(db),
+        {},
+      )
+      assert.equal(res.status, 403, role)
+    }
+  })
+
   it('blocks purchase-rate endpoint for admin role', async () => {
     const db = createRoleAwareMockDb('admin')
     const token = await signLocalDevAdminJwt(

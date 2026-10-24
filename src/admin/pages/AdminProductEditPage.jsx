@@ -21,12 +21,14 @@ import AdminFeedbackBanner from '../components/AdminFeedbackBanner.jsx'
 import { useAdminFlash } from '../lib/useAdminFlash.js'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
 import { showAdminProductSensitiveColumns } from '../lib/adminProductTableColumns.js'
+import { canDeleteAdminProducts } from '../lib/adminRoles.js'
 
 const PRODUCT_ID_RE = /^P\d{3,}$/
 
 export default function AdminProductEditPage() {
   const { role } = useAdminSession()
   const showSensitiveColumns = showAdminProductSensitiveColumns(role)
+  const canDeleteProduct = canDeleteAdminProducts(role)
   const { id: routeId } = useParams()
   const productId = String(routeId ?? '').trim()
   const navigate = useNavigate()
@@ -242,9 +244,11 @@ export default function AdminProductEditPage() {
         <Button type="button" variant="secondary" disabled={submitting || deleting} onClick={handleStatusToggle}>
           {initial.active ? 'Deactivate' : 'Activate'}
         </Button>
-        <Button type="button" variant="ghost" disabled={submitting || deleting} onClick={() => setDeleteOpen(true)}>
-          Delete
-        </Button>
+        {canDeleteProduct ? (
+          <Button type="button" variant="ghost" disabled={submitting || deleting} onClick={() => setDeleteOpen(true)}>
+            Delete
+          </Button>
+        ) : null}
       </div>
       <AdminConfirmDialog
         open={deleteOpen}

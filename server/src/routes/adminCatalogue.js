@@ -17,7 +17,7 @@ import {
   upsertCurrentPurchaseRate,
   validatePurchaseRateInr,
 } from '../services/adminPurchaseRates.js'
-import { canViewSensitiveProductPricing } from '../lib/adminRoles.js'
+import { canDeleteAdminProducts, canViewSensitiveProductPricing } from '../lib/adminRoles.js'
 import { filterAdminProductForRole, filterAdminProductsForRole } from '../lib/adminProductResponse.js'
 import {
   archiveAdminProduct,
@@ -34,6 +34,15 @@ import {
 /** @param {unknown} role */
 function sensitivePricingForbiddenResponse(role) {
   if (canViewSensitiveProductPricing(role)) return null
+  return Response.json(
+    { error: 'forbidden', message: 'Not allowed for this role.' },
+    { status: 403, headers: { ...JSON_HEADERS, 'Cache-Control': 'no-store' } },
+  )
+}
+
+/** @param {unknown} role */
+function productDeleteForbiddenResponse(role) {
+  if (canDeleteAdminProducts(role)) return null
   return Response.json(
     { error: 'forbidden', message: 'Not allowed for this role.' },
     { status: 403, headers: { ...JSON_HEADERS, 'Cache-Control': 'no-store' } },
@@ -292,6 +301,8 @@ export async function handleAdminCatalogueRoutes(request, env, url, identity = {
   if (productMatch) {
     const id = productMatch[1]
     if (method === 'DELETE') {
+      const denied = productDeleteForbiddenResponse(adminRole)
+      if (denied) return denied
       const result = await deleteAdminProduct(db, id)
       if (!result.ok) {
         if (result.errors) return validationErrorResponse(result.errors)

@@ -29,6 +29,12 @@ export function canManageAdminUsers(role) {
   return normalizeAdminRole(role) === 'owner'
 }
 
+/** Owner-only: permanent product deletion. */
+/** @param {unknown} role */
+export function canDeleteAdminProducts(role) {
+  return normalizeAdminRole(role) === 'owner'
+}
+
 /** Roles assignable when creating a user (owner must be promoted). */
 export const ADMIN_USER_CREATE_ROLES = /** @type {const} */ (['admin', 'super_admin'])
 

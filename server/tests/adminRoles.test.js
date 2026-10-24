@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  canDeleteAdminProducts,
   canManageAdminUsers,
   canViewSensitiveProductPricing,
   normalizeAdminRole,
@@ -39,5 +40,11 @@ describe('adminRoles', () => {
     assert.equal(canManageAdminUsers('owner'), true)
     assert.equal(canManageAdminUsers('super_admin'), false)
     assert.equal(canManageAdminUsers('admin'), false)
+  })
+
+  it('grants product delete only to owner', () => {
+    assert.equal(canDeleteAdminProducts('owner'), true)
+    assert.equal(canDeleteAdminProducts('super_admin'), false)
+    assert.equal(canDeleteAdminProducts('admin'), false)
   })
 })

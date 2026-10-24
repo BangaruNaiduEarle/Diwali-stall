@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import { Pencil } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
+import Button from '../../components/ui/Button.jsx'
 import { formatINR } from '../../utils/currency.js'
 import AdminProductTableThumb from './AdminProductTableThumb.jsx'
 import {
@@ -25,11 +26,12 @@ function formatOptionalInr(value) {
   return formatINR(n)
 }
 
-/** @param {{ product: Record<string, unknown>, showSensitiveColumns?: boolean, showUnitInSummary?: boolean }} props */
+/** @param {{ product: Record<string, unknown>, showSensitiveColumns?: boolean, showUnitInSummary?: boolean, onDelete?: (target: { id: string, name: string }) => void }} props */
 export default function AdminProductCard({
   product,
   showSensitiveColumns = true,
   showUnitInSummary = showSensitiveColumns,
+  onDelete,
 }) {
   const id = String(product.id ?? '')
   const name = String(product.name ?? '')
@@ -66,6 +68,19 @@ export default function AdminProductCard({
         </div>
         <div className="admin-product-card__actions">
           <StatusBadge active={product.active !== false} />
+          {onDelete ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="admin-product-card__edit-icon"
+              aria-label={`Delete ${name}`}
+              title={`Delete ${name}`}
+              onClick={() => onDelete({ id, name: name.trim() || id })}
+            >
+              <Trash2 size={18} aria-hidden="true" />
+            </Button>
+          ) : null}
           <Link
             to={`/admin/products/${encodeURIComponent(id)}/edit`}
             className="admin-product-card__edit-icon"

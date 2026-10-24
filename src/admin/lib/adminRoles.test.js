@@ -4,6 +4,7 @@ import {
   ADMIN_USER_CREATE_ROLES,
   ADMIN_USER_EDIT_ROLES,
   adminRoleDisplayLabel,
+  canDeleteAdminProducts,
   canManageAdminUsers,
   canViewSensitiveProductPricing,
   normalizeAdminRole,
@@ -51,5 +52,11 @@ describe('adminRoles (frontend)', () => {
     assert.equal(canManageAdminUsers('admin'), false)
     assert.equal(canManageAdminUsers(''), false)
     assert.equal(canManageAdminUsers('guest'), false)
+  })
+
+  it('grants product delete only to owner', () => {
+    assert.equal(canDeleteAdminProducts('owner'), true)
+    assert.equal(canDeleteAdminProducts('super_admin'), false)
+    assert.equal(canDeleteAdminProducts('admin'), false)
   })
 })

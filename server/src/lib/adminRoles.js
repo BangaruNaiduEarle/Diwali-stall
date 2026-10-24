@@ -32,3 +32,9 @@ export function canViewSensitiveProductPricing(role) {
 export function canManageAdminUsers(role) {
   return normalizeAdminRole(role) === 'owner'
 }
+
+/** Owner-only: permanent product deletion (super_admin does not inherit this). */
+/** @param {unknown} role */
+export function canDeleteAdminProducts(role) {
+  return normalizeAdminRole(role) === 'owner'
+}
