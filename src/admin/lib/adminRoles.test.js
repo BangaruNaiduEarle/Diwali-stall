@@ -10,7 +10,6 @@ import {
   normalizeAdminRole,
 } from './adminRoles.js'
 import {
-  showAdminProductCatalogueReferenceColumn,
   showAdminProductMappingColumn,
   showAdminProductSensitiveColumns,
   showAdminProductUnitColumn,
@@ -29,9 +28,6 @@ describe('adminRoles (frontend)', () => {
     assert.equal(showAdminProductSensitiveColumns(undefined), false)
     assert.equal(showAdminProductUnitColumn('admin'), false)
     assert.equal(showAdminProductMappingColumn('admin'), false)
-    assert.equal(showAdminProductCatalogueReferenceColumn('owner'), true)
-    assert.equal(showAdminProductCatalogueReferenceColumn('super_admin'), false)
-    assert.equal(showAdminProductCatalogueReferenceColumn('admin'), false)
     assert.equal(canViewSensitiveProductPricing('guest'), false)
   })
 
