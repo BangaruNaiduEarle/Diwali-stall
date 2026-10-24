@@ -12,6 +12,7 @@ import AdminUsersPage from './pages/AdminUsersPage.jsx'
 import AdminQuickBillPage from './pages/AdminQuickBillPage.jsx'
 import AdminFamilyPacksPage from './pages/AdminFamilyPacksPage.jsx'
 import AdminFamilyPackEditPage from './pages/AdminFamilyPackEditPage.jsx'
+import AdminCategoriesPage from './pages/AdminCategoriesPage.jsx'
 
 export default function AdminRoutes() {
   return (
@@ -27,6 +28,7 @@ export default function AdminRoutes() {
                   <Route index element={<Navigate to="products" replace />} />
                   <Route path="product" element={<Navigate to="products" replace />} />
                   <Route path="products" element={<AdminProductsPage />} />
+                  <Route path="categories" element={<AdminCategoriesPage />} />
                   <Route path="family-packs" element={<AdminFamilyPacksPage />} />
                   <Route path="family-packs/new" element={<AdminFamilyPackEditPage />} />
                   <Route path="family-packs/:id/edit" element={<AdminFamilyPackEditPage />} />

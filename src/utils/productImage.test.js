@@ -11,10 +11,15 @@ describe('productImage Cloudinary resolution', () => {
     assert.equal(normalizeProductImageUrl(local), expected)
   })
 
-  it('leaves unmapped catalogue paths on local /images/...', () => {
-    const local = '/images/products/images-mobile-webp/GANGA_JAMUNA_AJN.webp'
-    assert.equal(catalogueCloudinaryByPath[local], undefined)
-    assert.equal(normalizeProductImageUrl(local), local)
+  it('aliases legacy DB paths to existing catalogue assets', () => {
+    const legacy = '/images/products/images-mobile-webp/GANGA_JAMUNA_AJN.webp'
+    const canonical = '/images/products/images-mobile-webp/GANGA_JAMUNA.webp'
+    assert.equal(catalogueCloudinaryByPath[legacy], undefined)
+    assert.equal(normalizeProductImageUrl(legacy), catalogueCloudinaryByPath[canonical])
+    assert.equal(
+      normalizeProductImageUrl('/images/products/images-mobile-webp/GC_SPECIAL_AJN.webp'),
+      '/images/products/images-mobile-webp/GC_SPECIAL_AJN.jpg',
+    )
   })
 
   it('passes through existing https URLs unchanged', () => {

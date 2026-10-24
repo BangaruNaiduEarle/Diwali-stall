@@ -5,6 +5,21 @@ export const PRODUCT_IMAGE_DIR = '/images/products'
 
 export const PRODUCT_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
 
+/** Stored paths with no file on disk — point at existing catalogue assets. */
+const CATALOGUE_IMAGE_PATH_ALIASES = {
+  '/images/products/images-mobile-webp/GC_SPECIAL_AJN.webp':
+    '/images/products/images-mobile-webp/GC_SPECIAL_AJN.jpg',
+  '/images/products/images-mobile-webp/COLOUR_KOTI_DLX.webp':
+    '/images/products/images-mobile-webp/COLOUR_KOTI_DLX_AJN.webp',
+  '/images/products/images-mobile-webp/GANGA_JAMUNA_AJN.webp':
+    '/images/products/images-mobile-webp/GANGA_JAMUNA.webp',
+}
+
+function resolveLocalCataloguePath(path) {
+  const normalized = CATALOGUE_IMAGE_PATH_ALIASES[path] ?? path
+  return catalogueCloudinaryByPath[normalized] ?? normalized
+}
+
 /**
  * Normalize a single path for browser use. Never returns `public/...`.
  */
@@ -22,13 +37,11 @@ export function normalizeProductImageUrl(raw) {
   s = s.replace(/^public\//i, '')
 
   if (s.startsWith('/images/')) {
-    const cloudinary = catalogueCloudinaryByPath[s]
-    if (cloudinary) return cloudinary
-    return s
+    return resolveLocalCataloguePath(s)
   }
 
   if (s.startsWith('images/')) {
-    return `/${s}`
+    return resolveLocalCataloguePath(`/${s}`)
   }
 
   if (s.startsWith('/')) {

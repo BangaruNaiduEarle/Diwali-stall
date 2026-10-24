@@ -148,6 +148,35 @@ export async function fetchAdminCategories() {
   return { ok: true, categories: Array.isArray(categories) ? categories : [] }
 }
 
+/** @param {{ slug: string, label: string, sortOrder?: number }} body */
+export async function createAdminCategory(body) {
+  const result = await apiRequest('/api/admin/categories', {
+    method: 'POST',
+    body: JSON.stringify({
+      slug: body.slug,
+      label: body.label,
+      sortOrder: body.sortOrder,
+    }),
+  })
+  if (!result.ok) return result
+  const category = /** @type {{ category?: unknown }} */ (result.data ?? {}).category
+  return { ok: true, category: category ?? null }
+}
+
+/** @param {string} slug @param {{ label?: string, sortOrder?: number }} body */
+export async function updateAdminCategory(slug, body) {
+  const result = await apiRequest(`/api/admin/categories/${encodeURIComponent(slug)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      label: body.label,
+      sortOrder: body.sortOrder,
+    }),
+  })
+  if (!result.ok) return result
+  const category = /** @type {{ category?: unknown }} */ (result.data ?? {}).category
+  return { ok: true, category: category ?? null }
+}
+
 /** @param {unknown} data */
 function productFromAdminWriteResponse(data) {
   const product = /** @type {{ product?: unknown }} */ (data ?? {}).product

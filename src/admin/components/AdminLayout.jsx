@@ -80,6 +80,9 @@ export default function AdminLayout() {
             <NavLink to="/admin/products" className={({ isActive }) => navLinkClass(isActive)} end={false}>
               Products
             </NavLink>
+            <NavLink to="/admin/categories" className={({ isActive }) => navLinkClass(isActive)}>
+              Categories
+            </NavLink>
             <NavLink to="/admin/family-packs" className={({ isActive }) => navLinkClass(isActive)}>
               Family packs
             </NavLink>
