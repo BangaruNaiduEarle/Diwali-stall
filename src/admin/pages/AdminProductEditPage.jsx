@@ -133,7 +133,10 @@ export default function AdminProductEditPage() {
     }
 
     setSubmitting(true)
-    const body = buildProductPayload(values, { includeSellingPrice: showSensitiveColumns })
+    const body = buildProductPayload(values, {
+      includeSellingPrice: showSensitiveColumns,
+      includeFinalPrice: showSensitiveColumns,
+    })
     delete body.id
     const result = await updateAdminProduct(productId, body)
     if (!result.ok) {

@@ -291,6 +291,24 @@ export default function ProductForm({
               <p className="admin-hint admin-hint--warn">No selling price stored in D1 yet.</p>
             ) : null}
           </div>
+          <div className="admin-field">
+            <label className="admin-label" htmlFor="product-final-price">
+              Final Price (INR)
+            </label>
+            <input
+              id="product-final-price"
+              type="number"
+              min="0"
+              step="0.01"
+              className="admin-input"
+              value={values.finalPriceInr ?? ''}
+              onChange={(e) => setField('finalPriceInr', e.target.value)}
+              disabled={formDisabled}
+              placeholder={values.hasFinalPrice ? '' : 'Optional — set manually'}
+            />
+            {fieldError.finalPriceInr ? <p className="admin-field-error">{fieldError.finalPriceInr}</p> : null}
+            <p className="admin-hint">Manually managed; not copied from Selling Price or other rates.</p>
+          </div>
         </div>
       ) : null}
 
@@ -472,6 +490,10 @@ export function productToFormValues(product) {
     hasSellingPrice:
       product.hasSellingPrice === true ||
       (Number.isFinite(Number(product.sellingPriceInr)) && Number(product.sellingPriceInr) > 0),
+    finalPriceInr: product.finalPriceInr != null ? String(product.finalPriceInr) : '',
+    hasFinalPrice:
+      product.hasFinalPrice === true ||
+      (Number.isFinite(Number(product.finalPriceInr)) && Number(product.finalPriceInr) > 0),
   }
 }
 
@@ -492,6 +514,8 @@ export function emptyProductFormValues() {
     hasPurchaseRate: false,
     sellingPriceInr: '',
     hasSellingPrice: false,
+    finalPriceInr: '',
+    hasFinalPrice: false,
   }
 }
 

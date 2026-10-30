@@ -120,7 +120,7 @@ export async function ensurePublicReferenceOnRequest(db, requestId, generateRefe
 /**
  * @param {D1Database} db
  * @param {import('../lib/customerRequestValidation.js').NormalizedCustomerRequest} data
- * @param {{ requestId: string, idempotentReplay?: boolean, generateReference?: () => Promise<string> }} meta
+ * @param {{ requestId: string, idempotentReplay?: boolean, generateReference?: () => Promise<string>, resolvedLines?: { productId: string | null, familyPackId: string | null, productName: string, quantity: number, unitPricePaise: number | null }[] }} meta
  */
 export async function createPublicCustomerRequest(db, data, meta) {
   return createCustomerRequestWithSource(db, data, { ...meta, source: 'web' })
@@ -130,7 +130,7 @@ export async function createPublicCustomerRequest(db, data, meta) {
  * Admin walk-in / stall billing — same validation and line resolution as public requests.
  * @param {D1Database} db
  * @param {import('../lib/customerRequestValidation.js').NormalizedCustomerRequest} data
- * @param {{ requestId: string, generateReference?: () => Promise<string> }} meta
+ * @param {{ requestId: string, generateReference?: () => Promise<string>, resolvedLines?: { productId: string | null, familyPackId: string | null, productName: string, quantity: number, unitPricePaise: number | null }[] }} meta
  */
 export async function createManualCustomerRequest(db, data, meta) {
   return createCustomerRequestWithSource(db, data, { ...meta, source: 'manual' })
@@ -144,13 +144,17 @@ export async function createManualCustomerRequest(db, data, meta) {
  *   source: 'web' | 'manual',
  *   idempotentReplay?: boolean,
  *   generateReference?: () => Promise<string>,
+ *   resolvedLines?: { productId: string | null, familyPackId: string | null, productName: string, quantity: number, unitPricePaise: number | null }[],
  * }} meta
  */
 async function createCustomerRequestWithSource(db, data, meta) {
   const { requestId, source } = meta
   const generateReference = meta.generateReference ?? generatePublicReference
 
-  const lineRows = await resolveRequestLines(db, data.items)
+  const lineRows =
+    meta.resolvedLines != null
+      ? { ok: true, lines: meta.resolvedLines }
+      : await resolveRequestLines(db, data.items)
   if (!lineRows.ok) {
     return lineRows
   }

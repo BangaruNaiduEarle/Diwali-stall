@@ -2,7 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Loader2, RefreshCw, Search, X } from 'lucide-react'
 import { fetchAdminCustomerRequests } from '../api/adminApi.js'
+import { useAdminSession } from '../context/AdminSessionContext.jsx'
+import { canViewSensitiveProductPricing } from '../lib/adminRoles.js'
+import { STALL_FINALIZATION_FILTER_OPTIONS, stallBillFinalizationDisplay } from '../lib/stallBillFinalization.js'
 import AdminCustomerRequestCard from '../components/AdminCustomerRequestCard.jsx'
+import AdminCustomerRequestListAudit from '../components/AdminCustomerRequestListAudit.jsx'
+import AdminCustomerRequestWorkflowAudit from '../components/AdminCustomerRequestWorkflowAudit.jsx'
 import {
   formatAdminPublicReference,
   formatRequestCreatedAt,
@@ -15,11 +20,15 @@ import {
 } from '../lib/customerRequestStatus.js'
 
 export default function AdminCustomerRequestsPage() {
+  const { role, email: sessionEmail } = useAdminSession()
+  const canFilterAssignedToMe = canViewSensitiveProductPricing(role)
   const [requests, setRequests] = useState(/** @type {Record<string, unknown>[]} */ ([]))
   const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, totalPages: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(/** @type {string | null} */ (null))
   const [statusFilter, setStatusFilter] = useState('')
+  const [stallFinalizationFilter, setStallFinalizationFilter] = useState('')
+  const [assignedToMeOnly, setAssignedToMeOnly] = useState(false)
   const [searchInput, setSearchInput] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
   const [page, setPage] = useState(1)
@@ -32,7 +41,7 @@ export default function AdminCustomerRequestsPage() {
 
   useEffect(() => {
     setPage(1)
-  }, [statusFilter, debouncedQ])
+  }, [statusFilter, debouncedQ, stallFinalizationFilter, assignedToMeOnly])
 
   const clearSearch = useCallback(() => {
     setSearchInput('')
@@ -47,6 +56,8 @@ export default function AdminCustomerRequestsPage() {
       page,
       status: statusFilter || undefined,
       q: debouncedQ || undefined,
+      finalizationStatus: stallFinalizationFilter || undefined,
+      assignedToMe: assignedToMeOnly && canFilterAssignedToMe ? true : undefined,
     })
     if (seq !== requestSeq.current) return
     if (!result.ok) {
@@ -64,7 +75,7 @@ export default function AdminCustomerRequestsPage() {
       totalPages: Number(p.totalPages ?? 0),
     })
     setLoading(false)
-  }, [page, statusFilter, debouncedQ])
+  }, [page, statusFilter, debouncedQ, stallFinalizationFilter, assignedToMeOnly, canFilterAssignedToMe])
 
   useEffect(() => {
     load()
@@ -122,6 +133,31 @@ export default function AdminCustomerRequestsPage() {
               ))}
             </select>
           </label>
+          <label className="admin-field admin-requests-toolbar__stall-filter">
+            <span className="admin-label admin-show-desktop">Finalization</span>
+            <select
+              className="admin-input"
+              value={stallFinalizationFilter}
+              onChange={(e) => setStallFinalizationFilter(e.target.value)}
+              aria-label="Filter by finalization status"
+            >
+              {STALL_FINALIZATION_FILTER_OPTIONS.map(({ value, label }) => (
+                <option key={value || 'all'} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {canFilterAssignedToMe && sessionEmail ? (
+            <label className="admin-field admin-requests-toolbar__check">
+              <input
+                type="checkbox"
+                checked={assignedToMeOnly}
+                onChange={(e) => setAssignedToMeOnly(e.target.checked)}
+              />
+              <span className="admin-label">Assigned to me</span>
+            </label>
+          ) : null}
           <button
             type="button"
             className="admin-requests-refresh-btn admin-show-mobile"
@@ -169,41 +205,67 @@ export default function AdminCustomerRequestsPage() {
           </p>
           <div className="admin-card-list admin-show-mobile" aria-label="Customer requests">
             {requests.map((r) => (
-              <AdminCustomerRequestCard key={String(r.id ?? '')} request={r} />
+              <AdminCustomerRequestCard
+                key={String(r.id ?? '')}
+                request={r}
+                showListAudit={canFilterAssignedToMe}
+              />
             ))}
           </div>
           <div className="admin-table-wrap admin-show-desktop">
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Reference</th>
-                  <th>ID</th>
-                  <th>Customer</th>
-                  <th>Status</th>
-                  <th>Items</th>
-                  <th>Created</th>
-                  <th />
+                  <th className="admin-request-list__col-ref">Reference</th>
+                  <th className="admin-request-list__col-id">ID</th>
+                  <th className="admin-request-list__col-customer">Customer</th>
+                  <th className="admin-request-list__col-status">Status</th>
+                  <th className="admin-request-list__col-items">Items</th>
+                  <th className="admin-request-list__col-created">Created</th>
+                  <th className="admin-request-list__col-action" />
                 </tr>
               </thead>
               <tbody>
                 {requests.map((r) => {
                   const id = String(r.id ?? '')
                   const rowStatus = String(r.status ?? '')
+                  const stallFinalization = stallBillFinalizationDisplay(r)
                   return (
                     <tr key={id}>
                       <td className="admin-table__mono">{formatAdminPublicReference(r.publicReference)}</td>
                       <td className="admin-table__mono" title={id}>
                         {formatShortRequestId(id)}
                       </td>
-                      <td>
-                        <span className="admin-table__primary">{String(r.customerName ?? '—')}</span>
-                        {r.customerPhone ? (
-                          <span className="admin-table__meta">{String(r.customerPhone)}</span>
-                        ) : null}
+                      <td className="admin-request-list__customer-cell">
+                        <div className="admin-request-list__customer">
+                          <span className="admin-table__primary">{String(r.customerName ?? '—')}</span>
+                          {r.customerPhone ? (
+                            <span className="admin-table__meta">{String(r.customerPhone)}</span>
+                          ) : null}
+                          {canFilterAssignedToMe ? (
+                            <AdminCustomerRequestListAudit
+                              variant="inline"
+                              auditSummary={
+                                r.auditSummary && typeof r.auditSummary === 'object'
+                                  ? /** @type {Record<string, unknown>} */ (r.auditSummary)
+                                  : null
+                              }
+                            />
+                          ) : null}
+                          <AdminCustomerRequestWorkflowAudit
+                            request={/** @type {Record<string, unknown>} */ (r)}
+                            variant="listTable"
+                          />
+                        </div>
                       </td>
                       <td>
-                        <span className={customerRequestStatusBadgeClass(rowStatus)}>
-                          {customerRequestStatusLabel(rowStatus)}
+                        <span className="admin-request-card__badges admin-table__badges">
+                          <span className={customerRequestStatusBadgeClass(rowStatus)}>
+                            {customerRequestStatusLabel(rowStatus)}
+                          </span>
+                          {stallFinalization ? (
+                            <span className={stallFinalization.badgeClass}>{stallFinalization.label}</span>
+                          ) : null}
                         </span>
                       </td>
                       <td>{String(r.itemCount ?? 0)}</td>

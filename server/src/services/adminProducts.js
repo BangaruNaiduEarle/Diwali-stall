@@ -5,6 +5,7 @@ import {
   isValidStockStatus,
   validateImagePaths,
 } from '../lib/validation.js'
+import { filterProductsForQuickBillSearch } from '../../../src/lib/quickBillProductSearch.js'
 import { inrToPaise, paiseToInr } from './money.js'
 
 const ADMIN_PRODUCT_SELECT = `
@@ -22,6 +23,9 @@ const ADMIN_PRODUCT_SELECT = `
     p.images_json,
     p.company,
     p.selling_price_paise,
+    p.final_price_paise,
+    p.pieces_per_pack,
+    p.allow_loose_sale,
     pr.unit_rate_paise AS x4_selling_paise,
     ppr.unit_rate_paise AS purchase_rate_paise,
     p.created_at,
@@ -47,6 +51,12 @@ export function mapAdminProductRow(row) {
       : Number(row.selling_price_paise)
   const hasSellingPrice =
     sellingPricePaise !== null && Number.isInteger(sellingPricePaise) && sellingPricePaise > 0
+  let finalPricePaise =
+    row.final_price_paise === null || row.final_price_paise === undefined
+      ? null
+      : Number(row.final_price_paise)
+  const hasFinalPrice =
+    finalPricePaise !== null && Number.isInteger(finalPricePaise) && finalPricePaise > 0
   const x4SellingPaise =
     row.x4_selling_paise === null || row.x4_selling_paise === undefined
       ? null
@@ -73,6 +83,14 @@ export function mapAdminProductRow(row) {
     sellingPricePaise,
     sellingPriceInr: hasSellingPrice ? paiseToInr(sellingPricePaise) : null,
     hasSellingPrice,
+    finalPricePaise,
+    finalPriceInr: hasFinalPrice ? paiseToInr(finalPricePaise) : null,
+    hasFinalPrice,
+    piecesPerPack:
+      row.pieces_per_pack === null || row.pieces_per_pack === undefined
+        ? null
+        : Number(row.pieces_per_pack),
+    allowLooseSale: Number(row.allow_loose_sale) === 1,
     x4SellingPricePaise: x4SellingPaise,
     x4SellingPriceInr: x4SellingPaise === null ? null : paiseToInr(x4SellingPaise),
     hasX4SellingRate: x4SellingPaise !== null,
@@ -101,9 +119,32 @@ export function mapAdminProductRow(row) {
  *   activeFilter?: 'all' | 'active' | 'archived'
  *   missingRateOnly?: boolean
  *   missingPurchaseRateOnly?: boolean
+ *   flexSearch?: boolean
  * }} opts
  */
+const QUICK_BILL_FLEX_SEARCH_CATALOGUE_CAP = 2500
+
 export async function listAdminProductsPage(db, opts) {
+  const flexQuery = opts.flexSearch && opts.q && String(opts.q).trim()
+  if (flexQuery) {
+    const q = String(opts.q).trim()
+    const catalogue = await listAdminProductsPage(db, {
+      ...opts,
+      flexSearch: false,
+      q: undefined,
+      limit: QUICK_BILL_FLEX_SEARCH_CATALOGUE_CAP,
+      offset: 0,
+    })
+    const filtered = filterProductsForQuickBillSearch(catalogue.products, q)
+    const total = filtered.length
+    const offset = Math.max(0, Number(opts.offset) || 0)
+    const limit = Math.max(1, Number(opts.limit) || 25)
+    return {
+      products: filtered.slice(offset, offset + limit),
+      total,
+    }
+  }
+
   const wheres = []
   const binds = []
 
@@ -208,13 +249,18 @@ export async function createAdminProduct(db, body) {
   if (body.sellingPriceInr !== undefined && body.sellingPriceInr !== null && body.sellingPriceInr !== '') {
     selling_price_paise = inrToPaise(Number(body.sellingPriceInr))
   }
+  let final_price_paise = null
+  if (body.finalPriceInr !== undefined && body.finalPriceInr !== null && body.finalPriceInr !== '') {
+    final_price_paise = inrToPaise(Number(body.finalPriceInr))
+  }
 
   await db
     .prepare(
       `INSERT INTO products (
         id, category_slug, name, pack, description, featured, stock_status,
-        active, sort_order, images_json, company, selling_price_paise
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        active, sort_order, images_json, company, selling_price_paise, final_price_paise,
+        pieces_per_pack, allow_loose_sale
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       id,
@@ -229,6 +275,9 @@ export async function createAdminProduct(db, body) {
       images_json,
       body.company ? String(body.company).trim() : null,
       selling_price_paise,
+      final_price_paise,
+      resolvePiecesPerPackBind(body.piecesPerPack),
+      body.allowLooseSale === true ? 1 : 0,
     )
     .run()
 
@@ -307,6 +356,23 @@ export async function updateAdminProduct(db, id, body) {
       sets.push('selling_price_paise = ?')
       binds.push(inrToPaise(Number(body.sellingPriceInr)))
     }
+  }
+  if (body.finalPriceInr !== undefined) {
+    if (body.finalPriceInr === null || body.finalPriceInr === '') {
+      sets.push('final_price_paise = ?')
+      binds.push(null)
+    } else {
+      sets.push('final_price_paise = ?')
+      binds.push(inrToPaise(Number(body.finalPriceInr)))
+    }
+  }
+  if (body.piecesPerPack !== undefined) {
+    sets.push('pieces_per_pack = ?')
+    binds.push(resolvePiecesPerPackBind(body.piecesPerPack))
+  }
+  if (body.allowLooseSale !== undefined) {
+    sets.push('allow_loose_sale = ?')
+    binds.push(body.allowLooseSale ? 1 : 0)
   }
 
   if (sets.length === 0) {
@@ -447,5 +513,26 @@ function validateProductPayload(body, opts = {}) {
     errors.description = 'Description too long.'
   }
 
+  if (body.piecesPerPack !== undefined && body.piecesPerPack !== null && body.piecesPerPack !== '') {
+    const n = Number(body.piecesPerPack)
+    if (!Number.isInteger(n) || n <= 0) {
+      errors.piecesPerPack = 'Pieces per Pack must be a positive whole number.'
+    }
+  }
+
+  if (body.allowLooseSale !== undefined && body.allowLooseSale !== null) {
+    const v = body.allowLooseSale
+    if (typeof v !== 'boolean' && v !== 0 && v !== 1 && v !== '0' && v !== '1') {
+      errors.allowLooseSale = 'Invalid allow loose sale value.'
+    }
+  }
+
   return errors
+}
+
+/** @param {unknown} value */
+function resolvePiecesPerPackBind(value) {
+  if (value === null || value === undefined || value === '') return null
+  const n = Number(value)
+  return Number.isInteger(n) && n > 0 ? n : null
 }

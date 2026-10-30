@@ -65,7 +65,7 @@ describe('quick bill authorization', () => {
 })
 
 describe('quick bill service (mock D1)', () => {
-  it('previews totals from X4 private rates', async () => {
+  it('previews totals from products.selling_price_paise', async () => {
     const db = createQuickBillMockDb()
     const result = await previewQuickBill(db, [{ productId: 'P001', quantity: 2 }])
     assert.equal(result.ok, true)
@@ -74,12 +74,12 @@ describe('quick bill service (mock D1)', () => {
     assert.equal(result.preview.items.length, 1)
   })
 
-  it('reports missing X4 rates on preview', async () => {
-    const db = createQuickBillMockDb({ rates: new Map() })
+  it('reports missing selling price on preview', async () => {
+    const db = createQuickBillMockDb({ sellingPaise: null })
     const result = await previewQuickBill(db, [{ productId: 'P001', quantity: 1 }])
     assert.equal(result.ok, false)
     if (result.ok) return
-    assert.equal(result.code, 'missing_private_rates')
+    assert.equal(result.code, 'missing_selling_price')
     assert.deepEqual(result.missingProductIds, ['P001'])
   })
 
@@ -129,12 +129,25 @@ describe('quick bill HTTP (mock D1)', () => {
   })
 })
 
-/** @param {{ rates?: Map<string, number> }} [opts] */
+/** @param {{ sellingPaise?: number | null }} [opts] */
 function createQuickBillMockDb(opts = {}) {
-  const rates = opts.rates ?? new Map([['P001', 169400]])
+  const sellingPaise = opts.sellingPaise === undefined ? 169400 : opts.sellingPaise
   const state = {
     products: new Map([
-      ['P001', { id: 'P001', name: 'EMERALD GIFT BOX', active: 1, stock_status: 'available' }],
+      [
+        'P001',
+        {
+          id: 'P001',
+          name: 'EMERALD GIFT BOX',
+          company: null,
+          active: 1,
+          stock_status: 'available',
+          selling_price_paise: sellingPaise,
+          final_price_paise: null,
+          pieces_per_pack: null,
+          allow_loose_sale: 0,
+        },
+      ],
     ]),
     requests: new Map(),
     requestItems: [],
@@ -156,10 +169,6 @@ function createQuickBillMockDb(opts = {}) {
           }
           if (normalized.includes('FROM products WHERE id = ?')) {
             return state.products.get(String(params[0])) ?? null
-          }
-          if (normalized.includes('FROM private_rates') && normalized.includes('effective_to IS NULL')) {
-            const paise = rates.get(String(params[0]))
-            return paise == null ? null : { unit_rate_paise: paise }
           }
           if (normalized.includes('FROM customer_requests') && normalized.includes('WHERE id = ?')) {
             const id = String(params[0])
@@ -211,7 +220,19 @@ function createQuickBillMockDb(opts = {}) {
         },
         async run() {
           if (normalized.startsWith('INSERT INTO customer_requests')) {
-            const [id, publicReference, name, phone, area, pickup, note, source = 'web'] = params
+            const [
+              id,
+              publicReference,
+              name,
+              phone,
+              area,
+              pickup,
+              note,
+              deliveryAddress,
+              deliveryLandmark,
+              deliveryMapsUrl,
+              source = 'web',
+            ] = params
             state.requests.set(id, {
               id,
               public_reference: publicReference ?? null,
@@ -222,12 +243,16 @@ function createQuickBillMockDb(opts = {}) {
               customer_area: area,
               pickup_preference: pickup,
               customer_note: note,
+              delivery_address: deliveryAddress ?? null,
+              delivery_landmark: deliveryLandmark ?? null,
+              delivery_maps_url: deliveryMapsUrl ?? null,
               created_at: '2026-10-18 00:00:00',
             })
             return { meta: { changes: 1 } }
           }
           if (normalized.startsWith('INSERT INTO customer_request_items')) {
-            const [requestId, lineNumber, productId, familyPackId, productName, quantity] = params
+            const [requestId, lineNumber, productId, familyPackId, productName, quantity, unitPricePaise] =
+              params
             state.requestItems.push({
               request_id: requestId,
               line_number: lineNumber,
@@ -235,6 +260,7 @@ function createQuickBillMockDb(opts = {}) {
               family_pack_id: familyPackId ?? null,
               product_name: productName,
               quantity,
+              unit_price_paise: unitPricePaise ?? null,
             })
             return { meta: { changes: 1 } }
           }
@@ -246,12 +272,16 @@ function createQuickBillMockDb(opts = {}) {
               customer_name: params[2],
               customer_phone: params[3],
               customer_note: params[4],
-              currency: 'INR',
               subtotal_paise: params[5],
               adjustment_paise: 0,
               total_paise: params[6],
               wa_message_text: params[7],
               created_by_email: params[8],
+              pricing_mode: params[9] ?? null,
+              selling_subtotal_paise: params[10] ?? null,
+              final_subtotal_paise: params[11] ?? null,
+              bargain_floor_paise: params[12] ?? null,
+              accepted_amount_paise: params[13] ?? null,
               created_at: '2026-10-18 00:00:00',
               updated_at: '2026-10-18 00:00:00',
             })
@@ -272,6 +302,11 @@ function createQuickBillMockDb(opts = {}) {
           if (normalized.includes('UPDATE customer_requests SET status')) {
             const r = state.requests.get(String(params[1]))
             if (r) r.status = params[0]
+            return { meta: { changes: 1 } }
+          }
+          if (normalized.includes('SET finalization_status')) {
+            const r = state.requests.get(String(params[0]))
+            if (r) r.finalization_status = 'pending'
             return { meta: { changes: 1 } }
           }
           return { meta: { changes: 1 } }

@@ -3,6 +3,9 @@ import {
   validateQuickBillCheckoutBody,
   validateQuickBillPreviewBody,
 } from '../lib/quickBillValidation.js'
+import { canViewSensitiveProductPricing, normalizeAdminRole } from '../lib/adminRoles.js'
+import { filterQuotationForRole } from '../lib/adminQuotationResponse.js'
+import { filterQuickBillPreviewForRole } from '../lib/quickBillBargain.js'
 import { checkoutQuickBill, previewQuickBill } from '../services/adminQuickBill.js'
 
 const NO_STORE = { ...JSON_HEADERS, 'Cache-Control': 'no-store' }
@@ -27,12 +30,21 @@ export async function handleAdminQuickBillRoutes(request, env, identity) {
       )
     }
 
-    const validated = validateQuickBillPreviewBody(parsedBody.value)
+    const adminRole = normalizeAdminRole(identity.role)
+    const validated = validateQuickBillPreviewBody(parsedBody.value, adminRole)
     if (!validated.ok) {
-      return validationErrorResponse(validated.errors)
+      if (validated.errors) {
+        return validationErrorResponse(validated.errors)
+      }
+      return Response.json(
+        { error: validated.code ?? 'forbidden', message: validated.message ?? 'Not allowed.' },
+        { status: validated.status ?? 403, headers: NO_STORE },
+      )
     }
 
-    const result = await previewQuickBill(db, validated.data.items)
+    const result = await previewQuickBill(db, validated.data.items, {
+      pricingMode: validated.data.pricingMode,
+    })
     if (!result.ok) {
       const status = result.status ?? 400
       return Response.json(
@@ -46,7 +58,10 @@ export async function handleAdminQuickBillRoutes(request, env, identity) {
       )
     }
 
-    return Response.json({ preview: result.preview }, { headers: NO_STORE })
+    return Response.json(
+      { preview: filterQuickBillPreviewForRole(result.preview, adminRole) },
+      { headers: NO_STORE },
+    )
   }
 
   if (pathname === '/api/admin/quick-bill/checkout' && method === 'POST') {
@@ -58,13 +73,23 @@ export async function handleAdminQuickBillRoutes(request, env, identity) {
       )
     }
 
-    const validated = validateQuickBillCheckoutBody(parsedBody.value)
+    const adminRole = normalizeAdminRole(identity.role)
+    const validated = validateQuickBillCheckoutBody(parsedBody.value, adminRole)
     if (!validated.ok) {
-      return validationErrorResponse(validated.errors)
+      if (validated.errors) {
+        return validationErrorResponse(validated.errors)
+      }
+      return Response.json(
+        { error: validated.code ?? 'forbidden', message: validated.message ?? 'Not allowed.' },
+        { status: validated.status ?? 403, headers: NO_STORE },
+      )
     }
 
     const result = await checkoutQuickBill(db, validated.data, {
       createdByEmail: identity.email ?? null,
+      adminRole,
+      pricingMode: validated.data.pricingMode,
+      acceptedAmountPaise: validated.data.acceptedAmountPaise,
     })
     if (!result.ok) {
       const status = result.status ?? 400
@@ -84,8 +109,9 @@ export async function handleAdminQuickBillRoutes(request, env, identity) {
     return Response.json(
       {
         request: result.request,
-        quotation: result.quotation,
+        quotation: await filterQuotationForRole(db, result.quotation, adminRole),
         quotationCreated: result.quotationCreated,
+        warnings: canViewSensitiveProductPricing(adminRole) ? result.warnings : undefined,
       },
       { status: 201, headers: NO_STORE },
     )

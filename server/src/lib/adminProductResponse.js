@@ -18,6 +18,9 @@ export function filterAdminProductForRole(product, role) {
   delete next.privateX4Inr
   delete next.hasPrivateX4Rate
   delete next.pricingMapping
+  delete next.finalPricePaise
+  delete next.finalPriceInr
+  delete next.hasFinalPrice
   return next
 }
 

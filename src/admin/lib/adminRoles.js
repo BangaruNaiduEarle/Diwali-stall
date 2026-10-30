@@ -16,6 +16,17 @@ export function canViewSensitiveProductPricing(role) {
 }
 
 /** @param {unknown} role */
+export function canAssignQuickBillCustomerRequests(role) {
+  const r = normalizeAdminRole(role)
+  return r === 'admin' || r === 'owner' || r === 'super_admin'
+}
+
+/** @param {unknown} role */
+export function canFinalizeQuickBillCustomerRequests(role) {
+  return canViewSensitiveProductPricing(role)
+}
+
+/** @param {unknown} role */
 export function adminRoleDisplayLabel(role) {
   const r = normalizeAdminRole(role)
   if (r === 'owner') return 'Owner'

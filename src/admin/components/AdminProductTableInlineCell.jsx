@@ -47,7 +47,7 @@ export default function AdminProductTableInlineCell({
 
   async function save() {
     if (saving) return
-    if (draft.trim() === draftSeed.trim() && field !== 'sellingPriceInr') {
+    if (draft.trim() === draftSeed.trim() && field !== 'sellingPriceInr' && field !== 'finalPriceInr') {
       onDeactivate()
       return
     }

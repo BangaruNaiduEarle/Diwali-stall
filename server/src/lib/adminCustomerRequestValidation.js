@@ -1,3 +1,5 @@
+import { isValidCustomerRequestFinalizationStatus } from './adminCustomerRequestFinalization.js'
+
 /** Status values enforced by customer_requests.status CHECK constraint. */
 export const CUSTOMER_REQUEST_STATUSES = Object.freeze([
   'received',
@@ -73,7 +75,18 @@ export function validateCustomerRequestStatusTransition(currentStatus, nextStatu
 
 /**
  * @param {URLSearchParams} searchParams
- * @returns {{ ok: true, data: { page: number, limit: number, offset: number, status?: string, q: string } } | { ok: false, errors: Record<string, string> }}
+ * @returns {{
+ *   ok: true,
+ *   data: {
+ *     page: number,
+ *     limit: number,
+ *     offset: number,
+ *     status?: string,
+ *     q: string,
+ *     finalizationStatus?: string,
+ *     assignedToMe?: boolean,
+ *   },
+ * } | { ok: false, errors: Record<string, string> }}
  */
 export function parseAdminCustomerRequestListQuery(searchParams) {
   const errors = {}
@@ -81,6 +94,8 @@ export function parseAdminCustomerRequestListQuery(searchParams) {
   const limitRaw = searchParams.get('limit')
   const statusRaw = searchParams.get('status')
   const qRaw = searchParams.get('q')
+  const finalizationRaw = searchParams.get('finalizationStatus') ?? searchParams.get('finalization_status')
+  const assignedToMeRaw = searchParams.get('assignedToMe') ?? searchParams.get('assigned_to_me')
 
   let page = 1
   if (pageRaw !== null && pageRaw !== '') {
@@ -120,9 +135,30 @@ export function parseAdminCustomerRequestListQuery(searchParams) {
     q = qRaw.trim().slice(0, ADMIN_CUSTOMER_REQUEST_LIST_LIMITS.maxSearchLength)
   }
 
+  /** @type {string | undefined} */
+  let finalizationStatus
+  if (finalizationRaw !== null && finalizationRaw.trim()) {
+    const fs = finalizationRaw.trim()
+    if (!isValidCustomerRequestFinalizationStatus(fs)) {
+      errors.finalizationStatus = 'Invalid finalization filter.'
+    } else {
+      finalizationStatus = fs
+    }
+  }
+
+  let assignedToMe = false
+  if (assignedToMeRaw !== null && assignedToMeRaw !== '') {
+    const flag = String(assignedToMeRaw).trim().toLowerCase()
+    if (flag === '1' || flag === 'true' || flag === 'yes') {
+      assignedToMe = true
+    } else if (flag !== '0' && flag !== 'false' && flag !== 'no') {
+      errors.assignedToMe = 'Invalid assigned-to-me filter.'
+    }
+  }
+
   if (Object.keys(errors).length) return { ok: false, errors }
   const offset = (page - 1) * limit
-  return { ok: true, data: { page, limit, offset, status, q } }
+  return { ok: true, data: { page, limit, offset, status, q, finalizationStatus, assignedToMe } }
 }
 
 /**

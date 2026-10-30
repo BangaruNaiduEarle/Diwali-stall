@@ -11,3 +11,17 @@ export function sellingPriceInrForProductWrite(values) {
   if (!Number.isFinite(n) || n < 0) return null
   return n
 }
+
+/**
+ * Maps admin product form Final Price to D1 `products.final_price_paise` (via API `finalPriceInr`).
+ * @param {{ finalPriceInr?: string | number | null }} values
+ * @returns {number | null | undefined}
+ */
+export function finalPriceInrForProductWrite(values) {
+  if (!('finalPriceInr' in values)) return undefined
+  const raw = values.finalPriceInr
+  if (raw === null || raw === '') return null
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 0) return null
+  return n
+}

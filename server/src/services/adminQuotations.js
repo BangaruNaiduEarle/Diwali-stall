@@ -1,4 +1,10 @@
 import { validateCustomerRequestStatusTransition } from '../lib/adminCustomerRequestValidation.js'
+import {
+  presentCustomerFacingQuotation,
+  resolveCatalogueSellingUnitForProductLine,
+  stripLooseProductNameSuffix,
+  withLooseProductNameSuffix,
+} from '../lib/customerFacingQuotationTotal.js'
 import { buildOrderConfirmationWhatsAppMessage } from '../lib/orderConfirmationWhatsApp.js'
 import { buildQuotationWhatsAppMessage } from '../lib/quotationWhatsApp.js'
 import { mapAdminCustomerRequestDetail } from './adminCustomerRequests.js'
@@ -17,14 +23,69 @@ export const GET_REQUEST_ITEMS_FOR_QUOTE_SQL = `
   ORDER BY line_number ASC
 `.trim()
 
-/** X4 selling unit rate for quotations (private_rates — not purchase cost). */
-export const GET_X4_SELLING_RATE_SQL = `
-  SELECT unit_rate_paise
-  FROM private_rates
-  WHERE product_id = ? AND effective_to IS NULL
+/** @typedef {'selling' | 'bargain'} QuickBillPricingMode */
+
+/** Quotation columns for Quick Bill audit (migration 0015). */
+export const QUOTATION_QUICK_BILL_AUDIT_SELECT_SQL = `
+  pricing_mode, selling_subtotal_paise, final_subtotal_paise, bargain_floor_paise, accepted_amount_paise
 `.trim()
 
-export const GET_CURRENT_RATE_SQL = GET_X4_SELLING_RATE_SQL
+/**
+ * @param {Record<string, unknown>} row
+ */
+export function mapQuotationQuickBillAuditFromRow(row) {
+  const pricingModeRaw = row.pricing_mode
+  const pricingMode =
+    pricingModeRaw === 'selling' || pricingModeRaw === 'bargain'
+      ? /** @type {QuickBillPricingMode} */ (pricingModeRaw)
+      : null
+  return {
+    pricingMode,
+    sellingSubtotalPaise: nullablePaiseColumn(row.selling_subtotal_paise),
+    finalSubtotalPaise: nullablePaiseColumn(row.final_subtotal_paise),
+    bargainFloorPaise: nullablePaiseColumn(row.bargain_floor_paise),
+    acceptedAmountPaise: nullablePaiseColumn(row.accepted_amount_paise),
+  }
+}
+
+/** @param {unknown} value @returns {number | null} */
+function nullablePaiseColumn(value) {
+  if (value === null || value === undefined) return null
+  const n = Number(value)
+  return Number.isInteger(n) && n >= 0 ? n : null
+}
+
+/**
+ * Optional Quick Bill audit persisted on insert (Phase 2+ will populate).
+ * @param {{ quickBillAudit?: {
+ *   pricingMode?: QuickBillPricingMode | null,
+ *   sellingSubtotalPaise?: number | null,
+ *   finalSubtotalPaise?: number | null,
+ *   bargainFloorPaise?: number | null,
+ *   acceptedAmountPaise?: number | null,
+ * } | null }} opts
+ */
+export function resolveQuotationQuickBillAuditInsert(opts = {}) {
+  const audit = opts.quickBillAudit
+  if (!audit) {
+    return {
+      pricing_mode: null,
+      selling_subtotal_paise: null,
+      final_subtotal_paise: null,
+      bargain_floor_paise: null,
+      accepted_amount_paise: null,
+    }
+  }
+  const pricingMode =
+    audit.pricingMode === 'bargain' ? 'bargain' : audit.pricingMode === 'selling' ? 'selling' : null
+  return {
+    pricing_mode: pricingMode,
+    selling_subtotal_paise: nullablePaiseColumn(audit.sellingSubtotalPaise),
+    final_subtotal_paise: nullablePaiseColumn(audit.finalSubtotalPaise),
+    bargain_floor_paise: nullablePaiseColumn(audit.bargainFloorPaise),
+    accepted_amount_paise: nullablePaiseColumn(audit.acceptedAmountPaise),
+  }
+}
 
 /**
  * @param {D1Database} db
@@ -35,7 +96,8 @@ export async function getActiveQuotationForRequest(db, requestId) {
     .prepare(
       `SELECT id, customer_request_id, status, customer_name, customer_phone, customer_note,
               currency, subtotal_paise, adjustment_paise, total_paise, wa_message_text,
-              created_by_email, created_at, updated_at
+              created_by_email, created_at, updated_at,
+              ${QUOTATION_QUICK_BILL_AUDIT_SELECT_SQL}
        FROM quotations
        WHERE customer_request_id = ? AND status != 'void'
        ORDER BY created_at DESC
@@ -71,6 +133,7 @@ export function mapQuotationDetail(row, items) {
     createdByEmail: row.created_by_email ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    ...mapQuotationQuickBillAuditFromRow(row),
     items: items.map(mapQuotationItemRow),
   }
 }
@@ -88,13 +151,13 @@ function mapQuotationItemRow(row) {
 }
 
 /**
- * Shared X4 quotation line builder (private_rates only — not catalogue selling price).
+ * Quotation line builder — catalogue selling_price_paise only (no private_rates / X4).
  * @param {D1Database} db
  * @param {{ line_number: number, product_id: string, product_name: string, quantity: number }[]} requestItems
  */
 export async function buildQuoteLinesForRequestItems(db, requestItems) {
   /** @type {string[]} */
-  const missingRates = []
+  const missingSellingPriceProductIds = []
   /** @type {{ line_number: number, product_id: string, product_name: string, quantity: number, unit_rate_paise: number, line_total_paise: number }[]} */
   const quoteLines = []
 
@@ -165,7 +228,10 @@ export async function buildQuoteLinesForRequestItems(db, requestItems) {
       }
     }
 
-    const product = await db.prepare('SELECT id, name, active FROM products WHERE id = ?').bind(productId).first()
+    const product = await db
+      .prepare('SELECT id, name, active, selling_price_paise FROM products WHERE id = ?')
+      .bind(productId)
+      .first()
     if (!product || !product.active) {
       return {
         ok: false,
@@ -175,30 +241,37 @@ export async function buildQuoteLinesForRequestItems(db, requestItems) {
       }
     }
 
-    const rateRow = await db.prepare(GET_CURRENT_RATE_SQL).bind(productId).first()
-    if (!rateRow) {
-      missingRates.push(productId)
+    const resolved = await resolveCatalogueSellingUnitForProductLine(
+      db,
+      productId,
+      line.product_name ?? product.name,
+      line.unit_price_paise,
+    )
+    if (!resolved.ok) {
+      missingSellingPriceProductIds.push(productId)
       continue
     }
-    const unitPaise = Number(rateRow.unit_rate_paise)
-    const lineTotal = lineTotalPaise(qty, unitPaise)
+
+    const lineTotal = lineTotalPaise(qty, resolved.unitPaise)
     quoteLines.push({
       line_number: Number(line.line_number),
       product_id: productId,
-      product_name: String(line.product_name ?? product.name),
+      product_name: resolved.loose
+        ? withLooseProductNameSuffix(line.product_name ?? product.name)
+        : stripLooseProductNameSuffix(line.product_name ?? product.name),
       quantity: qty,
-      unit_rate_paise: unitPaise,
+      unit_rate_paise: resolved.unitPaise,
       line_total_paise: lineTotal,
     })
   }
 
-  if (missingRates.length) {
+  if (missingSellingPriceProductIds.length) {
     return {
       ok: false,
       status: 400,
-      code: 'missing_private_rates',
-      message: 'Private X4 rates missing for one or more products.',
-      missingProductIds: [...new Set(missingRates)],
+      code: 'missing_selling_price',
+      message: 'Catalogue selling price missing for one or more products.',
+      missingProductIds: [...new Set(missingSellingPriceProductIds)],
     }
   }
 
@@ -221,7 +294,13 @@ export function mapBuiltQuoteLineToApi(line) {
 /**
  * @param {D1Database} db
  * @param {string} requestId
- * @param {{ regenerate?: boolean, createdByEmail?: string }} opts
+ * @param {{ regenerate?: boolean, createdByEmail?: string, quickBillAudit?: {
+ *   pricingMode?: QuickBillPricingMode | null,
+ *   sellingSubtotalPaise?: number | null,
+ *   finalSubtotalPaise?: number | null,
+ *   bargainFloorPaise?: number | null,
+ *   acceptedAmountPaise?: number | null,
+ * } | null }} opts
  */
 export async function createOrGetQuotationForRequest(db, requestId, opts = {}) {
   const request = await db.prepare(GET_REQUEST_FOR_QUOTE_SQL).bind(requestId).first()
@@ -248,7 +327,16 @@ export async function createOrGetQuotationForRequest(db, requestId, opts = {}) {
 
   const quotationId = crypto.randomUUID()
   const voidQuotationId = existing && opts.regenerate ? existing.id : null
+  const quickBillAuditInsert = resolveQuotationQuickBillAuditInsert(opts)
 
+  const quoteItemsForWa = quoteLines.map((l) => ({
+    lineNumber: l.line_number,
+    productId: l.product_id,
+    productName: l.product_name,
+    quantity: l.quantity,
+    unitRatePaise: l.unit_rate_paise,
+    lineTotalPaise: l.line_total_paise,
+  }))
   const waMessage = buildQuotationWhatsAppMessage(
     {
       id: quotationId,
@@ -257,13 +345,7 @@ export async function createOrGetQuotationForRequest(db, requestId, opts = {}) {
       pickupPreference: request.pickup_preference,
       totalPaise: total,
     },
-    quoteLines.map((l) => ({
-      lineNumber: l.line_number,
-      productName: l.product_name,
-      quantity: l.quantity,
-      unitRatePaise: l.unit_rate_paise,
-      lineTotalPaise: l.line_total_paise,
-    })),
+    quoteItemsForWa,
     { requestSource: request.source },
   )
 
@@ -285,8 +367,10 @@ export async function createOrGetQuotationForRequest(db, requestId, opts = {}) {
       .prepare(
         `INSERT INTO quotations (
           id, customer_request_id, status, customer_name, customer_phone, customer_note,
-          subtotal_paise, adjustment_paise, total_paise, wa_message_text, created_by_email, updated_at
-        ) VALUES (?, ?, 'draft', ?, ?, ?, ?, 0, ?, ?, ?, datetime('now'))`,
+          subtotal_paise, adjustment_paise, total_paise, wa_message_text, created_by_email,
+          pricing_mode, selling_subtotal_paise, final_subtotal_paise, bargain_floor_paise,
+          accepted_amount_paise, updated_at
+        ) VALUES (?, ?, 'draft', ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
       )
       .bind(
         quotationId,
@@ -298,6 +382,11 @@ export async function createOrGetQuotationForRequest(db, requestId, opts = {}) {
         total,
         waMessage,
         opts.createdByEmail ?? null,
+        quickBillAuditInsert.pricing_mode,
+        quickBillAuditInsert.selling_subtotal_paise,
+        quickBillAuditInsert.final_subtotal_paise,
+        quickBillAuditInsert.bargain_floor_paise,
+        quickBillAuditInsert.accepted_amount_paise,
       ),
   )
 
@@ -359,7 +448,8 @@ export async function getQuotationById(db, quotationId) {
     .prepare(
       `SELECT id, customer_request_id, status, customer_name, customer_phone, customer_note,
               currency, subtotal_paise, adjustment_paise, total_paise, wa_message_text,
-              created_by_email, created_at, updated_at
+              created_by_email, created_at, updated_at,
+              ${QUOTATION_QUICK_BILL_AUDIT_SELECT_SQL}
        FROM quotations WHERE id = ?`,
     )
     .bind(quotationId)
@@ -390,9 +480,9 @@ export async function getQuotationWhatsAppPayload(db, quotationId) {
         .bind(quotation.customerRequestId)
         .first()
     : null
-  const message = buildQuotationWhatsAppMessage(quotation, quotation.items, {
-    requestSource: request?.source ?? null,
-  })
+  const requestSource = request?.source ?? null
+  const presented = await presentCustomerFacingQuotation(db, quotation, quotation.customerRequestId)
+  const message = buildQuotationWhatsAppMessage(presented, presented.items, { requestSource })
   return {
     ok: true,
     message,
@@ -405,6 +495,41 @@ export async function getQuotationWhatsAppPayload(db, quotationId) {
  * @param {D1Database} db
  * @param {string} requestId
  */
+/**
+ * Owner/Super Admin — persist customer-agreed amount on the active quotation (internal audit only).
+ *
+ * @param {D1Database} db
+ * @param {string} requestId
+ * @param {number} acceptedAmountPaise
+ */
+export async function patchActiveQuotationCustomerAgreedAmount(db, requestId, acceptedAmountPaise) {
+  const quotation = await getActiveQuotationForRequest(db, requestId)
+  if (!quotation) {
+    return { ok: false, status: 404, code: 'not_found', message: 'No quotation for this request.' }
+  }
+
+  const run = await db
+    .prepare(
+      `UPDATE quotations
+       SET accepted_amount_paise = ?, updated_at = datetime('now')
+       WHERE id = ? AND status != 'void'`,
+    )
+    .bind(acceptedAmountPaise, quotation.id)
+    .run()
+
+  if (!run.meta?.changes) {
+    return {
+      ok: false,
+      status: 409,
+      code: 'update_failed',
+      message: 'Could not save customer-agreed amount.',
+    }
+  }
+
+  const updated = await getQuotationById(db, quotation.id)
+  return { ok: true, quotation: updated }
+}
+
 export async function getOrderConfirmationWhatsAppPayload(db, requestId) {
   const row = await db
     .prepare(
@@ -423,7 +548,8 @@ export async function getOrderConfirmationWhatsAppPayload(db, requestId) {
     return { ok: false, status: 404, code: 'not_found', message: 'No quotation for this request.' }
   }
   const request = mapAdminCustomerRequestDetail(row, [])
-  const built = buildOrderConfirmationWhatsAppMessage(request, quotation)
+  const presented = await presentCustomerFacingQuotation(db, quotation, requestId)
+  const built = buildOrderConfirmationWhatsAppMessage(request, presented)
   if (!built.ok) {
     return {
       ok: false,

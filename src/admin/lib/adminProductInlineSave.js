@@ -1,9 +1,12 @@
 import { updateAdminProduct, updateAdminPurchaseRate } from '../api/adminApi.js'
-import { sellingPriceInrForProductWrite } from './adminProductSellingPricePayload.js'
+import {
+  finalPriceInrForProductWrite,
+  sellingPriceInrForProductWrite,
+} from './adminProductSellingPricePayload.js'
 
 const COMPANY_MAX_LENGTH = 120
 
-/** @typedef {'name' | 'company' | 'pack' | 'purchaseRateInr' | 'sellingPriceInr'} AdminProductInlineField */
+/** @typedef {'name' | 'company' | 'pack' | 'purchaseRateInr' | 'sellingPriceInr' | 'finalPriceInr' | 'piecesPerPack' | 'allowLooseSale'} AdminProductInlineField */
 
 /**
  * @param {string} productId
@@ -42,6 +45,35 @@ export async function saveAdminProductInlineField(productId, field, draft) {
       return { ok: false, message: 'Enter a valid selling price.' }
     }
     return updateAdminProduct(id, { sellingPriceInr: n })
+  }
+
+  if (field === 'finalPriceInr') {
+    const raw = String(draft ?? '').trim()
+    if (raw === '') {
+      return updateAdminProduct(id, { finalPriceInr: null })
+    }
+    const n = Number(raw)
+    if (!Number.isFinite(n) || n < 0) {
+      return { ok: false, message: 'Enter a valid final price.' }
+    }
+    return updateAdminProduct(id, { finalPriceInr: n })
+  }
+
+  if (field === 'piecesPerPack') {
+    const raw = String(draft ?? '').trim()
+    if (raw === '') {
+      return updateAdminProduct(id, { piecesPerPack: null })
+    }
+    const n = Number(raw)
+    if (!Number.isInteger(n) || n <= 0) {
+      return { ok: false, message: 'Pieces per Pack must be a positive whole number.' }
+    }
+    return updateAdminProduct(id, { piecesPerPack: n })
+  }
+
+  if (field === 'allowLooseSale') {
+    const yes = draft === '1' || draft === 'true' || String(draft).toLowerCase() === 'yes'
+    return updateAdminProduct(id, { allowLooseSale: yes })
   }
 
   if (field === 'purchaseRateInr') {
@@ -90,6 +122,26 @@ export function mergeAdminProductRowAfterInlineSave(row, field, result, draft) {
       sellingPriceInr: sellingPriceInr ?? null,
       hasSellingPrice: sellingPriceInr != null && sellingPriceInr > 0,
     }
+  }
+  if (field === 'finalPriceInr') {
+    const finalPriceInr = finalPriceInrForProductWrite({ finalPriceInr: draft })
+    return {
+      ...row,
+      finalPriceInr: finalPriceInr ?? null,
+      hasFinalPrice: finalPriceInr != null && finalPriceInr > 0,
+    }
+  }
+  if (field === 'piecesPerPack') {
+    const raw = String(draft ?? '').trim()
+    const piecesPerPack = raw === '' ? null : Number(raw)
+    return {
+      ...row,
+      piecesPerPack: Number.isInteger(piecesPerPack) && piecesPerPack > 0 ? piecesPerPack : null,
+    }
+  }
+  if (field === 'allowLooseSale') {
+    const yes = draft === '1' || draft === 'true' || String(draft).toLowerCase() === 'yes'
+    return { ...row, allowLooseSale: yes }
   }
 
   return row

@@ -80,7 +80,10 @@ export default function AdminProductCreatePage() {
     }
 
     const result = await createAdminProduct(
-      buildProductPayload({ ...values, id }, { includeSellingPrice: showSensitiveColumns }),
+      buildProductPayload({ ...values, id }, {
+        includeSellingPrice: showSensitiveColumns,
+        includeFinalPrice: showSensitiveColumns,
+      }),
     )
     if (!result.ok) {
       const fieldMsg = result.fields ? Object.values(result.fields).join(' ') : ''
@@ -121,7 +124,10 @@ export default function AdminProductCreatePage() {
     }
 
     setSubmitting(true)
-    const body = buildProductPayload(values, { includeSellingPrice: showSensitiveColumns })
+    const body = buildProductPayload(values, {
+      includeSellingPrice: showSensitiveColumns,
+      includeFinalPrice: showSensitiveColumns,
+    })
     delete body.id
     const result =
       persistedProductId && persistedProductId === values.id

@@ -1,5 +1,5 @@
 import { readJsonBody, JSON_HEADERS } from '../lib/http.js'
-import { canManageAdminUsers } from '../lib/adminRoles.js'
+import { canAssignQuickBillCustomerRequests, canManageAdminUsers } from '../lib/adminRoles.js'
 import {
   createAdminUser,
   listAdminUsers,
@@ -16,16 +16,35 @@ const NO_STORE = { ...JSON_HEADERS, 'Cache-Control': 'no-store' }
  * @param {{ identity: { userId?: string, email: string, role?: string } }} auth
  */
 export async function handleAdminUsersRoutes(request, env, auth) {
+  const url = new URL(request.url)
+  const { pathname } = url
+  const method = request.method
+
+  if (method === 'GET' && pathname === '/api/admin/users/assignees') {
+    if (!canAssignQuickBillCustomerRequests(auth.identity.role)) {
+      return Response.json(
+        { error: 'forbidden', message: 'Not allowed to list assignees.' },
+        { status: 403, headers: NO_STORE },
+      )
+    }
+    const users = await listAdminUsers(env.DB)
+    const assignees = users
+      .filter((u) => !u.disabled && (u.role === 'owner' || u.role === 'super_admin'))
+      .map((u) => ({
+        id: u.id,
+        email: u.email,
+        displayName: u.displayName,
+        role: u.role,
+      }))
+    return Response.json({ users: assignees }, { status: 200, headers: NO_STORE })
+  }
+
   if (!canManageAdminUsers(auth.identity.role)) {
     return Response.json(
       { error: 'forbidden', message: 'Owner access required.' },
       { status: 403, headers: NO_STORE },
     )
   }
-
-  const url = new URL(request.url)
-  const { pathname } = url
-  const method = request.method
 
   if (method === 'GET' && pathname === '/api/admin/users') {
     const users = await listAdminUsers(env.DB)

@@ -11,8 +11,13 @@ describe('imagePreviewSrc (admin product edit)', () => {
     assert.equal(imagePreviewSrc(local), expected)
   })
 
+  // it('keeps unmapped catalogue paths as local /images/...', () => {
+  //   const local = '/images/products/images-mobile-webp/GANGA_JAMUNA_AJN.webp'
+  //   assert.equal(catalogueCloudinaryByPath[local], undefined)
+  //   assert.equal(imagePreviewSrc(local), local)
+  // })
   it('keeps unmapped catalogue paths as local /images/...', () => {
-    const local = '/images/products/images-mobile-webp/GANGA_JAMUNA_AJN.webp'
+    const local = '/images/products/images-mobile-webp/UNMAPPED_TEST_IMAGE.webp'
     assert.equal(catalogueCloudinaryByPath[local], undefined)
     assert.equal(imagePreviewSrc(local), local)
   })

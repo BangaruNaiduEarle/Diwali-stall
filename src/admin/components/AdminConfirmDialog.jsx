@@ -12,6 +12,7 @@ export default function AdminConfirmDialog({
   cancelLabel = 'Cancel',
   confirmLabel = 'Confirm',
   confirmVariant = 'primary',
+  hideConfirm = false,
   onCancel,
   onConfirm,
   confirming = false,
@@ -58,20 +59,22 @@ export default function AdminConfirmDialog({
         <h2 id={titleId} className="text-lg font-semibold text-[var(--color-maroon)]">
           {title}
         </h2>
-        <p id={descId} className="mt-3 text-sm leading-relaxed text-[var(--color-charcoal)]">
+        <div id={descId} className="mt-3 text-sm leading-relaxed text-[var(--color-charcoal)]">
           {description}
-        </p>
+        </div>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row-reverse">
-          <Button
-            type="button"
-            variant={confirmVariant}
-            fullWidth
-            loading={confirming}
-            disabled={confirming}
-            onClick={onConfirm}
-          >
-            {confirmLabel}
-          </Button>
+          {!hideConfirm ? (
+            <Button
+              type="button"
+              variant={confirmVariant}
+              fullWidth
+              loading={confirming}
+              disabled={confirming}
+              onClick={onConfirm}
+            >
+              {confirmLabel}
+            </Button>
+          ) : null}
           <Button type="button" variant="secondary" surface="light" fullWidth disabled={confirming} onClick={onCancel}>
             {cancelLabel}
           </Button>

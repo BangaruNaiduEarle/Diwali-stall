@@ -128,8 +128,17 @@ export async function handleAdminCatalogueRoutes(request, env, url, identity = {
     if (usePageApi) {
       const parsed = parseAdminProductListQuery(url.searchParams)
       if (!parsed.ok) return validationErrorResponse(parsed.errors)
-      const { page, limit, offset, q, categorySlug, activeFilter, missingRateOnly, missingPurchaseRateOnly } =
-        parsed.data
+      const {
+        page,
+        limit,
+        offset,
+        q,
+        categorySlug,
+        activeFilter,
+        missingRateOnly,
+        missingPurchaseRateOnly,
+        flexSearch,
+      } = parsed.data
       const { products, total } = await listAdminProductsPage(db, {
         limit,
         offset,
@@ -138,6 +147,7 @@ export async function handleAdminCatalogueRoutes(request, env, url, identity = {
         activeFilter,
         missingRateOnly,
         missingPurchaseRateOnly,
+        flexSearch,
       })
       const totalPages = total === 0 ? 0 : Math.ceil(total / limit)
       return Response.json(
@@ -173,7 +183,7 @@ export async function handleAdminCatalogueRoutes(request, env, url, identity = {
     }
     const body = parseJsonObject(parsed.value)
     if (!body.ok) return validationErrorResponse(body.errors)
-    const payload = normalizeProductBody(body.data)
+    const payload = normalizeProductBody(body.data, adminRole)
     const result = await createAdminProduct(db, payload)
     if (!result.ok) return validationErrorResponse(result.errors)
     return Response.json(
@@ -333,7 +343,7 @@ export async function handleAdminCatalogueRoutes(request, env, url, identity = {
       }
       const body = parseJsonObject(parsed.value)
       if (!body.ok) return validationErrorResponse(body.errors)
-      const result = await updateAdminProduct(db, id, normalizeProductBody(body.data))
+      const result = await updateAdminProduct(db, id, normalizeProductBody(body.data, adminRole))
       if (!result.ok) {
         if (result.status === 404) {
           return Response.json({ error: result.code, message: 'Product not found.' }, { status: 404 })
@@ -380,9 +390,10 @@ export async function handleAdminCatalogueRoutes(request, env, url, identity = {
   return null
 }
 
-/** @param {Record<string, unknown>} data */
-function normalizeProductBody(data) {
-  return {
+/** @param {Record<string, unknown>} data @param {unknown} [role] */
+function normalizeProductBody(data, role) {
+  /** @type {Record<string, unknown>} */
+  const body = {
     id: data.id,
     categorySlug: data.categorySlug ?? data.category_slug,
     name: data.name,
@@ -395,5 +406,23 @@ function normalizeProductBody(data) {
     images: data.images,
     company: data.company,
     sellingPriceInr: data.sellingPriceInr ?? data.selling_price_inr,
+    piecesPerPack: data.piecesPerPack ?? data.pieces_per_pack,
+    allowLooseSale: parseAllowLooseSale(data.allowLooseSale ?? data.allow_loose_sale),
   }
+  if (canViewSensitiveProductPricing(role)) {
+    if (data.finalPriceInr !== undefined || data.final_price_inr !== undefined) {
+      body.finalPriceInr = data.finalPriceInr ?? data.final_price_inr
+    }
+  }
+  if (body.piecesPerPack === undefined) delete body.piecesPerPack
+  if (body.allowLooseSale === undefined) delete body.allowLooseSale
+  return body
+}
+
+/** @param {unknown} value */
+function parseAllowLooseSale(value) {
+  if (value === undefined) return undefined
+  if (value === true || value === 1 || value === '1') return true
+  if (value === false || value === 0 || value === '0') return false
+  return undefined
 }

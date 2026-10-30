@@ -62,6 +62,8 @@ export function parseAdminProductListQuery(searchParams) {
     category = String(categorySlug).trim()
   }
 
+  const flexSearch = searchParams.get('flexSearch') === '1'
+
   if (Object.keys(errors).length) return { ok: false, errors }
   return {
     ok: true,
@@ -74,6 +76,7 @@ export function parseAdminProductListQuery(searchParams) {
       activeFilter,
       missingRateOnly,
       missingPurchaseRateOnly,
+      flexSearch,
     },
   }
 }

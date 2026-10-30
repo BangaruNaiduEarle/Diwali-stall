@@ -89,7 +89,7 @@ async function handleRequest(request, env, ctx) {
       return familyPackResponse
     }
 
-    const customerRequestResponse = await handleAdminCustomerRequestRoutes(request, env, url)
+    const customerRequestResponse = await handleAdminCustomerRequestRoutes(request, env, url, auth.identity)
     if (customerRequestResponse) {
       return customerRequestResponse
     }

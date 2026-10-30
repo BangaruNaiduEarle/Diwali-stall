@@ -53,9 +53,11 @@ function phoneDigits(mobile) {
 
 /**
  * @param {unknown} body
+ * @param {{ quickBillItems?: boolean }} [options]
  * @returns {{ ok: true, data: NormalizedCustomerRequest } | { ok: false, errors: Record<string, string> }}
  */
-export function validateCustomerRequestBody(body) {
+export function validateCustomerRequestBody(body, options = {}) {
+  const quickBillItems = Boolean(options.quickBillItems)
   const errors = {}
 
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
@@ -166,7 +168,27 @@ export function validateCustomerRequestBody(body) {
           return
         }
 
-        const lineKey = productId ? `p:${productId}` : `fp:${familyPackId}`
+        let unitType = 'box'
+        if (quickBillItems && productId) {
+          const rawUnit = String(item.unitType ?? item.unit_type ?? 'box').trim().toLowerCase()
+          if (rawUnit !== 'box' && rawUnit !== 'piece') {
+            errors[`${prefix}.unitType`] = 'Unit type must be box or piece.'
+            return
+          }
+          unitType = /** @type {'box' | 'piece'} */ (rawUnit)
+        } else if (
+          !quickBillItems &&
+          (item.unitType !== undefined || item.unit_type !== undefined)
+        ) {
+          errors[`${prefix}.unitType`] = 'Unit type is not accepted on this request.'
+          return
+        }
+
+        const lineKey = productId
+          ? quickBillItems
+            ? `p:${productId}:${unitType}`
+            : `p:${productId}`
+          : `fp:${familyPackId}`
         if (seen.has(lineKey)) {
           errors[productId ? `${prefix}.productId` : `${prefix}.familyPackId`] = 'Duplicate line in request.'
           return
@@ -189,7 +211,11 @@ export function validateCustomerRequestBody(body) {
         } else if (quantity < CUSTOMER_REQUEST_LIMITS.minQuantity || quantity > CUSTOMER_REQUEST_LIMITS.maxQuantity) {
           errors[`${prefix}.quantity`] = `Quantity must be between ${CUSTOMER_REQUEST_LIMITS.minQuantity} and ${CUSTOMER_REQUEST_LIMITS.maxQuantity}.`
         } else if (productId) {
-          items.push({ productId, quantity })
+          if (quickBillItems) {
+            items.push({ productId, quantity, unitType })
+          } else {
+            items.push({ productId, quantity })
+          }
         } else {
           items.push({ familyPackId, quantity })
         }

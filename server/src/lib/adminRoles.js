@@ -27,6 +27,19 @@ export function canViewSensitiveProductPricing(role) {
   return r === 'owner' || r === 'super_admin'
 }
 
+/** Admin, Owner, and Super Admin can assign pending manual Quick Bill requests. */
+/** @param {unknown} role */
+export function canAssignQuickBillCustomerRequests(role) {
+  const r = normalizeAdminRole(role)
+  return r === 'admin' || r === 'owner' || r === 'super_admin'
+}
+
+/** Owner / Super Admin finalize pending manual Quick Bill requests. */
+/** @param {unknown} role */
+export function canFinalizeQuickBillCustomerRequests(role) {
+  return canViewSensitiveProductPricing(role)
+}
+
 /** Owner-only: admin user CRUD (super_admin does not inherit this). */
 /** @param {unknown} role */
 export function canManageAdminUsers(role) {

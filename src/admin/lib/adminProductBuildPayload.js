@@ -1,9 +1,12 @@
 import { isLocalPreviewUrl } from './adminImageUploadFlow.js'
-import { sellingPriceInrForProductWrite } from './adminProductSellingPricePayload.js'
+import {
+  finalPriceInrForProductWrite,
+  sellingPriceInrForProductWrite,
+} from './adminProductSellingPricePayload.js'
 
 /**
  * @param {import('../components/ProductForm.jsx').ProductFormValues} values
- * @param {{ includeSellingPrice?: boolean }} [opts]
+ * @param {{ includeSellingPrice?: boolean, includeFinalPrice?: boolean }} [opts]
  */
 export function buildProductPayload(values, opts = {}) {
   const payload = {
@@ -26,6 +29,12 @@ export function buildProductPayload(values, opts = {}) {
     const sellingInr = sellingPriceInrForProductWrite(values)
     if (sellingInr !== undefined) {
       payload.sellingPriceInr = sellingInr
+    }
+  }
+  if (opts.includeFinalPrice) {
+    const finalInr = finalPriceInrForProductWrite(values)
+    if (finalInr !== undefined) {
+      payload.finalPriceInr = finalInr
     }
   }
   return payload

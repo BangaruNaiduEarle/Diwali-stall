@@ -22,6 +22,14 @@ export function formatAdminProductPack(pack) {
   return s || '—'
 }
 
+/** @param {unknown} piecesPerPack */
+export function formatAdminProductPiecesPerPack(piecesPerPack) {
+  if (piecesPerPack === null || piecesPerPack === undefined || piecesPerPack === '') return '—'
+  const n = Number(piecesPerPack)
+  if (!Number.isInteger(n) || n <= 0) return '—'
+  return String(n)
+}
+
 /**
  * @param {unknown} images
  * @returns {string | null}

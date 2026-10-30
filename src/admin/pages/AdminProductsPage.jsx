@@ -12,6 +12,7 @@ import {
 import AdminConfirmDialog from '../components/AdminConfirmDialog.jsx'
 import AdminProductCard from '../components/AdminProductCard.jsx'
 import AdminProductTableInlineCell from '../components/AdminProductTableInlineCell.jsx'
+import AdminProductTableInlineYesNo from '../components/AdminProductTableInlineYesNo.jsx'
 import AdminProductTableThumb from '../components/AdminProductTableThumb.jsx'
 import AdminToast from '../components/AdminToast.jsx'
 import { mergeAdminProductRowAfterInlineSave } from '../lib/adminProductInlineSave.js'
@@ -24,6 +25,7 @@ import {
   adminProductListSellingPriceView,
   formatAdminProductCompany,
   formatAdminProductPack,
+  formatAdminProductPiecesPerPack,
 } from '../lib/adminProductTableDisplay.js'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
 import { canDeleteAdminProducts } from '../lib/adminRoles.js'
@@ -485,6 +487,9 @@ export default function AdminProductsPage() {
                       product={p}
                       showSensitiveColumns={showSensitiveColumns}
                       showUnitInSummary={showUnitColumn}
+                      activeInlineEdit={activeInlineEdit}
+                      onActivateInlineEdit={setActiveInlineEdit}
+                      onInlineSaved={(field, result, draft) => handleInlineSaved(id, field, result, draft)}
                       onDelete={
                         canDeleteProduct
                           ? (target) => setDeleteTarget({ id: target.id, name: target.name })
@@ -521,6 +526,9 @@ export default function AdminProductsPage() {
                   {showUnitColumn ? <th scope="col">Unit</th> : null}
                   {showSensitiveColumns ? <th scope="col">Purchase</th> : null}
                   <th scope="col">Selling Price</th>
+                  {showSensitiveColumns ? <th scope="col">Final Price</th> : null}
+                  <th scope="col">Pieces per Pack</th>
+                  <th scope="col">Allow Loose Sale</th>
                   {showMappingColumn ? <th scope="col">Mapping</th> : null}
                   <th scope="col">Status</th>
                   <th scope="col" className="admin-table__actions-col">
@@ -539,6 +547,14 @@ export default function AdminProductsPage() {
                       : ''
                   const sellingSeed =
                     sellingView.kind === 'value' && sellingView.inr != null ? String(sellingView.inr) : ''
+                  const finalSeed =
+                    p.hasFinalPrice || (Number.isFinite(Number(p.finalPriceInr)) && Number(p.finalPriceInr) > 0)
+                      ? String(p.finalPriceInr)
+                      : ''
+                  const piecesSeed =
+                    p.piecesPerPack != null && Number.isInteger(Number(p.piecesPerPack))
+                      ? String(p.piecesPerPack)
+                      : ''
                   const isEditing = (field) =>
                     activeInlineEdit?.id === id && activeInlineEdit?.field === field
                   return (
@@ -639,6 +655,51 @@ export default function AdminProductsPage() {
                               <span className="admin-table__meta admin-table__meta--warn">Missing</span>
                             )
                           }
+                        />
+                      </td>
+                      {showSensitiveColumns ? (
+                        <td className="tabular-nums">
+                          <AdminProductTableInlineCell
+                            productId={id}
+                            field="finalPriceInr"
+                            editable={showSensitiveColumns}
+                            inputMode="decimal"
+                            draftSeed={finalSeed}
+                            isActive={isEditing('finalPriceInr')}
+                            onActivate={() => setActiveInlineEdit({ id, field: 'finalPriceInr' })}
+                            onDeactivate={() => setActiveInlineEdit(null)}
+                            onSaved={(result, draft) => handleInlineSaved(id, 'finalPriceInr', result, draft)}
+                            display={
+                              p.hasFinalPrice ||
+                              (Number.isFinite(Number(p.finalPriceInr)) && Number(p.finalPriceInr) > 0) ? (
+                                formatOptionalInr(p.finalPriceInr)
+                              ) : (
+                                <span className="admin-table__meta">—</span>
+                              )
+                            }
+                          />
+                        </td>
+                      ) : null}
+                      <td className="tabular-nums">
+                        <AdminProductTableInlineCell
+                          productId={id}
+                          field="piecesPerPack"
+                          editable
+                          inputMode="numeric"
+                          draftSeed={piecesSeed}
+                          isActive={isEditing('piecesPerPack')}
+                          onActivate={() => setActiveInlineEdit({ id, field: 'piecesPerPack' })}
+                          onDeactivate={() => setActiveInlineEdit(null)}
+                          onSaved={(result, draft) => handleInlineSaved(id, 'piecesPerPack', result, draft)}
+                          display={formatAdminProductPiecesPerPack(p.piecesPerPack)}
+                        />
+                      </td>
+                      <td>
+                        <AdminProductTableInlineYesNo
+                          productId={id}
+                          field="allowLooseSale"
+                          value={p.allowLooseSale === true}
+                          onSaved={(result, draft) => handleInlineSaved(id, 'allowLooseSale', result, draft)}
                         />
                       </td>
                       {showMappingColumn ? (

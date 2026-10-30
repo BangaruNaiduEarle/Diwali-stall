@@ -50,6 +50,13 @@ export async function fetchAdminUsers() {
   return { ok: true, users: Array.isArray(users) ? users : [] }
 }
 
+export async function fetchAdminUserAssignees() {
+  const result = await apiRequest('/api/admin/users/assignees')
+  if (!result.ok) return result
+  const users = /** @type {{ users?: unknown[] }} */ (result.data ?? {}).users
+  return { ok: true, users: Array.isArray(users) ? users : [] }
+}
+
 export async function createAdminUser(body) {
   return apiRequest('/api/admin/users', {
     method: 'POST',
@@ -86,13 +93,14 @@ export async function updateAdminUserRole(id, role) {
  * @param {{ includeArchived?: boolean, limit?: number, offset?: number }} [opts]
  */
 /**
- * @param {{ page?: number, limit?: number, q?: string, categorySlug?: string, missingRateOnly?: boolean, missingPurchaseRateOnly?: boolean, includeArchived?: boolean }} opts
+ * @param {{ page?: number, limit?: number, q?: string, categorySlug?: string, missingRateOnly?: boolean, missingPurchaseRateOnly?: boolean, includeArchived?: boolean, flexSearch?: boolean }} opts
  */
 export async function fetchAdminProductsPage(opts = {}) {
   const params = new URLSearchParams()
   params.set('page', String(opts.page ?? 1))
   if (opts.limit != null) params.set('limit', String(opts.limit))
   if (opts.q) params.set('q', opts.q)
+  if (opts.flexSearch) params.set('flexSearch', '1')
   if (opts.categorySlug) params.set('category', opts.categorySlug)
   if (opts.missingRateOnly) params.set('missingRate', '1')
   if (opts.missingPurchaseRateOnly) params.set('missingPurchaseRate', '1')
@@ -267,6 +275,8 @@ export async function fetchAdminCustomerRequests(opts = {}) {
   const params = new URLSearchParams()
   params.set('page', String(opts.page ?? 1))
   if (opts.status) params.set('status', opts.status)
+  if (opts.finalizationStatus) params.set('finalizationStatus', opts.finalizationStatus)
+  if (opts.assignedToMe) params.set('assignedToMe', '1')
   const q = typeof opts.q === 'string' ? opts.q.trim() : ''
   if (q) params.set('q', q)
   const result = await apiRequest(`/api/admin/customer-requests?${params.toString()}`)
@@ -290,6 +300,127 @@ export async function fetchAdminCustomerRequest(id) {
  * @param {string} id
  * @param {string} status
  */
+/**
+ * @param {string} id
+ * @param {{ assigneeUserId?: string, assigneeEmail?: string }} body
+ */
+/** @param {string} id */
+export async function patchAdminCustomerRequestCustomerAgreed(id) {
+  const result = await apiRequest(
+    `/api/admin/customer-requests/${encodeURIComponent(id)}/customer-agreed`,
+    { method: 'PATCH' },
+  )
+  if (!result.ok) return result
+  const data = /** @type {{ request?: Record<string, unknown> }} */ (result.data ?? {})
+  if (!data.request) {
+    return {
+      ok: false,
+      status: result.status,
+      error: 'invalid_response',
+      message: 'Customer agreement response was invalid.',
+    }
+  }
+  return { ok: true, request: data.request }
+}
+
+/** @param {string} id */
+export async function patchAdminCustomerRequestFinalize(id) {
+  const result = await apiRequest(
+    `/api/admin/customer-requests/${encodeURIComponent(id)}/finalize`,
+    { method: 'PATCH' },
+  )
+  if (!result.ok) return result
+  const data = /** @type {{ request?: Record<string, unknown> }} */ (result.data ?? {})
+  if (!data.request) {
+    return {
+      ok: false,
+      status: result.status,
+      error: 'invalid_response',
+      message: 'Finalize response was invalid.',
+    }
+  }
+  return { ok: true, request: data.request }
+}
+
+/** @param {string} id @param {{ items: { productId: string, quantity: number, unitType?: string }[] }} body */
+export async function previewAdminCustomerRequestAdjustBill(id, body) {
+  const result = await apiRequest(
+    `/api/admin/customer-requests/${encodeURIComponent(id)}/adjust-bill/preview`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    },
+  )
+  if (!result.ok) return result
+  const preview = /** @type {Record<string, unknown> | undefined} */ (
+    /** @type {{ preview?: unknown }} */ (result.data ?? {}).preview
+  )
+  if (!preview || typeof preview !== 'object') {
+    return {
+      ok: false,
+      status: result.status,
+      error: 'invalid_response',
+      message: 'Adjust bill preview response was invalid.',
+    }
+  }
+  return { ok: true, preview }
+}
+
+/** @param {string} id @param {{ items: { productId: string, quantity: number, unitType?: string }[], acceptedAmountInr?: string }} body */
+export async function patchAdminCustomerRequestAdjustBill(id, body) {
+  const result = await apiRequest(
+    `/api/admin/customer-requests/${encodeURIComponent(id)}/adjust-bill`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    },
+  )
+  if (!result.ok) return result
+  const data = /** @type {{ request?: Record<string, unknown>, quotation?: Record<string, unknown>, clearedAcceptedAmount?: boolean, savedAcceptedAmount?: boolean }} */ (
+    result.data ?? {}
+  )
+  if (!data.request) {
+    return {
+      ok: false,
+      status: result.status,
+      error: 'invalid_response',
+      message: 'Adjust bill response was invalid.',
+    }
+  }
+  return {
+    ok: true,
+    request: data.request,
+    quotation: data.quotation ?? null,
+    clearedAcceptedAmount: Boolean(data.clearedAcceptedAmount),
+    savedAcceptedAmount: Boolean(data.savedAcceptedAmount),
+  }
+}
+
+export async function patchAdminCustomerRequestAssign(id, body) {
+  const payload =
+    body.assigneeUserId != null && String(body.assigneeUserId).trim()
+      ? { assigneeUserId: String(body.assigneeUserId).trim() }
+      : { assigneeEmail: String(body.assigneeEmail ?? '').trim().toLowerCase() }
+  const result = await apiRequest(
+    `/api/admin/customer-requests/${encodeURIComponent(id)}/assign`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    },
+  )
+  if (!result.ok) return result
+  const data = /** @type {{ request?: Record<string, unknown> }} */ (result.data ?? {})
+  if (!data.request) {
+    return {
+      ok: false,
+      status: result.status,
+      error: 'invalid_response',
+      message: 'Assign response was invalid.',
+    }
+  }
+  return { ok: true, request: data.request }
+}
+
 export async function patchAdminCustomerRequestStatus(id, status) {
   const result = await apiRequest(
     `/api/admin/customer-requests/${encodeURIComponent(id)}/status`,
@@ -335,6 +466,21 @@ export async function fetchQuotationForRequest(requestId) {
   return apiRequest(`/api/admin/customer-requests/${encodeURIComponent(requestId)}/quotation`)
 }
 
+/**
+ * Owner/Super Admin — save customer-agreed amount on the active quotation (internal audit).
+ * @param {string} requestId
+ * @param {{ acceptedAmountInr: string }} body
+ */
+export async function patchQuotationCustomerAgreedAmount(requestId, body) {
+  return apiRequest(
+    `/api/admin/customer-requests/${encodeURIComponent(requestId)}/quotation/customer-agreed-amount`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    },
+  )
+}
+
 /** @param {string} quotationId */
 export async function fetchQuotationWhatsApp(quotationId) {
   return apiRequest(`/api/admin/quotations/${encodeURIComponent(quotationId)}/whatsapp`)
@@ -347,11 +493,15 @@ export async function fetchOrderConfirmationWhatsApp(requestId) {
   )
 }
 
-/** @param {{ productId: string, quantity: number }[]} items */
-export async function previewQuickBill(items) {
+/**
+ * @param {{ productId: string, quantity: number, unitType?: 'box' | 'piece' }[]} items
+ * @param {{ pricingMode?: 'selling' | 'bargain' }} [options]
+ */
+export async function previewQuickBill(items, options = {}) {
+  const pricingMode = options.pricingMode === 'bargain' ? 'bargain' : 'selling'
   const result = await apiRequest('/api/admin/quick-bill/preview', {
     method: 'POST',
-    body: JSON.stringify({ items }),
+    body: JSON.stringify({ items, pricingMode }),
   })
   if (!result.ok) return result
   const preview = /** @type {{ preview?: unknown }} */ (result.data ?? {}).preview
@@ -367,7 +517,12 @@ export async function previewQuickBill(items) {
 }
 
 /**
- * @param {{ customer: { name: string, mobile: string, area?: string, note?: string }, items: { productId: string, quantity: number }[] }} payload
+ * @param {{
+ *   customer: { name: string, mobile: string, area?: string, note?: string },
+ *   items: { productId: string, quantity: number, unitType?: 'box' | 'piece' }[],
+ *   pricingMode?: 'selling' | 'bargain',
+ *   acceptedAmountPaise?: number,
+ * }} payload
  */
 export async function checkoutQuickBill(payload) {
   const result = await apiRequest('/api/admin/quick-bill/checkout', {
@@ -375,7 +530,7 @@ export async function checkoutQuickBill(payload) {
     body: JSON.stringify(payload),
   })
   if (!result.ok) return result
-  const data = /** @type {{ request?: unknown, quotation?: unknown }} */ (result.data ?? {})
+  const data = /** @type {{ request?: unknown, quotation?: unknown, warnings?: unknown }} */ (result.data ?? {})
   if (!data.request || !data.quotation) {
     return {
       ok: false,
@@ -384,7 +539,10 @@ export async function checkoutQuickBill(payload) {
       message: 'Checkout response was invalid.',
     }
   }
-  return { ok: true, request: data.request, quotation: data.quotation }
+  const warnings = Array.isArray(data.warnings)
+    ? data.warnings.filter((w) => w && typeof w === 'object')
+    : undefined
+  return { ok: true, request: data.request, quotation: data.quotation, warnings }
 }
 
 export async function requestUploadSign(productId, slot) {
