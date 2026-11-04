@@ -5,6 +5,7 @@ import {
   deleteAdminProduct,
   setAdminProductActive,
 } from '../src/services/adminProducts.js'
+import { DEFAULT_ADMIN_SEASON_ID } from '../src/services/adminSeasonContext.js'
 import { createLocalD1Database } from './helpers/localD1Database.js'
 import { d1ExecLocal } from './helpers/d1Local.js'
 import {
@@ -37,7 +38,7 @@ describe('admin product delete and active', () => {
   it('deactivates and reactivates without removing the row', async () => {
     deleteTestProductsById([DELETE_SAFE_ID])
     const db = createLocalD1Database()
-    const created = await createAdminProduct(db, {
+    const created = await createAdminProduct(db, DEFAULT_ADMIN_SEASON_ID, {
       id: DELETE_SAFE_ID,
       name: 'Toggle product',
       categorySlug: 'others',
@@ -47,9 +48,9 @@ describe('admin product delete and active', () => {
     })
     assert.equal(created.ok, true, JSON.stringify(created))
 
-    const off = await setAdminProductActive(db, DELETE_SAFE_ID, false)
+    const off = await setAdminProductActive(db, DEFAULT_ADMIN_SEASON_ID, DELETE_SAFE_ID, false)
     assert.equal(off.ok, true)
-    const on = await setAdminProductActive(db, DELETE_SAFE_ID, true)
+    const on = await setAdminProductActive(db, DEFAULT_ADMIN_SEASON_ID, DELETE_SAFE_ID, true)
     assert.equal(on.ok, true)
     if (on.ok) assert.equal(on.product.active, true)
   })
@@ -57,7 +58,7 @@ describe('admin product delete and active', () => {
   it('blocks delete when referenced by customer request items', async () => {
     deleteTestProductsById([DELETE_REF_ID])
     const db = createLocalD1Database()
-    const created = await createAdminProduct(db, {
+    const created = await createAdminProduct(db, DEFAULT_ADMIN_SEASON_ID, {
       id: DELETE_REF_ID,
       name: 'Referenced product',
       categorySlug: 'others',
@@ -75,7 +76,7 @@ describe('admin product delete and active', () => {
        VALUES ('${DELETE_REF_REQUEST_ID}', 1, '${DELETE_REF_ID}', 'Referenced product', 1)`,
     )
 
-    const blocked = await deleteAdminProduct(db, DELETE_REF_ID)
+    const blocked = await deleteAdminProduct(db, DEFAULT_ADMIN_SEASON_ID, DELETE_REF_ID)
     assert.equal(blocked.ok, false)
     if (!blocked.ok) {
       assert.equal(blocked.status, 409)
@@ -86,7 +87,7 @@ describe('admin product delete and active', () => {
   it('deletes product when nothing references it', async () => {
     deleteTestProductsById([DELETE_SAFE_ID])
     const db = createLocalD1Database()
-    const created = await createAdminProduct(db, {
+    const created = await createAdminProduct(db, DEFAULT_ADMIN_SEASON_ID, {
       id: DELETE_SAFE_ID,
       name: 'Disposable product',
       categorySlug: 'others',
@@ -95,7 +96,7 @@ describe('admin product delete and active', () => {
     })
     assert.equal(created.ok, true, JSON.stringify(created))
 
-    const deleted = await deleteAdminProduct(db, DELETE_SAFE_ID)
+    const deleted = await deleteAdminProduct(db, DEFAULT_ADMIN_SEASON_ID, DELETE_SAFE_ID)
     assert.equal(deleted.ok, true)
     const row = await db.prepare('SELECT id FROM products WHERE id = ?').bind(DELETE_SAFE_ID).first()
     assert.equal(row, null)

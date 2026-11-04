@@ -1,23 +1,32 @@
 import { categorySlugToLabel } from '../lib/categorySlug.js'
 import { LIMITS, isValidCategorySlug } from '../lib/validation.js'
+import { adminCatalogueScope } from '../lib/adminCatalogueScope.js'
 
-/** @param {D1Database} db */
-export async function listAdminCategories(db) {
+/** @param {D1Database} db @param {string} seasonId */
+export async function listAdminCategories(db, seasonId, context) {
+  const scope = adminCatalogueScope(db, seasonId, context)
   const result = await db
     .prepare(
       `SELECT slug, label, sort_order, created_at, updated_at
        FROM categories
+       WHERE ${scope.column} = ?
        ORDER BY sort_order ASC, slug ASC`,
     )
+    .bind(scope.value)
     .all()
   return result.results ?? []
 }
 
 /**
  * @param {D1Database} db
+ * @param {string} seasonId
  * @param {{ slug: string, label: string, sort_order?: number }} input
  */
-export async function createCategory(db, input) {
+export async function createCategory(db, seasonId, input, context) {
+  const scope = adminCatalogueScope(db, seasonId, context, true)
+  const season = scope.seasonId
+  if (!season) return { ok: false, errors: { _season: 'seasonId required.' } }
+
   const slug = String(input.slug ?? '').trim().toLowerCase()
   const label = String(input.label ?? '').trim()
   const sort_order = Number.isFinite(input.sort_order) ? Number(input.sort_order) : 0
@@ -28,27 +37,43 @@ export async function createCategory(db, input) {
 
   if (Object.keys(errors).length) return { ok: false, errors }
 
-  const exists = await db.prepare('SELECT 1 FROM categories WHERE slug = ?').bind(slug).first()
+  const exists = await db
+    // Slugs remain global primary keys. Report reservation without owner details.
+    .prepare(scope.locationId ? 'SELECT 1 FROM categories WHERE slug = ?' : 'SELECT 1 FROM categories WHERE slug = ? AND season_id = ?')
+    .bind(...(scope.locationId ? [slug] : [slug, season]))
+    .first()
   if (exists) return { ok: false, errors: { slug: 'Category slug already exists.' } }
 
-  await db
-    .prepare(
-      `INSERT INTO categories (slug, label, sort_order) VALUES (?, ?, ?)`,
-    )
-    .bind(slug, label, sort_order)
-    .run()
+  try {
+    await db
+      .prepare(scope.locationId
+        ? 'INSERT INTO categories (slug, label, sort_order, season_id, location_id) VALUES (?, ?, ?, ?, ?)'
+        : 'INSERT INTO categories (slug, label, sort_order, season_id) VALUES (?, ?, ?, ?)')
+      .bind(slug, label, sort_order, season, ...(scope.locationId ? [scope.locationId] : []))
+      .run()
+  } catch (error) {
+    if (scope.locationId && /UNIQUE constraint failed: categories\.slug/i.test(String(error?.message))) {
+      return { ok: false, errors: { slug: 'Category slug already exists.' } }
+    }
+    throw error
+  }
 
   return { ok: true, category: { slug, label, sort_order } }
 }
 
 /**
  * @param {D1Database} db
+ * @param {string} seasonId
  * @param {string} slug
  * @param {{ label?: string, sort_order?: number }} patch
  */
-export async function updateCategory(db, slug, patch) {
+export async function updateCategory(db, seasonId, slug, patch, context) {
+  const scope = adminCatalogueScope(db, seasonId, context, true)
   const key = String(slug ?? '').trim()
-  const row = await db.prepare('SELECT slug FROM categories WHERE slug = ?').bind(key).first()
+  const row = await db
+    .prepare(`SELECT slug FROM categories WHERE slug = ? AND ${scope.column} = ?`)
+    .bind(key, scope.value)
+    .first()
   if (!row) return { ok: false, status: 404, code: 'not_found' }
 
   const updates = []
@@ -76,17 +101,18 @@ export async function updateCategory(db, slug, patch) {
   }
 
   updates.push("updated_at = datetime('now')")
-  binds.push(key)
+  binds.push(scope.value, key)
 
   await db
-    .prepare(`UPDATE categories SET ${updates.join(', ')} WHERE slug = ?`)
+    .prepare(`UPDATE categories SET ${updates.join(', ')} WHERE ${scope.column} = ? AND slug = ?`)
     .bind(...binds)
     .run()
 
   const updated = await db
-    .prepare('SELECT slug, label, sort_order FROM categories WHERE slug = ?')
-    .bind(key)
+    .prepare(`SELECT slug, label, sort_order FROM categories WHERE slug = ? AND ${scope.column} = ?`)
+    .bind(key, scope.value)
     .first()
+  if (scope.locationId && !updated) return { ok: false, status: 404, code: 'not_found' }
 
   return { ok: true, category: updated }
 }

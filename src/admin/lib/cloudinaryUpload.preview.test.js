@@ -4,11 +4,10 @@ import { catalogueCloudinaryByPath } from '../../data/catalogueCloudinaryByPath.
 import { imagePreviewSrc } from './cloudinaryUpload.js'
 
 describe('imagePreviewSrc (admin product edit)', () => {
-  it('resolves mapped catalogue paths to Cloudinary for preview', () => {
+  it('resolves mapped catalogue paths to local /images/... for preview', () => {
     const local = '/images/products/images-mobile-webp/GC_BIG_10p_LEO.webp'
-    const expected = catalogueCloudinaryByPath[local]
-    assert.ok(expected?.startsWith('https://'))
-    assert.equal(imagePreviewSrc(local), expected)
+    assert.ok(catalogueCloudinaryByPath[local]?.startsWith('https://'))
+    assert.equal(imagePreviewSrc(local), local)
   })
 
   // it('keeps unmapped catalogue paths as local /images/...', () => {
@@ -22,9 +21,15 @@ describe('imagePreviewSrc (admin product edit)', () => {
     assert.equal(imagePreviewSrc(local), local)
   })
 
-  it('passes through Cloudinary URLs from uploads', () => {
-    const url = 'https://res.cloudinary.com/dn0puzofw/image/upload/v1/diwali/products/P005/1.webp'
-    assert.equal(imagePreviewSrc(url), url)
+  it('maps known Cloudinary catalogue URLs to local paths for preview', () => {
+    const local = '/images/products/images-mobile-webp/GC_BIG_10p_LEO.webp'
+    const url = catalogueCloudinaryByPath[local]
+    assert.equal(imagePreviewSrc(url), local)
+  })
+
+  it('maps supplemental Cloudinary product URLs to local paths for preview', () => {
+    const url = 'https://res.cloudinary.com/dn0puzofw/image/upload/v1792769924/diwali/products/P114/1.webp'
+    assert.equal(imagePreviewSrc(url), '/images/products/images-mobile-webp/dora-dora.webp')
   })
 
   it('returns empty for non-previewable strings', () => {

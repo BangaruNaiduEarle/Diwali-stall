@@ -6,15 +6,17 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { isValidCategorySlug } from '../utils/categoryCounts'
 import { getCategoryLabelFromSlug } from '../utils/filterProducts'
 import { cataloguePath } from '../utils/catalogueRoutes'
+import { useCatalogueProducts } from '../context/CatalogueProductsContext'
 
 export default function Category() {
   const { categorySlug } = useParams()
   const navigate = useNavigate()
-  const valid = isValidCategorySlug(categorySlug)
-  const label = valid ? getCategoryLabelFromSlug(categorySlug) : ''
+  const { categories, loading, error } = useCatalogueProducts()
+  const valid = isValidCategorySlug(categorySlug, categories)
+  const label = valid ? getCategoryLabelFromSlug(categorySlug, categories) : ''
   usePageTitle(valid ? label : 'Page not found')
 
-  if (!valid) {
+  if (!loading && !error && !valid) {
     return <Navigate to="/404" replace />
   }
 

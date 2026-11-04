@@ -14,6 +14,8 @@ describe('public product SQL separation', () => {
     assert.ok(!sql.includes('unit_rate'))
     assert.ok(sql.includes('selling_price_paise'))
     assert.ok(sql.includes('selling_price_paise > 0'))
+    assert.ok(sql.includes('p.season_id = ?'))
+    assert.ok(sql.includes('c.season_id = p.season_id'))
   })
 
   it('by-id SQL does not reference private_rates', () => {
@@ -21,6 +23,8 @@ describe('public product SQL separation', () => {
     assert.ok(!sql.includes('private_rates'))
     assert.ok(!sql.includes('unit_rate'))
     assert.ok(sql.includes('selling_price_paise > 0'))
+    assert.ok(sql.includes('p.season_id = ?'))
+    assert.ok(sql.includes('c.season_id = p.season_id'))
   })
 
   it('mapPublicProductRow omits private rate fields but includes D1 selling price', () => {
@@ -88,24 +92,35 @@ describe('public product SQL separation', () => {
     const db = createBindCaptureDb(binds)
 
     await listPublicProducts(db, {})
-    assert.deepEqual(binds.at(-1), [50, 0])
+    assert.deepEqual(binds.at(-1), ['season-2026', 50, 0])
 
     await listPublicProducts(db, { limit: 200, offset: 100 })
-    assert.deepEqual(binds.at(-1), [100, 100])
+    assert.deepEqual(binds.at(-1), ['season-2026', 100, 100])
 
     await listPublicProducts(db, { limit: 0, offset: -5 })
-    assert.deepEqual(binds.at(-1), [50, 0])
+    assert.deepEqual(binds.at(-1), ['season-2026', 50, 0])
 
     await listPublicProducts(db, { limit: 1, offset: 160 })
-    assert.deepEqual(binds.at(-1), [1, 160])
+    assert.deepEqual(binds.at(-1), ['season-2026', 1, 160])
   })
 })
 
 function createBindCaptureDb(binds) {
   return {
-    prepare() {
+    prepare(sql) {
+      const normalized = String(sql).replace(/\s+/g, ' ').trim()
       return {
         bind(...params) {
+          if (normalized.includes('FROM platform_settings') && normalized.includes('public_catalogue_season_id')) {
+            return {
+              async first() {
+                return { public_catalogue_season_id: 'season-2026' }
+              },
+            }
+          }
+          if (normalized.includes('FROM business_seasons') && normalized.includes('SELECT status')) {
+            return { async first() { return { status: 'active' } } }
+          }
           binds.push(params)
           return {
             async all() {

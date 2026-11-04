@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import { ChevronRight, HelpCircle } from 'lucide-react'
-import { CATALOG_CATEGORIES } from '../data/categories'
 import PreorderMarquee from '../components/PreorderMarquee'
 import FestiveHero from '../components/hero/FestiveHero'
 import ComplimentaryGiftPromo from '../components/promo/ComplimentaryGiftPromo'
@@ -14,23 +13,14 @@ import { getCategoryIcon } from '../utils/categoryIcons'
 import { getWhatsAppEnquiryUrl } from '../utils/whatsapp'
 
 const ICON = { strokeWidth: 1.8 }
-const HOME_CATEGORY_SLUGS = [
-  'gift-boxes',
-  'sparklers',
-  'flower-pots-fountains',
-  'chakkars-wheels',
-  'bombs',
-  'bijili',
-]
+const HOME_CATEGORY_LIMIT = 6
 
 function Home() {
   usePageTitle('Diwali Crackers')
   const whatsAppUrl = getWhatsAppEnquiryUrl()
-  const { products, loading: catalogueLoading } = useCatalogueProducts()
+  const { products, categories: catalogueCategories, loading: catalogueLoading } = useCatalogueProducts()
   const counts = getCategoryProductCounts(products)
-  const categories = CATALOG_CATEGORIES.filter(
-    (c) => c.slug !== 'all' && HOME_CATEGORY_SLUGS.includes(c.slug),
-  )
+  const categories = catalogueCategories.filter((c) => c.slug !== 'all').slice(0, HOME_CATEGORY_LIMIT)
 
   return (
     <>

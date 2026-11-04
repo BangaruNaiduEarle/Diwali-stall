@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import worker from '../src/index.js'
+import { createMockCustomerRequestDb } from './helpers/mockCustomerRequestDb.js'
 
 const ADMIN_PATHS = [
   ['GET', '/api/admin/session'],
@@ -69,6 +70,10 @@ describe('admin catalogue routes authorization', () => {
   })
 
   it('POST /api/public/customer-requests does not require admin auth', async () => {
+    // A usable public catalogue is required even though admin authentication is not.
+    const db = createMockCustomerRequestDb({ products: [
+      { id: 'P001', name: 'Public product', active: 1, stock_status: 'available', selling_price_paise: 10000 },
+    ] })
     const res = await worker.fetch(
       new Request('https://example.com/api/public/customer-requests', {
         method: 'POST',
@@ -78,11 +83,10 @@ describe('admin catalogue routes authorization', () => {
           items: [{ productId: 'P001', quantity: 1 }],
         }),
       }),
-      { DB: createLocalDbStub() },
+      { DB: db },
       {},
     )
-    assert.notEqual(res.status, 401)
-    assert.notEqual(res.status, 503)
+    assert.equal(res.status, 201)
   })
 })
 

@@ -4,16 +4,20 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:handover": "node --test --test-concurrency=1 src/shared/handoverProtocol.test.js src/admin/offline/handover.test.js src/admin/offline/familyPackHandover.test.js server/tests/handoverSync.test.js server/tests/requestWorkflowHistory.test.js server/tests/billAdjustmentsHandover.test.js server/tests/requestPayments.test.js server/tests/adminQuickBillAtomic.test.js server/tests/adminCustomerRequestFinalizeAgreed.test.js server/tests/adminFamilyPackLocation.test.js server/tests/adminFamilyPackSeason.test.js server/tests/publicFamilyPackSeason.test.js tests/estimateFamilyPack.test.js",
+    "test:offline": "node --test --test-concurrency=1 server/tests/offlineSync.test.js src/admin/offline/offline.test.js src/admin/offline/appShell.test.js src/admin/offline/storageHealth.test.js src/admin/api/adminOffline.test.js",
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "packs:verify": "node scripts/verify-family-packs.mjs",
-    "test": "node --test --test-concurrency=1 tests/vercelApiProxyConfig.test.js tests/familyPackUploadSignRequest.test.js src/api/resolveApiUrl.test.js src/utils/estimateHelpers.test.js src/utils/whatsapp.test.js tests/estimatePersistence.test.js src/admin/lib/adminCustomerRequestDisplay.test.js src/admin/lib/adminCustomerRequestInternalSummary.test.js src/lib/agreedBelowFinalWarning.test.js tests/estimateFamilyPack.test.js src/utils/estimateHistory.test.js src/utils/storefrontCustomerRequestPayload.test.js src/admin/lib/adminDateTime.test.js src/admin/lib/adminNavigationFlash.test.js src/admin/lib/adminFamilyPackPaths.test.js src/admin/lib/adminFamilyPackSlug.test.js src/admin/lib/adminFamilyPackFormValidation.test.js src/admin/lib/adminFamilyPackEditMode.test.js src/admin/lib/adminFamilyPackImageSave.test.js src/admin/lib/buildFamilyPackPersistPayload.test.js src/admin/lib/adminProductImageSave.test.js src/admin/api/adminApi.customerRequestStatus.test.js src/admin/api/adminApi.logout.test.js src/admin/components/adminSignOut.test.js src/admin/lib/adminAuthHints.test.js src/admin/lib/adminLogout.test.js src/admin/lib/adminSessionLogoutFlow.test.js src/admin/lib/adminProductTableDisplay.test.js src/admin/lib/adminProductTableColumns.test.js src/admin/lib/adminRoles.test.js src/admin/lib/adminImageUploadFlow.test.js src/admin/lib/cloudinaryUpload.preview.test.js src/admin/lib/copyToClipboard.test.js src/admin/lib/customerRequestStatus.test.js src/admin/lib/quotationWhatsAppMessage.test.js src/admin/lib/quickBillCart.test.js src/admin/lib/quickBillProductImage.test.js"
+    "test": "node --test --test-concurrency=1 tests/vercelApiProxyConfig.test.js tests/familyPackUploadSignRequest.test.js src/api/resolveApiUrl.test.js src/utils/estimateHelpers.test.js src/utils/whatsapp.test.js tests/estimatePersistence.test.js src/admin/lib/adminCustomerRequestDisplay.test.js src/admin/lib/adminCustomerRequestInternalSummary.test.js src/lib/agreedBelowFinalWarning.test.js tests/estimateFamilyPack.test.js src/utils/estimateHistory.test.js src/utils/storefrontCustomerRequestPayload.test.js src/admin/lib/adminDateTime.test.js src/admin/lib/adminNavigationFlash.test.js src/admin/lib/adminFamilyPackPaths.test.js src/admin/lib/adminFamilyPackSlug.test.js src/admin/lib/adminFamilyPackFormValidation.test.js src/admin/lib/adminFamilyPackEditMode.test.js src/admin/lib/adminFamilyPackImageSave.test.js src/admin/lib/buildFamilyPackPersistPayload.test.js src/admin/lib/adminProductImageSave.test.js src/admin/api/adminApi.customerRequestStatus.test.js src/admin/api/adminApi.logout.test.js src/admin/components/adminSignOut.test.js src/admin/lib/adminAuthHints.test.js src/admin/lib/adminLogout.test.js src/admin/lib/adminSessionLogoutFlow.test.js src/admin/lib/adminProductTableDisplay.test.js src/admin/lib/adminProductTableColumns.test.js src/admin/lib/adminRoles.test.js src/admin/lib/adminImageUploadFlow.test.js src/admin/lib/cloudinaryUpload.preview.test.js src/admin/lib/copyToClipboard.test.js src/admin/lib/customerRequestStatus.test.js src/admin/lib/quotationWhatsAppMessage.test.js src/admin/lib/quickBillCart.test.js src/admin/lib/quickBillProductImage.test.js src/admin/api/adminLocationContext.test.js"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "jsqr": "^1.4.0",
     "lucide-react": "^1.51.0",
+    "qrcode": "^1.5.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.4",
@@ -24,7 +28,8 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "fake-indexeddb": "^6.2.7",
     "oxlint": "^1.81.0",
-    "vite": "^8.3.0"
+    "vite": "8.3.3"
   }
 }

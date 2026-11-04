@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { createAdminProduct, listAdminProducts } from '../src/services/adminProducts.js'
+import { DEFAULT_ADMIN_SEASON_ID } from '../src/services/adminSeasonContext.js'
 import { getPublicProductById, listPublicProducts } from '../src/services/publicProducts.js'
 import { createLocalD1Database } from './helpers/localD1Database.js'
 import { d1ExecLocal } from './helpers/d1Local.js'
@@ -31,7 +32,7 @@ describe('public catalogue selling price gate', { concurrency: 1 }, () => {
       [ZERO_PRICE_ID, 1],
       [INACTIVE_PRICED_ID, 120],
     ]) {
-      const created = await createAdminProduct(db, {
+      const created = await createAdminProduct(db, DEFAULT_ADMIN_SEASON_ID, {
         id,
         name: `Gate ${id}`,
         categorySlug: 'others',
@@ -45,7 +46,10 @@ describe('public catalogue selling price gate', { concurrency: 1 }, () => {
     d1ExecLocal(`UPDATE products SET selling_price_paise = 0 WHERE id = '${ZERO_PRICE_ID}'`)
     d1ExecLocal(`UPDATE products SET active = 0 WHERE id = '${INACTIVE_PRICED_ID}'`)
 
-    const adminRows = await listAdminProducts(db, { includeArchived: true })
+    const adminRows = await listAdminProducts(db, {
+      seasonId: DEFAULT_ADMIN_SEASON_ID,
+      includeArchived: true,
+    })
     for (const id of ALL_IDS) {
       assert.ok(adminRows.some((p) => p.id === id), `admin should still list ${id}`)
     }

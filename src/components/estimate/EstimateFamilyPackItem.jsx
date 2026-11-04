@@ -1,12 +1,15 @@
 import { Gift, Trash2 } from 'lucide-react'
 import QuantityControl from '../QuantityControl'
 import { formatINR } from '../../utils/currency'
+import { normalizeProductImageUrl } from '../../utils/productImage.js'
 
 const ICON = { strokeWidth: 1.8 }
 
 export default function EstimateFamilyPackItem({ row, onIncrease, onDecrease, onRemove }) {
   const { name, quantity, unitPriceInr, unavailable } = row
-  const imageUrl = row.pack?.coverImageUrl ?? row.pack?.images?.[0]?.url ?? ''
+  const imageUrl = normalizeProductImageUrl(
+    String(row.pack?.coverImageUrl ?? row.pack?.images?.[0]?.url ?? ''),
+  )
 
   return (
     <article className="p-4 sm:p-5">

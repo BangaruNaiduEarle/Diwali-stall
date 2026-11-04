@@ -6,6 +6,8 @@ import { handleAdminSession } from './routes/admin.js'
 import { handleAdminUsersRoutes } from './routes/adminUsersRoutes.js'
 import { handleAdminCatalogueRoutes } from './routes/adminCatalogue.js'
 import { handleAdminCustomerRequestRoutes } from './routes/adminCustomerRequests.js'
+import { handleAdminPaymentRoutes } from './routes/adminPayments.js'
+import { handleAdminOfflineRoutes } from './routes/adminOfflineSync.js'
 import { handleAdminQuotationRoutes } from './routes/adminQuotations.js'
 import { handleAdminQuickBillRoutes } from './routes/adminQuickBill.js'
 import { handleAdminUploadSign } from './routes/adminUploads.js'
@@ -21,6 +23,9 @@ import {
   handlePublicFamilyPacksList,
 } from './routes/publicFamilyPacks.js'
 import { handleAdminFamilyPackRoutes } from './routes/adminFamilyPacks.js'
+import { handleAdminPlatformRoutes } from './routes/adminPlatformRoutes.js'
+import { handleAdminStallSettings } from './routes/adminStallSettings.js'
+import { handleAdminReports } from './routes/adminReports.js'
 import { adminAuthErrorResponse, requireAdmin } from './middleware/requireAdmin.js'
 import { withRequestContext } from './middleware/requestContext.js'
 
@@ -75,6 +80,16 @@ async function handleRequest(request, env, ctx) {
       return handleAdminSession(request, { identity: auth.identity }, env)
     }
 
+    if (pathname.startsWith('/api/admin/platform')) {
+      return handleAdminPlatformRoutes(request, url, auth, env)
+    }
+
+    const settingsResponse = await handleAdminStallSettings(request, env)
+    if (settingsResponse) return settingsResponse
+
+    const reportResponse = await handleAdminReports(request, env)
+    if (reportResponse) return reportResponse
+
     if (method === 'POST' && pathname === '/api/admin/uploads/sign') {
       return handleAdminUploadSign(request, env)
     }
@@ -88,6 +103,12 @@ async function handleRequest(request, env, ctx) {
     if (familyPackResponse) {
       return familyPackResponse
     }
+
+    const offlineResponse = await handleAdminOfflineRoutes(request, env, auth.identity)
+    if (offlineResponse) return offlineResponse
+
+    const paymentResponse = await handleAdminPaymentRoutes(request, env)
+    if (paymentResponse) return paymentResponse
 
     const customerRequestResponse = await handleAdminCustomerRequestRoutes(request, env, url, auth.identity)
     if (customerRequestResponse) {

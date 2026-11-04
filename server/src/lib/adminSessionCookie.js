@@ -1,4 +1,5 @@
 import { normalizeOrigin, parseCorsAllowedOrigins } from './cors.js'
+import { trustedRequestOrigin } from './trustedRequestOrigin.js'
 
 export const ADMIN_SESSION_COOKIE = 'diwali_admin_session'
 
@@ -44,7 +45,7 @@ export function isDevJwtSuppressActive(request) {
  */
 export function buildSessionSetCookie(sessionId, maxAgeSeconds, opts = {}) {
   const secure = opts.secure !== false
-  const sameSite = opts.sameSite ?? (secure ? 'None' : 'Lax')
+  const sameSite = opts.sameSite ?? 'Lax'
   const parts = [
     `${ADMIN_SESSION_COOKIE}=${encodeURIComponent(sessionId)}`,
     'Path=/',
@@ -61,7 +62,7 @@ export function buildSessionSetCookie(sessionId, maxAgeSeconds, opts = {}) {
  */
 export function buildSessionClearCookie(opts = {}) {
   const secure = opts.secure !== false
-  const sameSite = opts.sameSite ?? (secure ? 'None' : 'Lax')
+  const sameSite = opts.sameSite ?? 'Lax'
   const parts = [`${ADMIN_SESSION_COOKIE}=`, 'Path=/', 'HttpOnly', 'Max-Age=0']
   if (secure) parts.push('Secure')
   parts.push(`SameSite=${sameSite}`)
@@ -74,7 +75,7 @@ export function buildSessionClearCookie(opts = {}) {
  */
 export function buildDevJwtSuppressSetCookie(maxAgeSeconds, opts = {}) {
   const secure = opts.secure !== false
-  const sameSite = opts.sameSite ?? (secure ? 'None' : 'Lax')
+  const sameSite = opts.sameSite ?? 'Lax'
   const parts = [
     `${ADMIN_DEV_JWT_SUPPRESS_COOKIE}=1`,
     'Path=/',
@@ -91,7 +92,7 @@ export function buildDevJwtSuppressSetCookie(maxAgeSeconds, opts = {}) {
  */
 export function buildDevJwtSuppressClearCookie(opts = {}) {
   const secure = opts.secure !== false
-  const sameSite = opts.sameSite ?? (secure ? 'None' : 'Lax')
+  const sameSite = opts.sameSite ?? 'Lax'
   const parts = [`${ADMIN_DEV_JWT_SUPPRESS_COOKIE}=`, 'Path=/', 'HttpOnly', 'Max-Age=0']
   if (secure) parts.push('Secure')
   parts.push(`SameSite=${sameSite}`)
@@ -100,7 +101,8 @@ export function buildDevJwtSuppressClearCookie(opts = {}) {
 
 /**
  * Same-origin frontend proxy (e.g. Vercel /api → Worker): first-party cookies use Lax.
- * Direct cross-origin browser → Worker keeps SameSite=None.
+ * Only explicitly trusted direct cross-origin browser requests use None; Secure.
+ * Same-origin, CLI/no-Origin, and HTTP loopback requests default to Lax.
  *
  * @param {Request} request
  * @param {Record<string, unknown>} env
@@ -108,15 +110,17 @@ export function buildDevJwtSuppressClearCookie(opts = {}) {
  */
 export function resolveSessionCookieOptions(request, env) {
   const secure = requestIsSecure(request)
+  const allowed = parseCorsAllowedOrigins(env)
+  const origin = trustedRequestOrigin(request, allowed)
   const forwardedHost = request.headers.get('X-Forwarded-Host')?.split(',')[0]?.trim().toLowerCase()
   if (forwardedHost && secure) {
-    const allowed = parseCorsAllowedOrigins(env)
     if (allowed) {
       for (const origin of allowed) {
         const normalized = normalizeOrigin(origin)
         if (!normalized) continue
         try {
-          if (new URL(normalized).host.toLowerCase() === forwardedHost) {
+          if (new URL(normalized).host.toLowerCase() === forwardedHost &&
+              (!origin || new URL(origin).host.toLowerCase() === forwardedHost)) {
             return { secure: true, sameSite: 'Lax' }
           }
         } catch {
@@ -125,7 +129,8 @@ export function resolveSessionCookieOptions(request, env) {
       }
     }
   }
-  if (secure) return { secure: true, sameSite: 'None' }
+  if (secure && origin && origin !== new URL(request.url).origin) return { secure: true, sameSite: 'None' }
+  if (secure) return { secure: true, sameSite: 'Lax' }
   return { secure: false, sameSite: 'Lax' }
 }
 

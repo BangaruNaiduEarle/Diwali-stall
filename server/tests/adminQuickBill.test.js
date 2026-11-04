@@ -1,10 +1,18 @@
 import assert from 'node:assert/strict'
+import { bindAdminServiceMode } from '../src/lib/adminServiceMode.js'
 import { describe, it } from 'node:test'
 import worker from '../src/index.js'
 import { signLocalDevAdminJwt } from '../src/middleware/localAdminDevAuth.js'
 import { validateQuickBillPreviewBody } from '../src/lib/quickBillValidation.js'
 import { lineTotalPaise, sumPaise } from '../src/services/money.js'
 import { checkoutQuickBill, previewQuickBill } from '../src/services/adminQuickBill.js'
+import { attachAdminSeasonContext } from '../src/middleware/requireAdmin.js'
+import { handleAdminQuickBillRoutes } from '../src/routes/adminQuickBill.js'
+import { DEFAULT_ADMIN_SEASON_ID } from '../src/services/adminSeasonContext.js'
+
+const OTHER_SEASON_ID = 'season-2099'
+const ARCHIVED_SEASON_ID = 'season-archived'
+const PREVIEW_BODY = { items: [{ productId: 'P001', quantity: 1 }] }
 
 const LOCAL_SECRET = 'local-dev-secret-at-least-32-characters-long'
 const ALLOWED_EMAIL = 'owner@example.com'
@@ -18,7 +26,7 @@ function localEnv(db) {
   }
 }
 
-async function adminFetch(path, { method = 'GET', body, db } = {}) {
+async function adminFetch(path, { method = 'GET', body, db, seasonId = DEFAULT_ADMIN_SEASON_ID } = {}) {
   const token = await signLocalDevAdminJwt(
     { ADMIN_LOCAL_DEV_SECRET: LOCAL_SECRET, ADMIN_LOCAL_DEV_EMAIL: ALLOWED_EMAIL },
     { email: ALLOWED_EMAIL },
@@ -28,6 +36,8 @@ async function adminFetch(path, { method = 'GET', body, db } = {}) {
       method,
       headers: {
         'Cf-Access-Jwt-Assertion': token,
+        'X-Admin-Season-Id': seasonId,
+        ...(path.endsWith('/checkout') ? { 'Idempotency-Key': 'legacy-http-checkout' } : {}),
         ...(body ? { 'Content-Type': 'application/json' } : {}),
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
@@ -43,6 +53,172 @@ describe('quick bill validation', () => {
     assert.equal(bad.ok, false)
     const good = validateQuickBillPreviewBody({ items: [{ productId: 'P001', quantity: 1 }] })
     assert.equal(good.ok, true)
+  })
+})
+
+describe('quick bill season gate', () => {
+  it('returns 403 when active season is missing on preview and checkout', async () => {
+    const db = createQuickBillMockDb()
+    const previewBody = { items: [{ productId: 'P001', quantity: 1 }] }
+    for (const path of ['/api/admin/quick-bill/preview', '/api/admin/quick-bill/checkout']) {
+      const request = new Request(`https://example.com${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          path.includes('checkout')
+            ? { customer: { name: 'Walk-in', mobile: '9123456789' }, ...previewBody }
+            : previewBody,
+        ),
+      })
+      const res = await handleAdminQuickBillRoutes(request, { DB: db }, { email: ALLOWED_EMAIL, role: 'owner' })
+      assert.equal(res.status, 403, path)
+      const body = await res.json()
+      assert.equal(body.error, 'forbidden')
+    }
+  })
+
+  it('returns 403 when season membership is missing', async () => {
+    const db = createQuickBillMockDb({ memberships: [] })
+    const request = new Request('https://example.com/api/admin/quick-bill/preview', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Season-Id': DEFAULT_ADMIN_SEASON_ID,
+      },
+      body: JSON.stringify(PREVIEW_BODY),
+    })
+    await attachAdminSeasonContext(request, db, {
+      userId: 'u-none',
+      email: 'none@test.com',
+      role: 'owner',
+    })
+    const res = await handleAdminQuickBillRoutes(request, { DB: db }, {
+      email: 'none@test.com',
+      role: 'owner',
+    })
+    assert.equal(res.status, 403)
+  })
+})
+
+describe('quick bill season authorization routes', () => {
+  it('blocks bargain preview for season admin despite global owner identity', async () => {
+    const db = createQuickBillMockDb({
+      memberships: [membershipRow(DEFAULT_ADMIN_SEASON_ID, 'admin', 'active')],
+    })
+    const request = new Request('https://example.com/api/admin/quick-bill/preview', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Season-Id': DEFAULT_ADMIN_SEASON_ID,
+      },
+      body: JSON.stringify({ ...PREVIEW_BODY, pricingMode: 'bargain' }),
+    })
+    await attachAdminSeasonContext(request, db, {
+      userId: 'u-admin',
+      email: 'admin@test.com',
+      role: 'owner',
+    })
+    const res = await handleAdminQuickBillRoutes(request, { DB: db }, {
+      email: 'admin@test.com',
+      role: 'owner',
+    })
+    assert.equal(res.status, 403)
+  })
+
+  it('allows bargain preview for season super_admin', async () => {
+    const db = createQuickBillMockDb({
+      memberships: [membershipRow(DEFAULT_ADMIN_SEASON_ID, 'super_admin', 'active')],
+    })
+    const request = new Request('https://example.com/api/admin/quick-bill/preview', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Season-Id': DEFAULT_ADMIN_SEASON_ID,
+      },
+      body: JSON.stringify({ ...PREVIEW_BODY, pricingMode: 'bargain' }),
+    })
+    await attachAdminSeasonContext(request, db, {
+      userId: 'u-super',
+      email: 'super@test.com',
+      role: 'admin',
+    })
+    const res = await handleAdminQuickBillRoutes(request, { DB: db }, {
+      email: 'super@test.com',
+      role: 'admin',
+    })
+    assert.equal(res.status, 200)
+  })
+
+  it('blocks preview and checkout on archived season', async () => {
+    const db = createQuickBillMockDb({
+      memberships: [membershipRow(ARCHIVED_SEASON_ID, 'owner', 'archived')],
+    })
+    for (const path of ['/api/admin/quick-bill/preview', '/api/admin/quick-bill/checkout']) {
+      const request = new Request(`https://example.com${path}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Season-Id': ARCHIVED_SEASON_ID,
+        },
+        body: JSON.stringify(
+          path.includes('checkout')
+            ? { customer: { name: 'Walk-in', mobile: '9123456789' }, ...PREVIEW_BODY }
+            : PREVIEW_BODY,
+        ),
+      })
+      await attachAdminSeasonContext(request, db, {
+        userId: 'u-archived',
+        email: 'archived@test.com',
+        role: 'owner',
+      })
+      const res = await handleAdminQuickBillRoutes(request, { DB: db }, {
+        email: 'archived@test.com',
+        role: 'owner',
+      })
+      assert.equal(res.status, 403, path)
+      assert.match((await res.json()).message, /archived/i)
+    }
+  })
+
+  it('allows normal preview for owner super_admin and admin season roles', async () => {
+    for (const role of ['owner', 'super_admin', 'admin']) {
+      const db = createQuickBillMockDb({
+        memberships: [membershipRow(DEFAULT_ADMIN_SEASON_ID, role, 'active')],
+      })
+      const request = new Request('https://example.com/api/admin/quick-bill/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Season-Id': DEFAULT_ADMIN_SEASON_ID,
+        },
+        body: JSON.stringify(PREVIEW_BODY),
+      })
+      await attachAdminSeasonContext(request, db, {
+        userId: `u-${role}`,
+        email: `${role}@test.com`,
+        role: role === 'admin' ? 'owner' : 'admin',
+      })
+      const res = await handleAdminQuickBillRoutes(request, { DB: db }, {
+        email: `${role}@test.com`,
+        role: role === 'admin' ? 'owner' : 'admin',
+      })
+      assert.equal(res.status, 200, role)
+    }
+  })
+})
+
+describe('quick bill season gate (continued)', () => {
+  it('rejects preview when product belongs to another season', async () => {
+    const db = createQuickBillMockDb()
+    const result = await previewQuickBill(
+      db,
+      [{ productId: 'P001', quantity: 1 }],
+      { seasonId: OTHER_SEASON_ID },
+    )
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.status, 400)
+    assert.equal(result.fields?.['items[0].productId'], 'Product not found.')
   })
 })
 
@@ -67,7 +243,9 @@ describe('quick bill authorization', () => {
 describe('quick bill service (mock D1)', () => {
   it('previews totals from products.selling_price_paise', async () => {
     const db = createQuickBillMockDb()
-    const result = await previewQuickBill(db, [{ productId: 'P001', quantity: 2 }])
+    const result = await previewQuickBill(db, [{ productId: 'P001', quantity: 2 }], {
+      seasonId: DEFAULT_ADMIN_SEASON_ID,
+    })
     assert.equal(result.ok, true)
     if (!result.ok) return
     assert.equal(result.preview.totalPaise, lineTotalPaise(2, 169400))
@@ -76,7 +254,9 @@ describe('quick bill service (mock D1)', () => {
 
   it('reports missing selling price on preview', async () => {
     const db = createQuickBillMockDb({ sellingPaise: null })
-    const result = await previewQuickBill(db, [{ productId: 'P001', quantity: 1 }])
+    const result = await previewQuickBill(db, [{ productId: 'P001', quantity: 1 }], {
+      seasonId: DEFAULT_ADMIN_SEASON_ID,
+    })
     assert.equal(result.ok, false)
     if (result.ok) return
     assert.equal(result.code, 'missing_selling_price')
@@ -91,13 +271,52 @@ describe('quick bill service (mock D1)', () => {
         customer: { name: 'Stall Guest', mobile: '9876543210', area: '', pickupPreference: '', note: '' },
         items: [{ productId: 'P001', quantity: 2 }],
       },
-      { createdByEmail: ALLOWED_EMAIL },
+      { createdByEmail: ALLOWED_EMAIL, seasonId: DEFAULT_ADMIN_SEASON_ID, idempotencyKey: 'legacy-service-checkout' },
     )
     assert.equal(result.ok, true)
     if (!result.ok) return
     assert.equal(result.request.source, 'manual')
     assert.equal(result.quotation.totalPaise, lineTotalPaise(2, 169400))
     assert.equal(db.state.quotations.size, 1)
+    const requestRow = [...db.state.requests.values()][0]
+    const quotationRow = [...db.state.quotations.values()][0]
+    assert.equal(requestRow.season_id, DEFAULT_ADMIN_SEASON_ID)
+    assert.equal(quotationRow.season_id, DEFAULT_ADMIN_SEASON_ID)
+  })
+
+  it('rejects checkout without season context', async () => {
+    const db = createQuickBillMockDb()
+    const result = await checkoutQuickBill(
+      db,
+      {
+        customer: { name: 'Stall Guest', mobile: '9876543210' },
+        items: [{ productId: 'P001', quantity: 1 }],
+      },
+      { createdByEmail: ALLOWED_EMAIL },
+    )
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.status, 403)
+    assert.equal(db.state.requests.size, 0)
+  })
+
+  it('preview and checkout agree on totals for the same season', async () => {
+    const db = createQuickBillMockDb()
+    const items = [{ productId: 'P001', quantity: 2 }]
+    const preview = await previewQuickBill(db, items, { seasonId: DEFAULT_ADMIN_SEASON_ID })
+    assert.equal(preview.ok, true)
+    if (!preview.ok) return
+    const checkout = await checkoutQuickBill(
+      db,
+      {
+        customer: { name: 'Stall Guest', mobile: '9876543210' },
+        items,
+      },
+      { seasonId: DEFAULT_ADMIN_SEASON_ID, idempotencyKey: 'legacy-preview-checkout' },
+    )
+    assert.equal(checkout.ok, true)
+    if (!checkout.ok) return
+    assert.equal(checkout.quotation.totalPaise, preview.preview.totalPaise)
   })
 })
 
@@ -129,8 +348,33 @@ describe('quick bill HTTP (mock D1)', () => {
   })
 })
 
-/** @param {{ sellingPaise?: number | null }} [opts] */
+function membershipRow(seasonId, role, status) {
+  return {
+    season_id: seasonId,
+    role,
+    disabled_at: null,
+    created_at: '',
+    code: seasonId.replace('season-', ''),
+    label: seasonId,
+    status,
+  }
+}
+
+/** @param {{ sellingPaise?: number | null, memberships?: Record<string, unknown>[] }} [opts] */
 function createQuickBillMockDb(opts = {}) {
+  const membershipRows =
+    opts.memberships ??
+    [
+      {
+        season_id: DEFAULT_ADMIN_SEASON_ID,
+        role: 'owner',
+        disabled_at: null,
+        created_at: '',
+        code: '2026',
+        label: 'Diwali 2026',
+        status: 'active',
+      },
+    ]
   const sellingPaise = opts.sellingPaise === undefined ? 169400 : opts.sellingPaise
   const state = {
     products: new Map([
@@ -138,6 +382,7 @@ function createQuickBillMockDb(opts = {}) {
         'P001',
         {
           id: 'P001',
+          season_id: DEFAULT_ADMIN_SEASON_ID,
           name: 'EMERALD GIFT BOX',
           company: null,
           active: 1,
@@ -164,16 +409,55 @@ function createQuickBillMockDb(opts = {}) {
           return makeStmt(next.length ? next : params)
         },
         async first() {
+          if (normalized.includes('FROM platform_admins')) {
+            return null
+          }
           if (normalized.includes('admin_users')) {
-            return String(params[0]).toLowerCase() === ALLOWED_EMAIL.toLowerCase() ? { ok: 1 } : null
+            return String(params[0]).toLowerCase() === ALLOWED_EMAIL.toLowerCase()
+              ? { id: 'admin-u-1', ok: 1, role: 'owner', active: 1 }
+              : null
+          }
+          if (normalized.includes('FROM products') && normalized.includes('season_id = ?')) {
+            const productId = String(params[0])
+            const seasonId = String(params[1])
+            const row = state.products.get(productId)
+            if (!row || String(row.season_id) !== seasonId) return null
+            return row
           }
           if (normalized.includes('FROM products WHERE id = ?')) {
             return state.products.get(String(params[0])) ?? null
+          }
+          if (normalized.includes('FROM customer_requests') && normalized.includes('season_id = ?')) {
+            const id = String(params[0])
+            const seasonId = String(params[1])
+            const r = state.requests.get(id)
+            if (!r || String(r.season_id ?? '') !== seasonId) return null
+            if (normalized.includes('public_reference') && normalized.includes('created_at')) {
+              return {
+                id: r.id,
+                public_reference: r.public_reference ?? null,
+                status: r.status,
+                source: r.source,
+                created_at: r.created_at,
+              }
+            }
+            return {
+              id: r.id,
+              public_reference: r.public_reference ?? null,
+              status: r.status,
+              source: r.source,
+              customer_name: r.customer_name,
+              customer_phone: r.customer_phone,
+              customer_area: r.customer_area,
+              pickup_preference: r.pickup_preference,
+              customer_note: r.customer_note,
+            }
           }
           if (normalized.includes('FROM customer_requests') && normalized.includes('WHERE id = ?')) {
             const id = String(params[0])
             const r = state.requests.get(id)
             if (!r) return null
+            if (normalized.startsWith('SELECT *')) return { ...r }
             if (normalized.includes('public_reference') && normalized.includes('created_at')) {
               return {
                 id: r.id,
@@ -198,6 +482,20 @@ function createQuickBillMockDb(opts = {}) {
             const n = state.requestItems.filter((i) => i.request_id === params[0]).length
             return { n }
           }
+          if (normalized.includes('FROM quotations') && normalized.includes('season_id = ?')) {
+            const requestId = String(params[0])
+            const seasonId = String(params[1])
+            for (const q of state.quotations.values()) {
+              if (
+                q.customer_request_id === requestId &&
+                q.status !== 'void' &&
+                String(q.season_id ?? '') === seasonId
+              ) {
+                return q
+              }
+            }
+            return null
+          }
           if (normalized.includes('FROM quotations') && normalized.includes('customer_request_id = ?')) {
             for (const q of state.quotations.values()) {
               if (q.customer_request_id === params[0] && q.status !== 'void') return q
@@ -210,6 +508,21 @@ function createQuickBillMockDb(opts = {}) {
           return null
         },
         async all() {
+          if (normalized.includes('FROM season_members sm')) {
+            return { results: membershipRows }
+          }
+          if (
+            normalized.includes('FROM customer_request_items i') &&
+            normalized.includes('INNER JOIN customer_requests r')
+          ) {
+            const requestId = String(params[0])
+            const seasonId = String(params[1])
+            const request = state.requests.get(requestId)
+            if (!request || String(request.season_id ?? '') !== seasonId) {
+              return { results: [] }
+            }
+            return { results: state.requestItems.filter((i) => i.request_id === requestId) }
+          }
           if (normalized.includes('FROM customer_request_items')) {
             return { results: state.requestItems.filter((i) => i.request_id === params[0]) }
           }
@@ -219,6 +532,47 @@ function createQuickBillMockDb(opts = {}) {
           return { results: [] }
         },
         async run() {
+          if (normalized.startsWith("UPDATE customer_requests SET finalization_status = 'pending', raw_message")) {
+            const row = state.requests.get(params[1])
+            if (row && row.season_id === params[2]) { row.finalization_status = 'pending'; row.raw_message = params[0] }
+            return { meta: { changes: row ? 1 : 0 } }
+          }
+          if (
+            normalized.startsWith('INSERT INTO customer_requests') &&
+            normalized.includes('season_id')
+          ) {
+            const [
+              id,
+              publicReference,
+              name,
+              phone,
+              area,
+              pickup,
+              note,
+              deliveryAddress,
+              deliveryLandmark,
+              deliveryMapsUrl,
+              source = 'manual',
+              seasonId,
+            ] = params
+            state.requests.set(id, {
+              id,
+              public_reference: publicReference ?? null,
+              status: 'received',
+              source,
+              season_id: seasonId,
+              customer_name: name,
+              customer_phone: phone,
+              customer_area: area,
+              pickup_preference: pickup,
+              customer_note: note,
+              delivery_address: deliveryAddress ?? null,
+              delivery_landmark: deliveryLandmark ?? null,
+              delivery_maps_url: deliveryMapsUrl ?? null,
+              created_at: '2026-10-18 00:00:00',
+            })
+            return { meta: { changes: 1 } }
+          }
           if (normalized.startsWith('INSERT INTO customer_requests')) {
             const [
               id,
@@ -264,6 +618,30 @@ function createQuickBillMockDb(opts = {}) {
             })
             return { meta: { changes: 1 } }
           }
+          if (normalized.startsWith('INSERT INTO quotations') && normalized.includes('season_id')) {
+            state.quotations.set(params[0], {
+              id: params[0],
+              customer_request_id: params[1],
+              status: 'draft',
+              customer_name: params[2],
+              customer_phone: params[3],
+              customer_note: params[4],
+              subtotal_paise: params[5],
+              adjustment_paise: 0,
+              total_paise: params[6],
+              wa_message_text: params[7],
+              created_by_email: params[8],
+              pricing_mode: params[9] ?? null,
+              selling_subtotal_paise: params[10] ?? null,
+              final_subtotal_paise: params[11] ?? null,
+              bargain_floor_paise: params[12] ?? null,
+              accepted_amount_paise: params[13] ?? null,
+              season_id: params[14],
+              created_at: '2026-10-18 00:00:00',
+              updated_at: '2026-10-18 00:00:00',
+            })
+            return { meta: { changes: 1 } }
+          }
           if (normalized.startsWith('INSERT INTO quotations')) {
             state.quotations.set(params[0], {
               id: params[0],
@@ -299,9 +677,24 @@ function createQuickBillMockDb(opts = {}) {
             })
             return { meta: { changes: 1 } }
           }
+          if (
+            normalized.includes('UPDATE customer_requests SET status') &&
+            normalized.includes('season_id = ?')
+          ) {
+            const r = state.requests.get(String(params[1]))
+            if (r && String(r.season_id ?? '') === String(params[2])) r.status = params[0]
+            return { meta: { changes: 1 } }
+          }
           if (normalized.includes('UPDATE customer_requests SET status')) {
             const r = state.requests.get(String(params[1]))
             if (r) r.status = params[0]
+            return { meta: { changes: 1 } }
+          }
+          if (normalized.includes('SET finalization_status') && normalized.includes('season_id = ?')) {
+            const r = state.requests.get(String(params[0]))
+            if (r && String(r.season_id ?? '') === String(params[1])) {
+              r.finalization_status = 'pending'
+            }
             return { meta: { changes: 1 } }
           }
           if (normalized.includes('SET finalization_status')) {
@@ -321,5 +714,5 @@ function createQuickBillMockDb(opts = {}) {
     },
   }
 
-  return db
+  return bindAdminServiceMode(db, {})
 }

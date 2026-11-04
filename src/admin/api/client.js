@@ -4,6 +4,7 @@
  */
 
 import { resolveApiUrl } from '../../api/resolveApiUrl.js'
+import { adminSeasonHeaderValueForPath, adminLocationHeaderValueForPath, getAdminRequestContext, isAdminOperationalApiPath } from './adminSeasonRequest.js'
 
 /**
  * @param {Response} res
@@ -24,10 +25,25 @@ async function parseJsonBody(res) {
  * @returns {Promise<{ ok: true, data: unknown, status: number } | { ok: false, status: number, error: string, message: string, fields?: Record<string, string> }>}
  */
 export async function apiRequest(path, init = {}) {
+  const context = getAdminRequestContext()
+  const scoped = context.locationModeEnabled && isAdminOperationalApiPath(path)
+  if (scoped && (context.switching || !context.activeSeasonId || !context.activeLocationId)) {
+    return { ok: false, status: 409, error: 'location_context_required', message: 'Choose an authorized stall and wait for switching to finish.' }
+  }
+  const stale = () => scoped && context.generation !== getAdminRequestContext().generation
+  const staleResponse = () => ({ ok: false, status: 409, error: 'stale_context', message: 'The active stall changed. Refresh this screen before continuing.' })
   const headers = new Headers(init.headers)
   if (init.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
+  const seasonHeader = adminSeasonHeaderValueForPath(path)
+  if (seasonHeader && !headers.has('X-Admin-Season-Id')) {
+    headers.set('X-Admin-Season-Id', seasonHeader)
+  }
+  // Location selection comes only from the confirmed/requested session context.
+  headers.delete('X-Admin-Location-Id')
+  const locationHeader = adminLocationHeaderValueForPath(path)
+  if (locationHeader) headers.set('X-Admin-Location-Id', locationHeader)
 
   let res
   try {
@@ -37,6 +53,7 @@ export async function apiRequest(path, init = {}) {
       credentials: 'include',
     })
   } catch {
+    if (stale()) return staleResponse()
     return {
       ok: false,
       status: 0,
@@ -46,6 +63,7 @@ export async function apiRequest(path, init = {}) {
   }
 
   const data = await parseJsonBody(res)
+  if (stale()) return staleResponse()
 
   if (res.ok) {
     return { ok: true, data, status: res.status }

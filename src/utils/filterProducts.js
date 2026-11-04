@@ -1,9 +1,10 @@
-import { CATALOG_CATEGORIES } from '../data/categories'
-import { productMatchesBudget } from '../data/budgetRanges'
+import { CATALOG_CATEGORIES } from '../data/categories.js'
+import { productMatchesBudget } from '../data/budgetRanges.js'
+import { productCategorySlug } from './catalogueCategories.js'
 
-export function getCategoryLabelFromSlug(slug) {
+export function getCategoryLabelFromSlug(slug, categories = CATALOG_CATEGORIES) {
   if (!slug || slug === 'all') return null
-  return CATALOG_CATEGORIES.find((c) => c.slug === slug)?.label ?? null
+  return categories.find((c) => c.slug === slug)?.label ?? null
 }
 
 export function filterProducts(
@@ -12,9 +13,8 @@ export function filterProducts(
 ) {
   let list = products.filter((p) => p.active !== false)
 
-  const categoryLabel = getCategoryLabelFromSlug(categorySlug)
-  if (categoryLabel) {
-    list = list.filter((p) => p.category === categoryLabel)
+  if (categorySlug && categorySlug !== 'all') {
+    list = list.filter((p) => productCategorySlug(p) === categorySlug)
   }
 
   if (budgetId && budgetId !== 'all') {

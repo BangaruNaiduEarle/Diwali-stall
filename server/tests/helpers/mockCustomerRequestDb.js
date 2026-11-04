@@ -1,3 +1,5 @@
+import { DEFAULT_ADMIN_SEASON_ID } from '../../src/services/adminSeasonContext.js'
+
 /**
  * In-memory D1 mock for public customer request + admin detail flows.
  * @param {{
@@ -6,10 +8,24 @@
  *   privateRates?: Map<string, number>,
  *   failOnItemLine?: number,
  *   rejectPublicReferences?: Set<string>,
+ *   publicSeasonId?: string | null,
+ *   publicSeasonStatus?: 'active' | 'archived',
  * }} opts
  */
 export function createMockCustomerRequestDb(opts = {}) {
-  const products = new Map((opts.products ?? []).map((p) => [p.id, p]))
+  const publicSeasonId =
+    opts.publicSeasonId === undefined ? DEFAULT_ADMIN_SEASON_ID : opts.publicSeasonId
+  const publicSeasonStatus = opts.publicSeasonStatus ?? 'active'
+
+  const products = new Map(
+    (opts.products ?? []).map((p) => [
+      p.id,
+      {
+        ...p,
+        season_id: p.season_id ?? publicSeasonId ?? DEFAULT_ADMIN_SEASON_ID,
+      },
+    ]),
+  )
   const familyPacks = new Map(
     (opts.familyPacks ?? []).map((p) => [
       p.id,
@@ -19,6 +35,7 @@ export function createMockCustomerRequestDb(opts = {}) {
         active: p.active ?? 1,
         archived: p.archived ?? 0,
         selling_price_paise: p.selling_price_paise ?? p.sellingPricePaise ?? 0,
+        season_id: p.season_id ?? publicSeasonId ?? DEFAULT_ADMIN_SEASON_ID,
       },
     ]),
   )
@@ -36,6 +53,7 @@ export function createMockCustomerRequestDb(opts = {}) {
   const db = {
     batchCalls: 0,
     state,
+    publicSeasonId,
     prepare(sql) {
       const normalized = sql.replace(/\s+/g, ' ').trim()
       return {
@@ -44,8 +62,27 @@ export function createMockCustomerRequestDb(opts = {}) {
             _sql: normalized,
             _params: params,
             async first() {
+              if (normalized.includes('FROM platform_settings') && normalized.includes('public_catalogue_season_id')) {
+                if (!publicSeasonId) return null
+                return { public_catalogue_season_id: publicSeasonId }
+              }
+              if (normalized.includes('FROM business_seasons') && normalized.includes('status')) {
+                if (!publicSeasonId) return null
+                return { status: publicSeasonStatus }
+              }
               if (normalized.includes('FROM products WHERE id')) {
-                return products.get(String(params[0])) ?? null
+                const product = products.get(String(params[0]))
+                if (!product) return null
+                if (normalized.includes('season_id = ?')) {
+                  const seasonId = params[1]
+                  if (seasonId == null || String(product.season_id) !== String(seasonId)) return null
+                }
+                return product
+              }
+              if (normalized.includes('FROM family_packs') && normalized.includes('season_id = ?')) {
+                const pack = familyPacks.get(String(params[0]))
+                if (!pack || String(pack.season_id) !== String(params[1])) return null
+                return pack
               }
               if (normalized.includes('FROM family_packs WHERE id')) {
                 return familyPacks.get(String(params[0])) ?? null
@@ -122,6 +159,7 @@ export function createMockCustomerRequestDb(opts = {}) {
           const sql = stmt._sql
           const params = stmt._params
           if (sql.startsWith('INSERT INTO customer_requests')) {
+            const withSeason = sql.includes('season_id')
             const [
               id,
               publicReference,
@@ -134,7 +172,8 @@ export function createMockCustomerRequestDb(opts = {}) {
               deliveryLandmark,
               deliveryMapsUrl,
               source = 'web',
-            ] = params
+              seasonId = null,
+            ] = withSeason ? params : [...params, null]
             if (state.requests.has(id)) {
               throw new Error('UNIQUE constraint failed: customer_requests.id')
             }
@@ -150,6 +189,7 @@ export function createMockCustomerRequestDb(opts = {}) {
               public_reference: ref || null,
               status: 'received',
               source,
+              season_id: withSeason ? seasonId : null,
               customer_name: name,
               customer_phone: phone,
               customer_area: area,

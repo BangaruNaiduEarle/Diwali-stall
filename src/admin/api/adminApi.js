@@ -1,24 +1,34 @@
+import { parseAdminSessionPayload } from '../lib/adminSeasonSession.js'
 import { apiRequest } from './client.js'
+import { getAdminSessionSeasonHeader, getAdminRequestContext } from './adminSeasonRequest.js'
+import { reconcileOfflineAuthority } from '../offline/authority.js'
+import { newQuickBillCheckoutKey } from '../lib/quickBillCheckoutKey.js'
+import { requestRevisionHeaders } from '../lib/billAdjustment.js'
 
 /** @returns {Promise<import('./adminApi.js').SessionResult>} */
 export async function fetchAdminSession() {
-  const result = await apiRequest('/api/admin/session')
-  if (!result.ok) return result
-  const data = /** @type {{ ok?: boolean, email?: string, message?: string }} */ (result.data ?? {})
-  if (!data.ok || !data.email) {
+  const requested = getAdminRequestContext()
+  const seasonHeader = getAdminSessionSeasonHeader()
+  const result = await apiRequest('/api/admin/session', {
+    headers: seasonHeader ? { 'X-Admin-Season-Id': seasonHeader } : undefined,
+  })
+  if (!result.ok) {
+    try { await reconcileOfflineAuthority(result, requested) }
+    catch { return { ok: false, status: 503, error: 'offline_authority_unavailable', message: 'Offline access could not be secured. Keep this device online and retry. Pending work remains saved.' } }
+    return result
+  }
+  const parsed = parseAdminSessionPayload(result.data)
+  if (!parsed.ok) {
     return {
       ok: false,
       status: result.status,
-      error: 'invalid_session',
-      message: 'Admin session response was invalid.',
+      error: parsed.error,
+      message: parsed.message,
     }
   }
-  return {
-    ok: true,
-    email: data.email,
-    role: typeof data.role === 'string' ? data.role : 'admin',
-    message: data.message ?? '',
-  }
+  try { await reconcileOfflineAuthority(parsed, requested) }
+  catch { return { ok: false, status: 503, error: 'offline_authority_unavailable', message: 'Offline access could not be secured. Keep this device online and retry. Pending work remains saved.' } }
+  return parsed
 }
 
 export async function loginAdmin({ email, password }) {
@@ -66,6 +76,16 @@ export async function createAdminUser(body) {
 
 export async function disableAdminUser(id) {
   return apiRequest(`/api/admin/users/${encodeURIComponent(id)}/disable`, { method: 'POST' })
+}
+
+export async function removeAdminLocationMember(id) {
+  return apiRequest(`/api/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export async function updateAdminFinalRateAccess(id, enabled) {
+  return apiRequest(`/api/admin/users/${encodeURIComponent(id)}/final-rate-access`, {
+    method: 'POST', body: JSON.stringify({ enabled }),
+  })
 }
 
 export async function enableAdminUser(id) {
@@ -305,10 +325,10 @@ export async function fetchAdminCustomerRequest(id) {
  * @param {{ assigneeUserId?: string, assigneeEmail?: string }} body
  */
 /** @param {string} id */
-export async function patchAdminCustomerRequestCustomerAgreed(id) {
+export async function patchAdminCustomerRequestCustomerAgreed(id, { revision } = {}) {
   const result = await apiRequest(
     `/api/admin/customer-requests/${encodeURIComponent(id)}/customer-agreed`,
-    { method: 'PATCH' },
+    { method: 'PATCH', headers: requestRevisionHeaders(revision) },
   )
   if (!result.ok) return result
   const data = /** @type {{ request?: Record<string, unknown> }} */ (result.data ?? {})
@@ -324,10 +344,10 @@ export async function patchAdminCustomerRequestCustomerAgreed(id) {
 }
 
 /** @param {string} id */
-export async function patchAdminCustomerRequestFinalize(id) {
+export async function patchAdminCustomerRequestFinalize(id, { revision } = {}) {
   const result = await apiRequest(
     `/api/admin/customer-requests/${encodeURIComponent(id)}/finalize`,
-    { method: 'PATCH' },
+    { method: 'PATCH', headers: requestRevisionHeaders(revision) },
   )
   if (!result.ok) return result
   const data = /** @type {{ request?: Record<string, unknown> }} */ (result.data ?? {})
@@ -343,11 +363,12 @@ export async function patchAdminCustomerRequestFinalize(id) {
 }
 
 /** @param {string} id @param {{ items: { productId: string, quantity: number, unitType?: string }[] }} body */
-export async function previewAdminCustomerRequestAdjustBill(id, body) {
+export async function previewAdminCustomerRequestAdjustBill(id, body, { revision } = {}) {
   const result = await apiRequest(
     `/api/admin/customer-requests/${encodeURIComponent(id)}/adjust-bill/preview`,
     {
       method: 'POST',
+      headers: requestRevisionHeaders(revision),
       body: JSON.stringify(body),
     },
   )
@@ -367,11 +388,12 @@ export async function previewAdminCustomerRequestAdjustBill(id, body) {
 }
 
 /** @param {string} id @param {{ items: { productId: string, quantity: number, unitType?: string }[], acceptedAmountInr?: string }} body */
-export async function patchAdminCustomerRequestAdjustBill(id, body) {
+export async function patchAdminCustomerRequestAdjustBill(id, body, { revision } = {}) {
   const result = await apiRequest(
     `/api/admin/customer-requests/${encodeURIComponent(id)}/adjust-bill`,
     {
       method: 'PATCH',
+      headers: requestRevisionHeaders(revision),
       body: JSON.stringify(body),
     },
   )
@@ -396,7 +418,7 @@ export async function patchAdminCustomerRequestAdjustBill(id, body) {
   }
 }
 
-export async function patchAdminCustomerRequestAssign(id, body) {
+export async function patchAdminCustomerRequestAssign(id, body, { revision } = {}) {
   const payload =
     body.assigneeUserId != null && String(body.assigneeUserId).trim()
       ? { assigneeUserId: String(body.assigneeUserId).trim() }
@@ -405,6 +427,7 @@ export async function patchAdminCustomerRequestAssign(id, body) {
     `/api/admin/customer-requests/${encodeURIComponent(id)}/assign`,
     {
       method: 'PATCH',
+      headers: requestRevisionHeaders(revision),
       body: JSON.stringify(payload),
     },
   )
@@ -421,11 +444,12 @@ export async function patchAdminCustomerRequestAssign(id, body) {
   return { ok: true, request: data.request }
 }
 
-export async function patchAdminCustomerRequestStatus(id, status) {
+export async function patchAdminCustomerRequestStatus(id, status, { revision } = {}) {
   const result = await apiRequest(
     `/api/admin/customer-requests/${encodeURIComponent(id)}/status`,
     {
       method: 'PATCH',
+      headers: requestRevisionHeaders(revision),
       body: JSON.stringify({ status: String(status ?? '').trim() }),
     },
   )
@@ -446,17 +470,19 @@ export async function patchAdminCustomerRequestStatus(id, status) {
 }
 
 /** @param {string} requestId */
-export async function createQuotationForRequest(requestId) {
+export async function createQuotationForRequest(requestId, { revision } = {}) {
   return apiRequest(`/api/admin/customer-requests/${encodeURIComponent(requestId)}/quotation`, {
     method: 'POST',
+    headers: requestRevisionHeaders(revision),
     body: '{}',
   })
 }
 
 /** @param {string} requestId */
-export async function regenerateQuotationForRequest(requestId) {
+export async function regenerateQuotationForRequest(requestId, { revision } = {}) {
   return apiRequest(`/api/admin/customer-requests/${encodeURIComponent(requestId)}/quotation/regenerate`, {
     method: 'POST',
+    headers: requestRevisionHeaders(revision),
     body: '{}',
   })
 }
@@ -471,11 +497,12 @@ export async function fetchQuotationForRequest(requestId) {
  * @param {string} requestId
  * @param {{ acceptedAmountInr: string }} body
  */
-export async function patchQuotationCustomerAgreedAmount(requestId, body) {
+export async function patchQuotationCustomerAgreedAmount(requestId, body, { revision } = {}) {
   return apiRequest(
     `/api/admin/customer-requests/${encodeURIComponent(requestId)}/quotation/customer-agreed-amount`,
     {
       method: 'PATCH',
+      headers: requestRevisionHeaders(revision),
       body: JSON.stringify(body),
     },
   )
@@ -524,9 +551,10 @@ export async function previewQuickBill(items, options = {}) {
  *   acceptedAmountPaise?: number,
  * }} payload
  */
-export async function checkoutQuickBill(payload) {
+export async function checkoutQuickBill(payload, { idempotencyKey = newQuickBillCheckoutKey() } = {}) {
   const result = await apiRequest('/api/admin/quick-bill/checkout', {
     method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
     body: JSON.stringify(payload),
   })
   if (!result.ok) return result
@@ -542,7 +570,7 @@ export async function checkoutQuickBill(payload) {
   const warnings = Array.isArray(data.warnings)
     ? data.warnings.filter((w) => w && typeof w === 'object')
     : undefined
-  return { ok: true, request: data.request, quotation: data.quotation, warnings }
+  return { ok: true, request: data.request, quotation: data.quotation, warnings, idempotentReplay: data.idempotentReplay === true }
 }
 
 export async function requestUploadSign(productId, slot) {

@@ -70,6 +70,7 @@ export async function countActiveAdminUsers(db) {
 }
 
 /**
+ * @deprecated Uses global `admin_users.role`; prefer season owner counts on `season_members`.
  * @param {D1Database} db
  */
 export async function countOwnersWithPassword(db) {
@@ -83,6 +84,7 @@ export async function countOwnersWithPassword(db) {
 }
 
 /**
+ * @deprecated Uses global `admin_users.role`; prefer `countActiveSeasonOwners` in admin user management.
  * @param {D1Database} db
  * @param {string} [excludeUserId]
  */
@@ -105,6 +107,7 @@ export async function countActiveOwners(db, excludeUserId = '') {
 }
 
 /**
+ * @deprecated Use `listSeasonAdminUsers` for production user listing.
  * @param {D1Database} db
  */
 export async function listAdminUsers(db) {

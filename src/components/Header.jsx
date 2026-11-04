@@ -17,7 +17,7 @@ import EstimateCountBadge from './EstimateCountBadge'
 import WhatsAppButton from './WhatsAppButton'
 import Button from './ui/Button'
 import { useEstimate } from '../context/EstimateContext'
-import { CATALOG_CATEGORIES } from '../data/categories'
+import { useCatalogueProducts } from '../context/CatalogueProductsContext'
 import { getBrandDisplayName, getWhatsAppDisplayNumber, hasWhatsApp } from '../data/siteConfig'
 
 const ICON = { strokeWidth: 1.8 }
@@ -387,6 +387,7 @@ export default function Header() {
   const { pathname } = useLocation()
   const brandName = getBrandDisplayName()
   const { estimateCount } = useEstimate()
+  const { categories } = useCatalogueProducts()
 
   const closeMobileMenu = () => setMenuOpen(false)
 
@@ -416,7 +417,7 @@ export default function Header() {
     }
   }, [menuOpen])
 
-  const categoryLinks = CATALOG_CATEGORIES.filter((c) => c.slug !== 'all')
+  const categoryLinks = categories.filter((c) => c.slug !== 'all')
   const categoriesNavActive = /^\/crackers\/.+/.test(pathname)
   const estimateAria = `My estimate, ${estimateCount} items`
 
@@ -451,7 +452,7 @@ export default function Header() {
 
         <Link
           to="/"
-          className="header-brand focus-ring col-start-2 flex min-w-0 items-center justify-self-center truncate whitespace-nowrap text-center text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--color-charcoal)] min-[360px]:text-[12px] min-[360px]:tracking-[0.1em] sm:text-[13px] sm:tracking-[0.12em] lg:col-start-auto lg:shrink-0 lg:justify-self-start lg:text-left lg:text-sm"
+          className="header-brand focus-ring col-start-2 flex min-w-0 max-w-[18ch] items-center justify-self-center text-center text-[11px] font-semibold leading-snug text-[var(--color-brand)] min-[360px]:text-xs sm:max-w-none sm:whitespace-nowrap sm:text-[13px] lg:col-start-auto lg:shrink-0 lg:justify-self-start lg:text-left lg:text-sm"
         >
           {brandName}
         </Link>

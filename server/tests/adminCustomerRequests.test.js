@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { bindAdminServiceMode } from '../src/lib/adminServiceMode.js'
 import { describe, it } from 'node:test'
 import worker from '../src/index.js'
 import { signLocalDevAdminJwt } from '../src/middleware/localAdminDevAuth.js'
@@ -16,6 +17,7 @@ import {
   parseAdminCustomerRequestListQuery,
   validateCustomerRequestStatusPatchBody,
 } from '../src/lib/adminCustomerRequestValidation.js'
+import { DEFAULT_ADMIN_SEASON_ID } from '../src/services/adminSeasonContext.js'
 
 const LOCAL_SECRET = 'local-dev-secret-at-least-32-characters-long'
 const ALLOWED_EMAIL = 'owner@example.com'
@@ -29,7 +31,7 @@ function localEnv(db) {
   }
 }
 
-async function adminFetch(path, { method = 'GET', body, db } = {}) {
+async function adminFetch(path, { method = 'GET', body, db, seasonId = DEFAULT_ADMIN_SEASON_ID } = {}) {
   const token = await signLocalDevAdminJwt(
     { ADMIN_LOCAL_DEV_SECRET: LOCAL_SECRET, ADMIN_LOCAL_DEV_EMAIL: ALLOWED_EMAIL },
     { email: ALLOWED_EMAIL },
@@ -38,6 +40,7 @@ async function adminFetch(path, { method = 'GET', body, db } = {}) {
     method,
     headers: {
       'Cf-Access-Jwt-Assertion': token,
+      ...(seasonId ? { 'X-Admin-Season-Id': seasonId } : {}),
       ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
@@ -142,6 +145,7 @@ describe('admin customer request API (mock D1)', () => {
       customer_note: 'Note A',
       created_at: '2026-10-16 10:00:00',
       updated_at: '2026-10-16 10:00:00',
+      season_id: DEFAULT_ADMIN_SEASON_ID,
     },
     {
       id: '22222222-2222-4222-8222-222222222222',
@@ -154,6 +158,7 @@ describe('admin customer request API (mock D1)', () => {
       customer_note: null,
       created_at: '2026-10-16 11:00:00',
       updated_at: '2026-10-16 11:00:00',
+      season_id: DEFAULT_ADMIN_SEASON_ID,
     },
   ]
 
@@ -235,7 +240,8 @@ describe('admin customer request API (mock D1)', () => {
     })
     assert.equal(res.status, 200)
     const body = await res.json()
-    assert.deepEqual(body.request, { id, status: 'reviewing' })
+    assert.equal(body.request.id, id)
+    assert.equal(body.request.status, 'reviewing')
     assert.equal(db.state.requests.get(id).status, 'reviewing')
   })
 
@@ -270,14 +276,32 @@ describe('admin customer request API (mock D1)', () => {
     assert.equal(r.ok, false)
   })
 
+  it('returns not_found when status patch targets another season', async () => {
+    const otherSeasonRequest = {
+      ...structuredClone(sampleRequests[0]),
+      id: '33333333-3333-4333-8333-333333333333',
+      season_id: 'season-2099',
+    }
+    const db = createAdminMockDb({ requests: [otherSeasonRequest], items: [] })
+    const res = await adminFetch(`/api/admin/customer-requests/${otherSeasonRequest.id}/status`, {
+      method: 'PATCH',
+      body: { status: 'reviewing' },
+      db,
+    })
+    assert.equal(res.status, 404)
+  })
+
   it('blocks transition out of terminal closed status', async () => {
     const closed = {
       ...sampleRequests[0],
       id: '55555555-5555-4555-8555-555555555555',
       status: 'closed',
+      season_id: DEFAULT_ADMIN_SEASON_ID,
     }
     const db = createAdminMockDb({ requests: [closed], items: [] })
-    const result = await updateAdminCustomerRequestStatus(db, closed.id, 'reviewing')
+    const result = await updateAdminCustomerRequestStatus(db, closed.id, 'reviewing', {
+      seasonId: DEFAULT_ADMIN_SEASON_ID,
+    })
     assert.equal(result.ok, false)
     if (!result.ok) assert.equal(result.status, 400)
 
@@ -301,7 +325,7 @@ describe('admin customer request API (mock D1)', () => {
     await listAdminCustomerRequests(db, { limit: 10, offset: 0, q: "O'Hara%" })
     assert.equal(String(db.lastListSql).includes("O'Hara"), false)
     assert.match(String(db.lastListSql), /LIKE \?/)
-    assert.deepEqual(db.lastListBind, ["%O'Hara\\%%", "%O'Hara\\%%", 10, 0])
+    assert.deepEqual(db.lastListBind, ["%O'Hara\\%%", "%O'Hara\\%%", "%O'Hara\\%%", 10, 0])
   })
 })
 
@@ -309,6 +333,7 @@ describe('admin customer request search', () => {
   const searchRequests = [
     {
       id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      public_reference: 'DWL-TKTSWMFM',
       status: 'received',
       source: 'web',
       customer_name: 'Ravi Kumar',
@@ -316,6 +341,7 @@ describe('admin customer request search', () => {
       customer_area: 'Chennai',
       created_at: '2026-10-16 09:00:00',
       updated_at: '2026-10-16 09:00:00',
+      season_id: DEFAULT_ADMIN_SEASON_ID,
     },
     {
       id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
@@ -326,6 +352,7 @@ describe('admin customer request search', () => {
       customer_area: 'Madurai',
       created_at: '2026-10-16 12:00:00',
       updated_at: '2026-10-16 12:00:00',
+      season_id: DEFAULT_ADMIN_SEASON_ID,
     },
     {
       id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
@@ -336,12 +363,31 @@ describe('admin customer request search', () => {
       customer_area: 'Chennai',
       created_at: '2026-10-16 13:00:00',
       updated_at: '2026-10-16 13:00:00',
+      season_id: DEFAULT_ADMIN_SEASON_ID,
     },
   ]
 
   it('normalizes phone search text', () => {
     assert.equal(normalizeCustomerRequestPhoneSearch(' +91 (958)-123 '), '91958123')
     assert.equal(normalizeCustomerRequestPhoneSearch('9581'), '9581')
+  })
+
+  it('searches the stored Reference ID exactly and partially, ignoring case', async () => {
+    for (const q of ['DWL-TKTSWMFM', 'tkts', 'SWMFM']) {
+      const db = createAdminMockDb({ requests: searchRequests, items: [] })
+      const response = await adminFetch(`/api/admin/customer-requests?q=${encodeURIComponent(q)}`, { db })
+      assert.equal(response.status, 200)
+      const body = await response.json()
+      assert.equal(body.pagination.total, 1)
+      assert.deepEqual(body.requests.map(row => row.id), [searchRequests[0].id])
+    }
+  })
+
+  it('does not search by the internal Request ID', async () => {
+    const db = createAdminMockDb({ requests: searchRequests, items: [] })
+    const response = await adminFetch(`/api/admin/customer-requests?q=${searchRequests[0].id}`, { db })
+    assert.equal((await response.json()).pagination.total, 0)
+    assert.doesNotMatch(buildAdminCustomerRequestListFilter({ q: 'aaaa' }).whereSql, /r\.id LIKE/)
   })
 
   it('searches by full and partial customer name, ignoring case', async () => {
@@ -420,7 +466,7 @@ describe('admin customer request search', () => {
 
   it('does not treat LIKE wildcards in the query as match-all', () => {
     const filter = buildAdminCustomerRequestListFilter({ q: '%' })
-    assert.deepEqual(filter.binds, ['%\\%%', '%\\%%'])
+    assert.deepEqual(filter.binds, ['%\\%%', '%\\%%', '%\\%%'])
     assert.match(filter.whereSql, /ESCAPE '\\'/)
   })
 })
@@ -461,15 +507,21 @@ function sqlLikeMatch(value, pattern) {
 function filterCustomerRequestRows(rows, normalized, params) {
   let index = 0
   let filtered = rows
+  if (normalized.includes('r.season_id = ?')) {
+    const seasonId = String(params[index++])
+    filtered = filtered.filter((row) => String(row.season_id ?? '') === seasonId)
+  }
   if (normalized.includes('r.status = ?')) {
     const status = params[index++]
     filtered = filtered.filter((row) => row.status === status)
   }
   const likeCount = normalized.split('LIKE ?').length - 1
   if (likeCount > 0) {
+    const referencePattern = normalized.includes('r.public_reference LIKE ?') ? String(params[index++] ?? '') : null
     const namePattern = String(params[index++] ?? '')
-    const phonePattern = likeCount > 1 ? String(params[index++] ?? '') : null
+    const phonePattern = likeCount > (referencePattern ? 2 : 1) ? String(params[index++] ?? '') : null
     filtered = filtered.filter((row) => {
+      if (referencePattern && sqlLikeMatch(row.public_reference, referencePattern)) return true
       if (sqlLikeMatch(row.customer_name, namePattern)) return true
       if (!phonePattern) return false
       return sqlLikeMatch(normalizeCustomerRequestPhoneSearch(row.customer_phone), phonePattern)
@@ -525,12 +577,28 @@ function createAdminMockDb(opts) {
         async first() {
               if (normalized.includes('FROM admin_users')) {
                 const email = String(params[0]).toLowerCase()
-                if (email === ALLOWED_EMAIL.toLowerCase()) return { ok: 1 }
+                if (email === ALLOWED_EMAIL.toLowerCase()) {
+                  return { id: 'admin-u-1', email, role: 'owner', active: 1 }
+                }
                 return null
               }
               if (normalized.includes('SELECT id, status FROM customer_requests')) {
-                const row = state.requests.get(String(params[0]))
-                return row ? { id: row.id, status: row.status } : null
+                const id = String(params[0])
+                const seasonId = String(params[1] ?? '')
+                const row = state.requests.get(id)
+                if (!row || String(row.season_id ?? '') !== seasonId) return null
+                return { id: row.id, status: row.status }
+              }
+              if (
+                normalized.includes('FROM customer_requests') &&
+                normalized.includes('WHERE id = ?') &&
+                normalized.includes('season_id = ?')
+              ) {
+                const id = String(params[0])
+                const seasonId = String(params[1])
+                const row = state.requests.get(id)
+                if (!row || String(row.season_id ?? '') !== seasonId) return null
+                return row
               }
               if (normalized.includes('FROM customer_requests') && normalized.includes('WHERE id = ?')) {
                 return state.requests.get(String(params[0])) ?? null
@@ -546,6 +614,30 @@ function createAdminMockDb(opts) {
               return null
             },
         async all() {
+              if (normalized.includes('FROM season_members sm')) {
+                return {
+                  results: [
+                    {
+                      season_id: DEFAULT_ADMIN_SEASON_ID,
+                      role: 'owner',
+                      disabled_at: null,
+                      created_at: '',
+                      code: '2026',
+                      label: 'Diwali 2026',
+                      status: 'active',
+                    },
+                    {
+                      season_id: 'season-2099',
+                      role: 'owner',
+                      disabled_at: null,
+                      created_at: '',
+                      code: '2099',
+                      label: 'Other',
+                      status: 'active',
+                    },
+                  ],
+                }
+              }
               if (normalized.includes('FROM customer_request_items') && normalized.includes('WHERE request_id = ?')) {
                 const rid = String(params[0])
                 const results = state.items
@@ -590,9 +682,14 @@ function createAdminMockDb(opts) {
             },
         async run() {
               if (normalized.startsWith('UPDATE customer_requests SET status')) {
-                const [status, id] = params
-                const row = state.requests.get(String(id))
-                if (!row) return { meta: { changes: 0 } }
+                const hasClosure = normalized.includes('closed_by_email')
+                const status = String(params[0])
+                const id = String(hasClosure ? params[2] : params[1])
+                const seasonId = String(hasClosure ? params[3] : params[2])
+                const row = state.requests.get(id)
+                if (!row || String(row.season_id ?? '') !== seasonId) {
+                  return { meta: { changes: 0 } }
+                }
                 row.status = status
                 row.updated_at = '2026-10-16 12:00:00'
                 return { meta: { changes: 1 } }
@@ -607,5 +704,5 @@ function createAdminMockDb(opts) {
     },
   }
 
-  return db
+  return bindAdminServiceMode(db, {})
 }

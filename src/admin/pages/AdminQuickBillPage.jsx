@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createQuickBillRetryKeys } from '../lib/quickBillCheckoutKey.js'
 import { Link } from 'react-router-dom'
 import { Loader2, Minus, Plus, Search, Trash2 } from 'lucide-react'
 import Button from '../../components/ui/Button.jsx'
@@ -24,7 +25,9 @@ import {
   removeCartLine,
   setCartLineQuantity,
 } from '../lib/quickBillCart.js'
+import { useAdminSeasonReadOnly } from '../hooks/useAdminSeasonReadOnly.js'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
+import { checkoutHandoverFields } from '../lib/billAdjustment.js'
 import { useQuickBillAssignees } from '../lib/quickBillAssignees.js'
 import { canAssignQuickBillCustomerRequests, canViewSensitiveProductPricing } from '../lib/adminRoles.js'
 import { listQuickBillCustomerValidationIssues } from '../lib/quickBillCustomerValidation.js'
@@ -114,9 +117,11 @@ function formatQuickBillLoosePcPrice(product) {
 }
 
 export default function AdminQuickBillPage() {
-  const { role } = useAdminSession()
-  const canUseBargainMode = canViewSensitiveProductPricing(role)
-  const canAssign = canAssignQuickBillCustomerRequests(role)
+  const { role, permissionRole: seasonRole, activeSeasonId, contextKey, seasonSwitching, locationModeEnabled } = useAdminSession()
+  const { isReadOnly } = useAdminSeasonReadOnly()
+  const pricingPermissionRole = activeSeasonId != null ? seasonRole : role
+  const canUseBargainMode = canViewSensitiveProductPricing(pricingPermissionRole)
+  const canAssign = canAssignQuickBillCustomerRequests(pricingPermissionRole)
   const { users: assigneeUsers, loading: assigneesLoading, error: assigneesError } =
     useQuickBillAssignees(canAssign)
   const [assigneeUserId, setAssigneeUserId] = useState('')
@@ -152,12 +157,15 @@ export default function AdminQuickBillPage() {
   const [assignBusy, setAssignBusy] = useState(false)
   const billSectionRef = useRef(/** @type {HTMLDivElement | null} */ (null))
   const previewRequestSeqRef = useRef(0)
+  const checkoutKeysRef = useRef(null)
+  const checkoutPendingRef = useRef(false)
 
   const effectivePricingMode = canUseBargainMode && pricingMode === 'bargain' ? 'bargain' : 'selling'
 
   const cartItemsPayload = useMemo(() => cartToCheckoutItems(cart), [cart])
 
   useEffect(() => {
+    if (seasonSwitching) return
     fetchAdminCategories().then((res) => {
       if (!res.ok) return
       const mapped = res.categories
@@ -169,9 +177,10 @@ export default function AdminQuickBillPage() {
         .filter((c) => c.slug)
       setCategories(mapped)
     })
-  }, [])
+  }, [seasonSwitching])
 
   useEffect(() => {
+    if (seasonSwitching) return undefined
     const q = query.trim()
     const hasCategory = categorySlug.length > 0
     if (q.length < 1 && !hasCategory) {
@@ -197,7 +206,7 @@ export default function AdminQuickBillPage() {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [query, categorySlug])
+  }, [query, categorySlug, seasonSwitching])
 
   useEffect(() => {
     if (!canUseBargainMode && pricingMode === 'bargain') {
@@ -234,13 +243,18 @@ export default function AdminQuickBillPage() {
   }, [])
 
   useEffect(() => {
+    if (seasonSwitching) {
+      previewRequestSeqRef.current += 1
+      return undefined
+    }
     const timer = setTimeout(() => {
       loadPreview(cartItemsPayload, effectivePricingMode)
     }, 320)
     return () => clearTimeout(timer)
-  }, [cartItemsPayload, effectivePricingMode, loadPreview])
+  }, [cartItemsPayload, effectivePricingMode, loadPreview, seasonSwitching])
 
   function handleAddProduct(product, unitType = 'box') {
+    if (isReadOnly) return
     const id = String(product.id ?? '')
     const name = String(product.name ?? id)
     if (!id) return
@@ -262,6 +276,7 @@ export default function AdminQuickBillPage() {
   }
 
   function handleCheckoutClick() {
+    if (isReadOnly) return
     setCheckoutError(null)
     const customerIssues = listQuickBillCustomerValidationIssues(
       customerName.trim(),
@@ -277,6 +292,7 @@ export default function AdminQuickBillPage() {
   }
 
   function runCheckout() {
+    if (isReadOnly || checkoutPendingRef.current) return
     setCheckoutError(null)
     /** @type {{ pricingMode: QuickBillPricingMode, acceptedAmountPaise?: number }} */
     const pricingPayload = { pricingMode: effectivePricingMode }
@@ -290,15 +306,20 @@ export default function AdminQuickBillPage() {
     }
 
     const assignOnSave = assigneeUserId.trim()
+    if (!checkoutKeysRef.current) checkoutKeysRef.current = createQuickBillRetryKeys()
+    checkoutPendingRef.current = true
     setCheckoutBusy(true)
-    checkoutQuickBill({
+    const payload = {
       customer: {
         name: customerName.trim(),
         mobile: customerMobile.trim(),
       },
       items: cartItemsPayload,
       ...pricingPayload,
-    }).then(async (res) => {
+      ...checkoutHandoverFields(locationModeEnabled, assignOnSave),
+    }
+    const idempotencyKey = checkoutKeysRef.current.forCheckout(payload, contextKey)
+    checkoutQuickBill(payload, { idempotencyKey }).then(async (res) => {
       setCheckoutBusy(false)
       if (!res.ok) {
         const missing = res.missingProductIds?.length
@@ -310,14 +331,15 @@ export default function AdminQuickBillPage() {
         return
       }
       const request = /** @type {{ id?: string }} */ (res.request)
+      checkoutKeysRef.current.complete()
       const quotation = /** @type {{ totalPaise?: number }} */ (res.quotation)
       const warnings = /** @type {{ code?: string, message?: string }[] | undefined} */ (res.warnings)
       const requestId = String(request.id ?? '')
       /** @type {string | null} */
-      let assignedToEmail = null
+      let assignedToEmail = res.request?.assignedToEmail ?? null
       /** @type {string | null} */
       let assignError = null
-      if (assignOnSave) {
+      if (assignOnSave && !locationModeEnabled) {
         const assignRes = await patchAdminCustomerRequestAssign(requestId, {
           assigneeUserId: assignOnSave,
         })
@@ -333,6 +355,7 @@ export default function AdminQuickBillPage() {
       setSuccessAssigneeUserId(assignOnSave && !assignedToEmail ? assignOnSave : '')
       setSuccess({
         requestId,
+        revision: res.request?.revision ?? null,
         totalPaise: Number(quotation.totalPaise ?? 0),
         warnings: warnings?.length ? warnings : undefined,
         assignedToEmail,
@@ -344,7 +367,7 @@ export default function AdminQuickBillPage() {
       setPricingMode('selling')
       setAssigneeUserId('')
       setCustomerFieldIssues([])
-    })
+    }).finally(() => { checkoutPendingRef.current = false })
   }
 
   const customerNameInvalid = customerFieldIssues.some((i) => i.field === 'name')
@@ -355,7 +378,7 @@ export default function AdminQuickBillPage() {
     setAssignBusy(true)
     const res = await patchAdminCustomerRequestAssign(success.requestId, {
       assigneeUserId: successAssigneeUserId.trim(),
-    })
+    }, { revision: success.revision })
     setAssignBusy(false)
     if (!res.ok) {
       setSuccess((prev) =>
@@ -370,6 +393,7 @@ export default function AdminQuickBillPage() {
             assignedToEmail:
               res.request?.assignedToEmail != null ? String(res.request.assignedToEmail) : null,
             assignError: null,
+            revision: res.request?.revision ?? prev.revision,
           }
         : prev,
     )
@@ -840,7 +864,7 @@ export default function AdminQuickBillPage() {
                   <dd>{formatPreviewPaise(preview, 'finalSubtotalPaise')}</dd>
                 </div>
                 <div className="admin-quick-bill__bargain-row">
-                  <dt>Floor (Final + ₹500)</dt>
+                  <dt>Final Price + ₹500 — reference only</dt>
                   <dd>{formatPreviewPaise(preview, 'bargainFloorPaise')}</dd>
                 </div>
               </dl>
@@ -888,6 +912,7 @@ export default function AdminQuickBillPage() {
             type="button"
             className="admin-touch-button admin-quick-bill__checkout-btn"
             disabled={
+              isReadOnly ||
               cart.length === 0 ||
               previewBusy ||
               Boolean(previewError) ||

@@ -3,11 +3,13 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Button from '../../components/ui/Button.jsx'
 import { isLocalViteProxyMode } from '../../api/adminApiMode.js'
-import { fetchAdminSession, loginAdmin } from '../api/adminApi.js'
+import { loginAdmin } from '../api/adminApi.js'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
+import { adminDestination, resolveAdminLoginDestination } from '../lib/adminWorkspaceAccess.js'
 
 export default function AdminLoginPage() {
-  const { refreshSession } = useAdminSession()
+  const session = useAdminSession()
+  const { refreshSession } = session
   const navigate = useNavigate()
   const location = useLocation()
   const logoutNotice =
@@ -19,27 +21,21 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [checkingSession, setCheckingSession] = useState(true)
+  const checkingSession = session.status === 'loading'
   const usingViteProxy = isLocalViteProxyMode()
 
   useEffect(() => {
     if (!logoutNotice) return
-    navigate(location.pathname, { replace: true, state: null })
-  }, [location.pathname, logoutNotice, navigate])
+    navigate(location.pathname, { replace: true, state: { from: location.state?.from } })
+  }, [location.pathname, location.state?.from, logoutNotice, navigate])
 
   useEffect(() => {
-    let cancelled = false
-    fetchAdminSession().then((result) => {
-      if (cancelled) return
-      setCheckingSession(false)
-      if (result.ok) {
-        navigate('/admin/products', { replace: true })
-      }
-    })
-    return () => {
-      cancelled = true
+    if (session.status === 'authenticated') {
+      navigate(resolveAdminLoginDestination(session, location.state?.from), {
+        replace: true, state: { from: adminDestination(location.state?.from)?.destination },
+      })
     }
-  }, [navigate])
+  }, [session, location.state?.from, navigate])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -51,8 +47,8 @@ export default function AdminLoginPage() {
       setError(result.message || 'Sign in failed.')
       return
     }
-    await refreshSession()
-    navigate('/admin/products', { replace: true })
+    const refreshed = await refreshSession()
+    if (!refreshed.ok) setError('Could not verify your workspace. Try signing in again.')
   }
 
   if (checkingSession) {
@@ -94,7 +90,7 @@ export default function AdminLoginPage() {
           </p>
         </div>
       ) : null}
-      <form onSubmit={handleSubmit} className="admin-form admin-form--auth w-full max-w-sm">
+      <form onSubmit={handleSubmit} onReset={() => { setEmail(''); setPassword(''); setShowPassword(false) }} className="admin-form admin-form--auth w-full max-w-sm">
         <label className="admin-field">
           <span className="admin-label">Email</span>
           <input

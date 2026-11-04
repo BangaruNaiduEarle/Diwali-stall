@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Copy, ExternalLink, Loader2 } from 'lucide-react'
+import { Copy, ExternalLink, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { formatINR } from '../../utils/currency.js'
+import { currentBillRevision } from '../lib/billAdjustment.js'
 import {
   createQuotationForRequest,
   fetchAdminCustomerRequest,
@@ -18,6 +19,7 @@ import {
 import AdminCustomerRequestQuotationLineCard from '../components/AdminCustomerRequestQuotationLineCard.jsx'
 import QuickBillAssigneeSelect from '../components/QuickBillAssigneeSelect.jsx'
 import AdminCustomerRequestAdjustBillPanel from '../components/AdminCustomerRequestAdjustBillPanel.jsx'
+import AdminRequestPayments from '../components/AdminRequestPayments.jsx'
 import AdminCustomerRequestWorkflowAudit from '../components/AdminCustomerRequestWorkflowAudit.jsx'
 import {
   formatAdminPublicReference,
@@ -33,6 +35,7 @@ import {
   isTerminalCustomerRequestStatus,
 } from '../lib/customerRequestStatus.js'
 import { paiseToInrHelper } from '../lib/moneyDisplay.js'
+import { useAdminSeasonReadOnly } from '../hooks/useAdminSeasonReadOnly.js'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
 import { useQuickBillAssignees } from '../lib/quickBillAssignees.js'
 import {
@@ -64,11 +67,23 @@ function formatPaiseOrDash(paise) {
   return formatINR(paiseToInrHelper(p))
 }
 
+function formatFinancialEstimate(paise) {
+  return Number.isSafeInteger(paise) ? formatINR(paise / 100) : '—'
+}
+
 export default function AdminCustomerRequestDetailPage() {
   const { id } = useParams()
   const requestId = String(id ?? '')
-  const { role: adminRole } = useAdminSession()
-  const canAssign = canAssignQuickBillCustomerRequests(adminRole)
+  const { role, permissionRole: seasonRole, activeSeasonId, contextKey, locationModeEnabled, email } = useAdminSession()
+  const { isReadOnly } = useAdminSeasonReadOnly()
+  const pricingPermissionRole = activeSeasonId != null ? seasonRole : role
+  const purchaseVisibilityScope = JSON.stringify([contextKey, email, activeSeasonId, pricingPermissionRole, requestId])
+  const [purchaseVisibility, setPurchaseVisibility] = useState({ scope: purchaseVisibilityScope, visible: true })
+  const showPurchasePrice = purchaseVisibility.scope === purchaseVisibilityScope ? purchaseVisibility.visible : true
+  useEffect(() => {
+    setPurchaseVisibility({ scope: purchaseVisibilityScope, visible: true })
+  }, [purchaseVisibilityScope])
+  const canAssign = canAssignQuickBillCustomerRequests(pricingPermissionRole)
   const { users: assigneeUsers, loading: assigneesLoading, error: assigneesError } =
     useQuickBillAssignees(canAssign)
   const [assigneeUserId, setAssigneeUserId] = useState('')
@@ -153,6 +168,7 @@ export default function AdminCustomerRequestDetailPage() {
   }, [quotation?.acceptedAmountPaise, quotation?.id])
 
   async function handleStatusChange(e) {
+    if (isReadOnly) return
     const next = e.target.value
     const previous = String(request?.status ?? statusValue)
     if (next === previous) return
@@ -162,7 +178,7 @@ export default function AdminCustomerRequestDetailPage() {
     setStatusError(null)
     setStatusMessage(null)
 
-    const res = await patchAdminCustomerRequestStatus(requestId, next)
+    const res = await patchAdminCustomerRequestStatus(requestId, next, { revision: currentBillRevision(request, quotation) })
     setStatusSaving(false)
 
     if (!res.ok) {
@@ -174,12 +190,14 @@ export default function AdminCustomerRequestDetailPage() {
     setRequest((prev) => (prev ? { ...prev, status: res.request.status } : prev))
     setStatusValue(res.request.status)
     setStatusMessage('Status updated successfully.')
+    await reloadRequest()
   }
 
   async function handleCreateQuote() {
+    if (isReadOnly) return
     setBusy(true)
     setError(null)
-    const res = await createQuotationForRequest(requestId)
+    const res = await createQuotationForRequest(requestId, { revision: currentBillRevision(request, quotation) })
     setBusy(false)
     if (!res.ok) {
       setError(res.message)
@@ -190,10 +208,11 @@ export default function AdminCustomerRequestDetailPage() {
   }
 
   async function handleRegenerate() {
+    if (isReadOnly) return
     if (!window.confirm('Create a new quotation snapshot? The previous active quotation will be voided.')) return
     setBusy(true)
     setError(null)
-    const res = await regenerateQuotationForRequest(requestId)
+    const res = await regenerateQuotationForRequest(requestId, { revision: currentBillRevision(request, quotation) })
     setBusy(false)
     if (!res.ok) {
       setError(res.message)
@@ -267,7 +286,7 @@ export default function AdminCustomerRequestDetailPage() {
   const quoteLines = Array.isArray(quotation?.items) ? quotation.items : []
   const hasQuotation = Boolean(quotation?.id)
   const requestSource = String(request?.source ?? '')
-  const canViewInternalPricing = canViewSensitiveProductPricing(adminRole)
+  const canViewInternalPricing = canViewSensitiveProductPricing(pricingPermissionRole)
   const internalPreview =
     canViewInternalPricing && quotation?.internalPricingPreview && typeof quotation.internalPricingPreview === 'object'
       ? /** @type {{ sellingSubtotalPaise?: number, finalSubtotalPaise?: number, bargainFloorPaise?: number }} */ (
@@ -310,10 +329,10 @@ export default function AdminCustomerRequestDetailPage() {
   const finalizationStatus = String(request?.finalizationStatus ?? '').trim()
   const isPendingFinalization = finalizationStatus === 'pending'
   const isPendingManualBill = requestSource === 'manual' && isPendingFinalization
-  const showAssignPanel = canAssign && isPendingManualBill
-  const canFinalize = canFinalizeQuickBillCustomerRequests(adminRole)
-  const showAdjustBillPanel = canFinalize && isPendingManualBill && hasQuotation
-  const showFinalizePanel = canFinalize && isPendingFinalization
+  const showAssignPanel = canAssign && isPendingFinalization && ['manual', 'web'].includes(requestSource)
+  const canFinalize = canFinalizeQuickBillCustomerRequests(pricingPermissionRole)
+  const showAdjustBillPanel = !isReadOnly && !statusTerminal && (isPendingManualBill || requestSource === 'web') && hasQuotation
+  const showFinalizePanel = !isReadOnly && canFinalize && isPendingFinalization
   const bargainModeQuotation = quotationIsBargainMode(
     /** @type {{ pricingMode?: string, bargainFloorPaise?: number | null, acceptedAmountPaise?: number | null }} */ (
       quotation
@@ -332,16 +351,17 @@ export default function AdminCustomerRequestDetailPage() {
     requestSource === 'web' &&
     !finalizationStatus &&
     !isTerminalCustomerRequestStatus(currentStatus)
-  const showCreateQuotation = !hasQuotation && !statusTerminal
+  const showCreateQuotation = !isReadOnly && !hasQuotation && !statusTerminal
   const showQuotationMessaging = hasQuotation && !statusTerminal
-  const showRegenerateQuotation = showQuotationMessaging && requestSource === 'web'
+  const showRegenerateQuotation = !isReadOnly && showQuotationMessaging && requestSource === 'web'
 
   async function handleAssignBill() {
+    if (isReadOnly) return
     if (!assigneeUserId.trim()) return
     setAssignBusy(true)
     setAssignError(null)
     setAssignMessage(null)
-    const res = await patchAdminCustomerRequestAssign(requestId, { assigneeUserId: assigneeUserId.trim() })
+    const res = await patchAdminCustomerRequestAssign(requestId, { assigneeUserId: assigneeUserId.trim() }, { revision: currentBillRevision(request, quotation) })
     setAssignBusy(false)
     if (!res.ok) {
       setAssignError(res.message || 'Could not assign bill.')
@@ -355,6 +375,7 @@ export default function AdminCustomerRequestDetailPage() {
   }
 
   async function handleCustomerAgreed() {
+    if (isReadOnly) return
     if (!showCustomerAgreedPanel || agreementBusy) return
     if (
       !window.confirm(
@@ -366,7 +387,7 @@ export default function AdminCustomerRequestDetailPage() {
     setAgreementBusy(true)
     setAgreementError(null)
     setAgreementMessage(null)
-    const res = await patchAdminCustomerRequestCustomerAgreed(requestId)
+    const res = await patchAdminCustomerRequestCustomerAgreed(requestId, { revision: currentBillRevision(request, quotation) })
     setAgreementBusy(false)
     if (!res.ok) {
       setAgreementError(res.message || 'Could not record customer agreement.')
@@ -377,6 +398,7 @@ export default function AdminCustomerRequestDetailPage() {
   }
 
   async function handleSaveAgreedAmount() {
+    if (isReadOnly) return
     if (!showAgreedAmountForm || agreedAmountBusy) return
     const parsed = parseCustomerAgreedInrToPaise(agreedAmountInr)
     if (!parsed.ok) {
@@ -388,7 +410,7 @@ export default function AdminCustomerRequestDetailPage() {
     setAgreedAmountMessage(null)
     const res = await patchQuotationCustomerAgreedAmount(requestId, {
       acceptedAmountInr: String(agreedAmountInr).trim(),
-    })
+    }, { revision: currentBillRevision(request, quotation) })
     setAgreedAmountBusy(false)
     if (!res.ok) {
       setAgreedAmountError(res.message || 'Could not save customer-agreed amount.')
@@ -399,9 +421,11 @@ export default function AdminCustomerRequestDetailPage() {
     }
     await loadQuotation()
     setAgreedAmountMessage('Customer-agreed amount saved.')
+    await reloadRequest()
   }
 
   function handleFinalizeBillClick() {
+    if (isReadOnly) return
     if (!isPendingFinalization || finalizeBusy) return
     if (agreedAmountFinalizeBlocked) {
       setFinalizeDialog('missing-agreed')
@@ -411,6 +435,7 @@ export default function AdminCustomerRequestDetailPage() {
   }
 
   async function executeFinalizeBill() {
+    if (isReadOnly) return
     if (!isPendingFinalization || finalizeBusy) return
     if (agreedAmountFinalizeBlocked) {
       setFinalizeDialog('missing-agreed')
@@ -419,7 +444,7 @@ export default function AdminCustomerRequestDetailPage() {
     setFinalizeBusy(true)
     setFinalizeError(null)
     setFinalizeMessage(null)
-    const res = await patchAdminCustomerRequestFinalize(requestId)
+    const res = await patchAdminCustomerRequestFinalize(requestId, { revision: currentBillRevision(request, quotation) })
     setFinalizeBusy(false)
     setFinalizeDialog(null)
     if (!res.ok) {
@@ -475,7 +500,7 @@ export default function AdminCustomerRequestDetailPage() {
             className="admin-input"
             value={statusValue}
             onChange={handleStatusChange}
-            disabled={statusTerminal || statusSaving || busy}
+            disabled={isReadOnly || statusTerminal || statusSaving || busy}
             aria-describedby={statusTerminal ? 'request-status-terminal-hint' : undefined}
           >
             {CUSTOMER_REQUEST_STATUSES.map((value) => (
@@ -701,8 +726,8 @@ export default function AdminCustomerRequestDetailPage() {
                     <div>
                       <dt>
                         {internalSummary.isBargainMode
-                          ? 'Bargain floor (Final + ₹500)'
-                          : 'Reference floor (Final + ₹500)'}
+                          ? 'Final Price + ₹500 (reference only)'
+                          : 'Final Price + ₹500 (reference only)'}
                         {internalSummary.bargainFloorIsEstimate ? (
                           <span className="admin-request-detail__field-estimate-tag">est.</span>
                         ) : null}
@@ -758,21 +783,24 @@ export default function AdminCustomerRequestDetailPage() {
                       setAgreedAmountInr(e.target.value)
                       if (agreedAmountError) setAgreedAmountError(null)
                     }}
-                    disabled={agreedAmountBusy || busy}
+                    disabled={isReadOnly || agreedAmountBusy || busy}
+                    readOnly={isReadOnly}
                     placeholder="e.g. 2500"
                     aria-invalid={showAgreedAmountRequiredValidation ? true : undefined}
                     aria-describedby={
                       showAgreedAmountRequiredValidation ? 'customer-agreed-amount-required-hint' : undefined
                     }
                   />
-                  <button
-                    type="button"
-                    className="admin-touch-button admin-touch-button--secondary admin-request-detail__agreed-save"
-                    disabled={agreedAmountBusy || busy || !String(agreedAmountInr).trim()}
-                    onClick={handleSaveAgreedAmount}
-                  >
-                    {agreedAmountBusy ? 'Saving…' : 'Save agreed amount'}
-                  </button>
+                  {!isReadOnly ? (
+                    <button
+                      type="button"
+                      className="admin-touch-button admin-touch-button--secondary admin-request-detail__agreed-save"
+                      disabled={agreedAmountBusy || busy || !String(agreedAmountInr).trim()}
+                      onClick={handleSaveAgreedAmount}
+                    >
+                      {agreedAmountBusy ? 'Saving…' : 'Save agreed amount'}
+                    </button>
+                  ) : null}
                 </div>
                 {showAgreedAmountRequiredValidation ? (
                   <p
@@ -878,19 +906,21 @@ export default function AdminCustomerRequestDetailPage() {
             onChange={setAssigneeUserId}
             users={assigneeUsers}
             loading={assigneesLoading}
-            disabled={assignBusy}
+            disabled={isReadOnly || assignBusy}
             hint={assigneesError}
           />
-          <div className="admin-form__actions admin-form__actions--start admin-request-detail__actions">
-            <button
-              type="button"
-              className="admin-touch-button admin-touch-button--secondary"
-              disabled={assignBusy || !assigneeUserId.trim()}
-              onClick={handleAssignBill}
-            >
-              {assignBusy ? 'Saving…' : 'Save assignment'}
-            </button>
-          </div>
+          {!isReadOnly ? (
+            <div className="admin-form__actions admin-form__actions--start admin-request-detail__actions">
+              <button
+                type="button"
+                className="admin-touch-button admin-touch-button--secondary"
+                disabled={assignBusy || !assigneeUserId.trim()}
+                onClick={handleAssignBill}
+              >
+                {assignBusy ? 'Saving…' : 'Save assignment'}
+              </button>
+            </div>
+          ) : null}
           <AdminFeedbackBanner
             variant="success"
             message={assignMessage}
@@ -906,6 +936,35 @@ export default function AdminCustomerRequestDetailPage() {
         </section>
       ) : null}
 
+      {locationModeEnabled ? <p><Link to={`/admin/offline?requestId=${encodeURIComponent(requestId)}`}>Save this request for offline work</Link></p> : null}
+      {locationModeEnabled ? <AdminRequestPayments key={`payments:${contextKey}:${requestId}`} requestId={requestId}
+        contextKey={contextKey} initialSummary={request?.paymentSummary} canRecord={canViewInternalPricing} disabled={isReadOnly}
+        onRecorded={async () => { await reloadRequest(); await loadQuotation() }} /> : null}
+
+      <button type="button" className="admin-touch-button admin-touch-button--secondary" disabled={busy}
+        onClick={async () => { await reloadRequest(); await loadQuotation() }}>Refresh request progress</button>
+
+      {canViewInternalPricing && quotation?.internalFinancialSummary ? <section className="admin-request-detail__section admin-card">
+        <h3>{quotation.internalFinancialSummary.basis === 'finalization_purchase_snapshot' ? 'Finalized purchase cost and profit' : 'Current purchase and profit estimates'}{' '}
+          <button type="button" className="admin-icon-btn"
+            aria-label={showPurchasePrice ? 'Hide purchase price' : 'Show purchase price'}
+            title={showPurchasePrice ? 'Hide purchase price' : 'Show purchase price'}
+            aria-pressed={showPurchasePrice}
+            onClick={() => setPurchaseVisibility({ scope: purchaseVisibilityScope, visible: !showPurchasePrice })}>
+            {showPurchasePrice ? <Eye size={18} aria-hidden="true" /> : <EyeOff size={18} aria-hidden="true" />}
+          </button>
+        </h3>
+        {quotation.internalFinancialSummary.available === false ? <p>Historical purchase cost is unavailable. Profit cannot be calculated for this bill.</p> : null}
+        <dl className="admin-request-detail__summary-dl">
+          {quotation.internalFinancialSummary.lines.map(line => <div key={line.lineId}>
+            <dt>{request.items.find(item => item.lineId === line.lineId)?.productName ?? 'Product'} — purchase per unit</dt>
+            <dd>{showPurchasePrice ? formatFinancialEstimate(line.purchaseUnitPaise) : '••••'}</dd>
+          </div>)}
+          <div><dt>{quotation.internalFinancialSummary.basis === 'finalization_purchase_snapshot' ? 'Purchase subtotal at finalization' : 'Purchase subtotal estimate'}</dt><dd>{showPurchasePrice ? formatFinancialEstimate(quotation.internalFinancialSummary.purchaseSubtotalPaise) : '••••'}</dd></div>
+          <div><dt>{quotation.internalFinancialSummary.basis === 'finalization_purchase_snapshot' ? 'Profit on finalized bill amount' : 'Profit estimate after discount'}</dt><dd>{formatFinancialEstimate(quotation.internalFinancialSummary.profitPaise)}</dd></div>
+        </dl>
+      </section> : null}
+
       {showAdjustBillPanel ? (
         <section
           className="admin-request-detail__section admin-card admin-request-detail__card"
@@ -915,7 +974,12 @@ export default function AdminCustomerRequestDetailPage() {
             Adjust bill before finalize
           </h3>
           <AdminCustomerRequestAdjustBillPanel
+            key={`${contextKey}:${requestId}`}
             requestId={requestId}
+            revision={currentBillRevision(request, quotation)}
+            privileged={canViewInternalPricing}
+            discountPaise={Math.max(0, -(quotation?.adjustmentPaise ?? 0))}
+            onReload={async () => { await reloadRequest(); await loadQuotation() }}
             requestItems={Array.isArray(request?.items) ? request.items : []}
             pricingMode={bargainModeQuotation ? 'bargain' : 'selling'}
             disabled={busy || finalizeBusy}

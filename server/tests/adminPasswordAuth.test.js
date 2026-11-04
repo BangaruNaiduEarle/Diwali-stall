@@ -85,7 +85,7 @@ describe('admin password auth HTTP', () => {
     const logoutRes = await worker.fetch(
       new Request('https://api.example.com/api/admin/auth/logout', {
         method: 'POST',
-        headers: { Cookie: sessionCookie },
+        headers: { Cookie: sessionCookie, Origin: 'https://api.example.com' },
       }),
       env,
       {},
@@ -145,6 +145,7 @@ describe('admin password auth HTTP', () => {
         headers: {
           Cookie: sessionCookie,
           'X-Forwarded-Host': 'diwali-stall.vercel.app',
+          Origin: 'https://diwali-stall.vercel.app',
         },
       }),
       proxyEnv,
@@ -258,6 +259,12 @@ function createAuthDb() {
         if (normalized.includes('FROM admin_owner_bootstrap')) {
           return bootstrapComplete ? { singleton_id: 1 } : null
         }
+        if (normalized.includes('FROM business_seasons WHERE id =')) {
+          return { id: 'season-2026' }
+        }
+        if (normalized.includes('FROM season_members WHERE season_id =')) {
+          return null
+        }
         if (normalized.includes('COUNT(*)') && normalized.includes('admin_login_attempts')) {
           return { n: 0 }
         }
@@ -303,6 +310,9 @@ function createAuthDb() {
             display_name: args[1],
             disabled_at: null,
           })
+        }
+        if (normalized.startsWith('INSERT INTO season_members')) {
+          /* bootstrap season membership — no-op for auth flow tests */
         }
         if (normalized.startsWith('INSERT INTO admin_sessions')) {
           sessions.set(String(args[0]), {

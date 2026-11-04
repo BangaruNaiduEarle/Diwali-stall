@@ -1,70 +1,12 @@
 @import 'tailwindcss';
-
-/* ─── Festive brand tokens (cool page + maroon/gold accents) ─── */
-:root {
-  --color-page: #f2f6fc;
-  --color-maroon: #5a1720;
-  --color-maroon-deep: #4a121a;
-  --color-maroon-soft: #7a1f27;
-  --color-red: #a82424;
-  --color-saffron: #d97706;
-  --color-gold: #c9a45c;
-  --color-gold-light: #e1c27d;
-
-  --color-brand: #5a1720;
-  --color-brand-dark: #4a121a;
-  --color-brand-deep: #5a1720;
-  --color-brand-text: #5a1720;
-
-  /* Page canvas; also used for light text/icons on maroon surfaces */
-  --color-ivory: var(--color-page);
-  --color-white: #ffffff;
-
-  --color-charcoal: #292321;
-  --color-muted: #62544b;
-  --color-ref-price: #8a7b72;
-
-  --color-border: #dce5f0;
-  --color-border-warm: #cdd8ea;
-  --color-border-faint: rgba(41, 35, 33, 0.08);
-  --color-image-well: #e7effa;
-  --color-surface-hover: #e8eef8;
-
-  /* Semantic aliases (used across components) */
-  --color-ink: var(--color-charcoal);
-  --color-paper: var(--color-white);
-
-  --radius-sm: 8px;
-  --radius-md: 10px;
-  --radius-lg: 12px;
-
-  --shadow-hover: 0 12px 36px rgba(41, 35, 33, 0.08);
-  --container-max: 80rem;
-
-  --section-y: clamp(2.5rem, 5vw, 5rem);
-  --section-y-compact: clamp(2rem, 4vw, 3.5rem);
-  --space-page-x: 1rem;
-
-  --font-sans: 'Segoe UI', system-ui, Roboto, sans-serif;
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --transition-fast: 180ms var(--ease-out);
-  --btn-radius: 10px;
-  --btn-shadow-hover: 0 4px 14px rgba(143, 29, 44, 0.14);
-
-  --hero-maroon-bg: radial-gradient(
-      circle at 80% 30%,
-      rgba(201, 164, 92, 0.18),
-      transparent 35%
-    ),
-    linear-gradient(135deg, #5a1720 0%, #7a1f27 100%);
-}
+@import './styles/design-tokens.css';
 
 @theme {
   --color-diwali-navy: var(--color-maroon);
   --color-diwali-navy-muted: var(--color-maroon-soft);
   --color-diwali-gold: var(--color-gold);
-  --color-diwali-gold-dark: #a88648;
-  --color-diwali-gold-light: #dbc088;
+  --color-diwali-gold-dark: var(--color-slate);
+  --color-diwali-gold-light: var(--color-surface-muted);
   --color-diwali-cream: var(--color-ivory);
   --color-diwali-surface: var(--color-white);
   --color-diwali-ink: var(--color-charcoal);
@@ -1706,11 +1648,105 @@
   white-space: nowrap;
 }
 
+.admin-header__season {
+  flex: 1 1 10rem;
+  min-width: 0;
+  max-width: 20rem;
+}
+
+.admin-season-select {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.admin-season-select__label {
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.82;
+}
+
+.admin-season-select__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  min-width: 0;
+}
+
+.admin-season-select__control {
+  flex: 1 1 8rem;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 2.25rem;
+  padding: 0.25rem 1.75rem 0.25rem 0.5rem;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-charcoal);
+  background: var(--color-ivory);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.admin-season-select__control:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.admin-season-select__role {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-gold-light);
+  white-space: nowrap;
+}
+
+.admin-season-select__static {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.admin-season-select__badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.admin-season-select__error {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: #ffd4d4;
+}
+
+.admin-season-select--platform {
+  justify-content: center;
+}
+
 .admin-main {
   max-width: var(--container-max);
   margin: 0 auto;
   padding: 1.25rem max(var(--space-page-x), env(safe-area-inset-left, 0px)) calc(3rem + env(safe-area-inset-bottom, 0px))
     max(var(--space-page-x), env(safe-area-inset-right, 0px));
+}
+
+.admin-archived-season-banner {
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-charcoal);
+  background: #fff3cd;
+  border: 1px solid #e8c96a;
+  border-radius: var(--radius-sm);
 }
 
 .admin-page__head {

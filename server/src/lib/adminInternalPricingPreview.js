@@ -1,3 +1,4 @@
+import { customerRequestDb, validateTransactionCatalogueReferences } from './adminCustomerRequestScope.js'
 import {
   isLooseQuotationProductName,
   stripLooseProductNameSuffix,
@@ -35,9 +36,12 @@ function mapRequestItemsToQuickBillInputs(requestItems) {
  *
  * @param {D1Database} db
  * @param {Record<string, unknown>[] | null | undefined} requestItems
+ * @param {string} seasonId
  */
-export async function buildManualRequestInternalPricingPreview(db, requestItems) {
-  const view = await buildRequestInternalPricingView(db, requestItems)
+export async function buildManualRequestInternalPricingPreview(db, requestItems, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context)
+  await validateTransactionCatalogueReferences(db, requestItems)
+  const view = await buildRequestInternalPricingView(db, requestItems, seasonId)
   if (!view) return null
   return {
     kind: 'estimate',
@@ -52,8 +56,11 @@ export async function buildManualRequestInternalPricingPreview(db, requestItems)
  *
  * @param {D1Database} db
  * @param {Record<string, unknown>[] | null | undefined} requestItems
+ * @param {string} [seasonId]
  */
-export async function buildRequestInternalPricingView(db, requestItems) {
+export async function buildRequestInternalPricingView(db, requestItems, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context)
+  await validateTransactionCatalogueReferences(db, requestItems)
   /** @type {Array<
    *   | { kind: 'pack', req: Record<string, unknown> }
    *   | { kind: 'product', req: Record<string, unknown>, qb: { productId: string, quantity: number, unitType: 'box' | 'piece' } }
@@ -92,7 +99,7 @@ export async function buildRequestInternalPricingView(db, requestItems) {
   /** @type {Awaited<ReturnType<typeof resolveQuickBillProductPricing>> | null} */
   let resolved = null
   if (quickBillItems.length) {
-    const result = await resolveQuickBillProductPricing(db, quickBillItems)
+    const result = await resolveQuickBillProductPricing(db, quickBillItems, seasonId)
     if (result.ok) resolved = result
   }
 

@@ -23,6 +23,8 @@ import {
   validateFamilyPackFormValuesForUploadDraft,
 } from '../lib/adminFamilyPackFormValidation.js'
 import { adminNavigationFlashState } from '../lib/adminNavigationFlash.js'
+import { useAdminSession } from '../context/AdminSessionContext.jsx'
+import { useAdminSeasonReadOnly } from '../hooks/useAdminSeasonReadOnly.js'
 import { useAdminFlash } from '../lib/useAdminFlash.js'
 
 const FP_ID_RE = /^FP\d{3,}$/
@@ -39,6 +41,8 @@ export default function AdminFamilyPackEditPage() {
   const isCreate = routeId == null
   const packId = isCreate ? null : String(routeId ?? '').trim()
   const navigate = useNavigate()
+  const { activeSeasonId } = useAdminSession()
+  const { isReadOnly } = useAdminSeasonReadOnly()
   const { flash, setFlash, clearFlash } = useAdminFlash()
 
   const [values, setValues] = useState(emptyFamilyPackFormValues)
@@ -67,6 +71,17 @@ export default function AdminFamilyPackEditPage() {
   }
 
   useEffect(() => {
+    if (!isCreate) return
+    setValues(emptyFamilyPackFormValues())
+    draftPackIdRef.current = null
+    setDraftPackId(null)
+    setLoadError('')
+    setServerError('')
+    setServerFields(null)
+    setFlash(null)
+  }, [activeSeasonId, isCreate, setFlash])
+
+  useEffect(() => {
     if (isCreate) return
     if (!FP_ID_RE.test(packId)) {
       setLoadError('Invalid family pack id in URL.')
@@ -74,6 +89,8 @@ export default function AdminFamilyPackEditPage() {
       return
     }
     let cancelled = false
+    setLoading(true)
+    setLoadError('')
     fetchAdminFamilyPack(packId).then((result) => {
       if (cancelled) return
       if (!result.ok) {
@@ -87,7 +104,7 @@ export default function AdminFamilyPackEditPage() {
     return () => {
       cancelled = true
     }
-  }, [isCreate, packId])
+  }, [isCreate, packId, activeSeasonId])
 
   async function ensureFamilyPackForUpload() {
     const existingId = effectiveFamilyPackId(packId, draftPackIdRef.current ?? draftPackId)
@@ -117,7 +134,7 @@ export default function AdminFamilyPackEditPage() {
   }
 
   async function handleSave() {
-    if (submitting) return
+    if (isReadOnly || submitting) return
     setServerError('')
     setServerFields(null)
     clearFlash()
@@ -172,7 +189,7 @@ export default function AdminFamilyPackEditPage() {
   }
 
   async function handleStatus(active) {
-    if (!packId || submitting) return
+    if (isReadOnly || !packId || submitting) return
     clearFlash()
     const result = await patchAdminFamilyPackStatus(packId, active)
     if (result.ok && result.data?.familyPack) {
@@ -210,7 +227,7 @@ export default function AdminFamilyPackEditPage() {
   }
 
   async function handleDeleteConfirm() {
-    if (!packId || deleting) return
+    if (isReadOnly || !packId || deleting) return
     setDeleting(true)
     setServerError('')
     const result = await deleteAdminFamilyPack(packId)
@@ -288,7 +305,7 @@ export default function AdminFamilyPackEditPage() {
         onPersistImages={persistImages}
         uploadCoordinatorRef={uploadCoordinatorRef}
         onUploadBusyChange={setImageUploadBusy}
-        disabled={submitting}
+        disabled={submitting || isReadOnly}
         isCreateRoute={isCreate}
         onImagesSaved={() => {
           setFlash({ type: 'success', message: 'Images uploaded to Cloudinary and saved to this pack.' })
@@ -304,26 +321,28 @@ export default function AdminFamilyPackEditPage() {
 
       <div className="admin-form-sticky-footer" role="group" aria-label="Form actions">
         <div className="admin-form-sticky-footer__primary flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="primary"
-            loading={submitting}
-            disabled={submitting || imageUploadBusy}
-            onClick={handleSave}
-          >
-            {submitting
-              ? isCreate
-                ? 'Creating…'
-                : 'Saving changes…'
-              : isCreate
-                ? 'Create family pack'
-                : 'Save changes'}
-          </Button>
+          {!isReadOnly ? (
+            <Button
+              type="button"
+              variant="primary"
+              loading={submitting}
+              disabled={submitting || imageUploadBusy}
+              onClick={handleSave}
+            >
+              {submitting
+                ? isCreate
+                  ? 'Creating…'
+                  : 'Saving changes…'
+                : isCreate
+                  ? 'Create family pack'
+                  : 'Save changes'}
+            </Button>
+          ) : null}
           <Button type="button" variant="secondary" disabled={submitting} to="/admin/family-packs">
             Cancel
           </Button>
         </div>
-        {!isCreate ? (
+        {!isCreate && !isReadOnly ? (
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"

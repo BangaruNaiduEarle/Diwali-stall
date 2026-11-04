@@ -6,6 +6,7 @@ import { ADMIN_LIST_CUSTOMER_REQUEST_ITEMS_SQL } from './adminCustomerRequests.j
 import {
   buildQuoteLinesForRequestItems,
   getActiveQuotationForRequest,
+  INSERT_QUOTATION_WITH_SEASON_SQL,
   resolveQuotationQuickBillAuditInsert,
 } from './adminQuotations.js'
 import {
@@ -15,6 +16,27 @@ import {
 } from './adminQuickBill.js'
 import { getAdminCustomerRequestById } from './adminCustomerRequests.js'
 import { quotationIsBargainMode } from '../../../src/lib/quotationBargainMode.js'
+import { customerRequestDb, customerRequestScope } from '../lib/adminCustomerRequestScope.js'
+import { quotationReplacementGuard, transactionChanged } from '../lib/adminTransactionIntegrity.js'
+import { billLineKey, parseBillAdjustmentFields, bargainingReference } from '../lib/billAdjustmentPolicy.js'
+import { canViewSensitiveProductPricing } from '../lib/adminRoles.js'
+
+export const DELETE_CUSTOMER_REQUEST_ITEMS_FOR_SEASON_SQL = `
+  DELETE FROM customer_request_items
+  WHERE request_id = ?
+    AND request_id IN (SELECT id FROM customer_requests WHERE id = ? AND season_id = ?)
+`.trim()
+
+const BILL_ADJUST_REQUEST_SELECT_SQL = `
+  SELECT id, status, source, finalization_status
+  FROM customer_requests
+  WHERE id = ? AND season_id = ?
+`.trim()
+
+/** @param {string} seasonId */
+function requireSeasonId(seasonId) {
+  return String(seasonId ?? '').trim()
+}
 
 /** @param {{ pricingMode?: string | null, bargainFloorPaise?: number | null } | null | undefined} quotation */
 function resolveAdjustBillPricingMode(quotation) {
@@ -24,24 +46,35 @@ function resolveAdjustBillPricingMode(quotation) {
 /** @param {Record<string, unknown>} row */
 export function isCustomerRequestEligibleForBillAdjust(row) {
   if (!row || typeof row !== 'object') return false
-  if (String(row.source ?? '') !== 'manual') return false
+  const source = String(row.source ?? '')
+  if (!['manual', 'web'].includes(source)) return false
   const finalizationStatus = String(row.finalization_status ?? row.finalizationStatus ?? '').trim()
-  if (finalizationStatus !== 'pending') return false
+  if (finalizationStatus !== 'pending' && !(source === 'web' && !finalizationStatus)) return false
   const status = String(row.status ?? '').trim()
   if (status === 'closed' || status === 'void') return false
   return true
 }
 
 /** @param {unknown} body */
-export function validateAdjustBillBody(body) {
+export function validateAdjustBillBody(body, role = 'owner', {familyPacks=false} = {}) {
+  if(familyPacks && Array.isArray(body?.items) && body.items.some(item=>item?.familyPackId)){
+    if(body.items.some(item=>item?.familyPackId&&Object.keys(item).some(key=>!['familyPackId','quantity'].includes(key))))return {ok:false,status:400,code:'invalid_family_pack',message:'Family Pack quantities can change; custom pack prices, units or variants are not accepted.'}
+    const products=body.items.filter(item=>!item?.familyPackId)
+    const normalized=validateCustomerRequestBody({customer:{name:'Adjust Bill',mobile:'9876543210'},items:body.items.map(item=>item?.familyPackId?item:{productId:item?.productId,quantity:item?.quantity,unitType:item?.unitType})},{quickBillItems:true})
+    if(!normalized.ok)return normalized
+    const parsed=validateAdjustBillBody({...body,items:products.length?products:[{productId:'P001',quantity:1,unitType:'box'}]},role)
+    return parsed.ok?{...parsed,data:{...parsed.data,items:normalized.data.items}}:parsed
+  }
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return { ok: false, errors: { _body: 'JSON object required.' } }
   }
   const record = /** @type {Record<string, unknown>} */ (body)
+  const financial = parseBillAdjustmentFields(record, role)
+  if (!financial.ok) return financial
   const itemsResult = validateCustomerRequestBody(
     {
       customer: { name: 'Adjust Bill', mobile: '9876543210' },
-      items: record.items,
+      items: financial.items,
     },
     { quickBillItems: true },
   )
@@ -60,6 +93,9 @@ export function validateAdjustBillBody(body) {
       items: itemsResult.data.items,
       acceptedAmountProvided: accepted.provided,
       acceptedAmountPaise: accepted.acceptedAmountPaise,
+      overrides: financial.overrides,
+      discountProvided: financial.discountProvided,
+      discountPaise: financial.discountPaise,
     },
   }
 }
@@ -123,12 +159,17 @@ function combinedLinesToPricingRequestItems(combined) {
  * }[]} combined
  * @param {Record<string, number>} productAudit
  * @param {'selling' | 'bargain'} pricingMode
+ * @param {string} seasonId
  */
-async function resolveAdjustBillAudit(db, combined, productAudit, pricingMode) {
+async function resolveAdjustBillAudit(db, combined, productAudit, pricingMode, seasonId) {
   if (pricingMode !== 'bargain') {
     return productAudit
   }
-  const internalView = await buildRequestInternalPricingView(db, combinedLinesToPricingRequestItems(combined))
+  const internalView = await buildRequestInternalPricingView(
+    db,
+    combinedLinesToPricingRequestItems(combined),
+    seasonId,
+  )
   if (internalView?.finalSubtotalPaise == null) {
     return productAudit
   }
@@ -147,9 +188,10 @@ async function resolveAdjustBillAudit(db, combined, productAudit, pricingMode) {
  * @param {string} requestId
  * @param {{ productId: string, quantity: number, unitType?: 'box' | 'piece' }[]} items
  * @param {'selling' | 'bargain'} pricingMode
+ * @param {string} seasonId
  */
-async function buildAdjustBillDraft(db, requestId, items, pricingMode) {
-  const resolved = await resolveQuickBillProductPricing(db, items)
+async function buildAdjustBillDraft(db, requestId, items, pricingMode, seasonId, options = {}) {
+  const resolved = await resolveQuickBillProductPricing(db, items.filter(item=>!item.familyPackId), seasonId)
   if (!resolved.ok) {
     return resolved
   }
@@ -159,7 +201,12 @@ async function buildAdjustBillDraft(db, requestId, items, pricingMode) {
     .prepare(ADMIN_LIST_CUSTOMER_REQUEST_ITEMS_SQL)
     .bind(requestId)
     .all()
-  const familyLines = preservedFamilyPackLines(existingItemsResult.results ?? [])
+  const familyLines = options.offlineFamilyPacks===undefined?preservedFamilyPackLines(existingItemsResult.results ?? []):items.filter(item=>item.familyPackId).map(item=>{
+    const pack=options.offlineFamilyPacks.find(pack=>pack.familyPackId===item.familyPackId)
+    if(!pack)throw Object.assign(Error('A complete Family Pack snapshot is required.'),{status:409,code:'family_pack_catalogue_conflict'})
+    return {productId:null,familyPackId:item.familyPackId,productName:pack.name,quantity:item.quantity,unitPricePaise:pack.sellingUnitPaise}
+  })
+  const originals = new Map((existingItemsResult.results ?? []).filter(row => row.product_id).map(row => [billLineKey(row), row]))
 
   /** @type {{ productId: string | null, familyPackId: string | null, productName: string, quantity: number, unitPricePaise: number | null }[]} */
   const combined = [
@@ -197,15 +244,44 @@ async function buildAdjustBillDraft(db, requestId, items, pricingMode) {
     unit_price_paise: line.unitPricePaise,
   }))
 
-  const built = await buildQuoteLinesForRequestItems(db, rowsForQuote)
+  const built = await buildQuoteLinesForRequestItems(db, rowsForQuote, seasonId)
   if (!built.ok) {
     return built
   }
 
-  const audit = await resolveAdjustBillAudit(db, combined, resolved.audit, pricingMode)
+  if (customerRequestScope(db)) {
+    const overrides = new Map((options.overrides ?? []).map(line => [billLineKey(line), line.unitRatePaise]))
+    for (let i = 0; i < combined.length; i++) {
+      const line = combined[i]
+      const prior = line.productId ? originals.get(billLineKey(line)) : (existingItemsResult.results ?? []).find(row => row.family_pack_id === line.familyPackId)
+      const details = prior?.product_details_json ? JSON.parse(prior.product_details_json) : { productId: line.productId, familyPackId: line.familyPackId, name: line.productName, company: resolved.lines.find(row => row.productId === line.productId)?.company ?? null }
+      const catalogueUnit = Number.isSafeInteger(prior?.unit_price_paise) && prior.unit_price_paise > 0 ? prior.unit_price_paise : line.unitPricePaise
+      const knownSnapshot = ['box', 'piece'].includes(prior?.unit_type) || Boolean(line.familyPackId)
+      const safeCatalogueUnit = details.billing?.catalogueUnitPaise ?? (knownSnapshot ? catalogueUnit : line.unitPricePaise)
+      const savedUnit = details.billing?.version === 1 ? details.billing.sellingUnitPaise : safeCatalogueUnit
+      const sellingUnit = overrides.get(billLineKey(line)) ?? savedUnit
+      if (!Number.isSafeInteger(sellingUnit) || sellingUnit <= 0 || !Number.isSafeInteger(sellingUnit * line.quantity)) return { ok: false, status: 400, code: 'invalid_price', message: 'Invalid adjusted selling price.' }
+      line.unitPricePaise = catalogueUnit
+      if (prior) line.productName = prior.product_name
+      line.billingDetails = { ...details, billing: { version: 1, catalogueUnitPaise: safeCatalogueUnit, sellingUnitPaise: sellingUnit } }
+      built.quoteLines[i].product_name = line.productName
+      built.quoteLines[i].unit_rate_paise = sellingUnit
+      built.quoteLines[i].line_total_paise = sellingUnit * line.quantity
+    }
+    built.subtotalPaise = built.quoteLines.reduce((sum, line) => sum + line.line_total_paise, 0)
+    const discount = options.discountProvided ? options.discountPaise : Math.max(0, -(options.existingQuotation?.adjustmentPaise ?? 0))
+    if (!Number.isSafeInteger(built.subtotalPaise) || !Number.isSafeInteger(discount) || discount < 0 || discount > built.subtotalPaise) return { ok: false, status: 400, code: 'invalid_discount', message: 'Discount cannot exceed the adjusted subtotal.' }
+    built.adjustmentPaise = -discount
+    built.totalPaise = built.subtotalPaise - discount
+    for (const line of combined) line.billingDetails.billing.discountPaise = discount
+  }
+
+  const audit = await resolveAdjustBillAudit(db, combined, resolved.audit, pricingMode, seasonId)
+  if (customerRequestScope(db)) audit.sellingSubtotalPaise = combined.reduce((sum, line) => sum + line.unitPricePaise * line.quantity, 0)
   const internalView = await buildRequestInternalPricingView(
     db,
     combinedLinesToPricingRequestItems(combined),
+    seasonId,
   )
 
   return {
@@ -215,11 +291,14 @@ async function buildAdjustBillDraft(db, requestId, items, pricingMode) {
     built,
     audit,
     preview: {
+      subtotalPaise: built.subtotalPaise,
+      totalPaise: built.totalPaise,
+      discountPaise: -(built.adjustmentPaise ?? 0),
       customerSellingSubtotalPaise: built.subtotalPaise,
       sellingSubtotalPaise: internalView?.sellingSubtotalPaise ?? audit.sellingSubtotalPaise,
       finalSubtotalPaise: internalView?.finalSubtotalPaise ?? null,
       bargainFloorPaise:
-        pricingMode === 'bargain' ? internalView?.bargainFloorPaise ?? audit.bargainFloorPaise ?? null : null,
+        pricingMode === 'bargain' ? bargainingReference(internalView?.finalSubtotalPaise ?? audit.finalSubtotalPaise) : null,
       pricingMode,
     },
   }
@@ -229,15 +308,25 @@ async function buildAdjustBillDraft(db, requestId, items, pricingMode) {
  * @param {D1Database} db
  * @param {string} requestId
  * @param {{ productId: string, quantity: number, unitType?: 'box' | 'piece' }[]} items
+ * @param {string} seasonId
  */
-export async function previewPendingCustomerRequestBillAdjust(db, requestId, items) {
-  const row = await db
-    .prepare(`SELECT id, status, source, finalization_status FROM customer_requests WHERE id = ?`)
-    .bind(requestId)
-    .first()
+export async function previewPendingCustomerRequestBillAdjust(db, requestId, items, seasonId, context, financial = {}) {
+  db = customerRequestDb(db, seasonId, context, true)
+  if ((financial.overrides?.length || financial.discountProvided || financial.acceptedAmountProvided) && !canViewSensitiveProductPricing(customerRequestScope(db)?.effectiveRole ?? financial.actorRole)) return { ok: false, status: 403, code: 'forbidden', message: 'Privileged financial authority is required.' }
+  const season = requireSeasonId(seasonId)
+  if (!season) {
+    return {
+      ok: false,
+      status: 403,
+      code: 'forbidden',
+      message: 'Active business season is required for bill adjustment.',
+    }
+  }
+  const row = await db.prepare(BILL_ADJUST_REQUEST_SELECT_SQL).bind(requestId, season).first()
   if (!row) {
     return { ok: false, status: 404, code: 'not_found', message: 'Customer request not found.' }
   }
+  if (context?.workflowTransport?.expectedRevision != null && row.revision !== context.workflowTransport.expectedRevision) return transactionChanged()
   if (!isCustomerRequestEligibleForBillAdjust(row)) {
     return {
       ok: false,
@@ -256,7 +345,7 @@ export async function previewPendingCustomerRequestBillAdjust(db, requestId, ite
     }
   }
 
-  const existingQuotation = await getActiveQuotationForRequest(db, requestId)
+  const existingQuotation = await getActiveQuotationForRequest(db, requestId, season)
   if (!existingQuotation) {
     return {
       ok: false,
@@ -267,7 +356,7 @@ export async function previewPendingCustomerRequestBillAdjust(db, requestId, ite
   }
 
   const pricingMode = resolveAdjustBillPricingMode(existingQuotation)
-  const draft = await buildAdjustBillDraft(db, requestId, items, pricingMode)
+  const draft = await buildAdjustBillDraft(db, requestId, items, pricingMode, season, { ...financial, existingQuotation })
   if (!draft.ok) {
     return draft
   }
@@ -281,13 +370,23 @@ export async function previewPendingCustomerRequestBillAdjust(db, requestId, ite
  * @param {D1Database} db
  * @param {string} requestId
  * @param {{ productId: string, quantity: number, unitType?: 'box' | 'piece' }[]} items
- * @param {{ adjustedByEmail?: string | null, acceptedAmountProvided?: boolean, acceptedAmountPaise?: number | null }} [opts]
+ * @param {{ adjustedByEmail?: string | null, acceptedAmountProvided?: boolean, acceptedAmountPaise?: number | null, seasonId?: string }} [opts]
  */
 export async function adjustPendingCustomerRequestBill(db, requestId, items, opts = {}) {
-  const row = await db
-    .prepare(`SELECT id, status, source, finalization_status FROM customer_requests WHERE id = ?`)
-    .bind(requestId)
-    .first()
+  db = customerRequestDb(db, opts.seasonId, opts.context, true)
+  const privileged = canViewSensitiveProductPricing(customerRequestScope(db)?.effectiveRole ?? opts.actorRole)
+  if ((opts.overrides?.length || opts.discountProvided || opts.acceptedAmountProvided) && !privileged) return { ok: false, status: 403, code: 'forbidden', message: 'Privileged financial authority is required.' }
+  if ((opts.overrides?.length || opts.discountProvided) && !customerRequestScope(db)) return { ok: false, status: 400, code: 'location_required', message: 'Select an authorized location for financial adjustments.' }
+  const season = requireSeasonId(opts.seasonId)
+  if (!season) {
+    return {
+      ok: false,
+      status: 403,
+      code: 'forbidden',
+      message: 'Active business season is required for bill adjustment.',
+    }
+  }
+  const row = await db.prepare(BILL_ADJUST_REQUEST_SELECT_SQL).bind(requestId, season).first()
   if (!row) {
     return { ok: false, status: 404, code: 'not_found', message: 'Customer request not found.' }
   }
@@ -300,6 +399,8 @@ export async function adjustPendingCustomerRequestBill(db, requestId, items, opt
     }
   }
 
+  if (opts.requireRevision && opts.context?.workflowTransport?.expectedRevision == null) return { ok: false, status: 428, code: 'revision_required', message: 'Refresh the request and send its current revision before saving.' }
+
   if (!items.length) {
     return {
       ok: false,
@@ -309,7 +410,7 @@ export async function adjustPendingCustomerRequestBill(db, requestId, items, opt
     }
   }
 
-  const existingQuotation = await getActiveQuotationForRequest(db, requestId)
+  const existingQuotation = await getActiveQuotationForRequest(db, requestId, season)
   if (!existingQuotation) {
     return {
       ok: false,
@@ -334,7 +435,7 @@ export async function adjustPendingCustomerRequestBill(db, requestId, items, opt
   const acceptedAmountPaise =
     pricingMode === 'bargain' && opts.acceptedAmountProvided ? opts.acceptedAmountPaise ?? null : null
 
-  const draft = await buildAdjustBillDraft(db, requestId, items, pricingMode)
+  const draft = await buildAdjustBillDraft(db, requestId, items, pricingMode, season, { ...opts, existingQuotation })
   if (!draft.ok) {
     return draft
   }
@@ -344,14 +445,17 @@ export async function adjustPendingCustomerRequestBill(db, requestId, items, opt
 
   /** @type {import('@cloudflare/workers-types').D1PreparedStatement[]} */
   const statements = [
-    db.prepare(`DELETE FROM customer_request_items WHERE request_id = ?`).bind(requestId),
+    ...(customerRequestScope(db) ? [quotationReplacementGuard(db, row, existingQuotation, season)] : []),
+    db
+      .prepare(DELETE_CUSTOMER_REQUEST_ITEMS_FOR_SEASON_SQL)
+      .bind(requestId, requestId, season),
   ]
 
   for (let i = 0; i < combined.length; i += 1) {
     const line = combined[i]
     statements.push(
       db
-        .prepare(INSERT_CUSTOMER_REQUEST_ITEM_SQL)
+        .prepare(line.billingDetails ? INSERT_CUSTOMER_REQUEST_ITEM_SQL.replace('unit_price_paise\n', 'unit_price_paise, product_details_json\n').replace('?, ?, ?, ?, ?, ?, ?)', '?, ?, ?, ?, ?, ?, ?, ?)') : INSERT_CUSTOMER_REQUEST_ITEM_SQL)
         .bind(
           requestId,
           i + 1,
@@ -360,24 +464,28 @@ export async function adjustPendingCustomerRequestBill(db, requestId, items, opt
           line.productName,
           line.quantity,
           line.unitPricePaise,
+          ...(line.billingDetails ? [JSON.stringify(line.billingDetails)] : []),
         ),
     )
   }
 
   const voidQuotationId = existingQuotation.id
+  const quotationId = crypto.randomUUID()
   statements.push(
     db
       .prepare(
-        `UPDATE quotations SET status = 'void', updated_at = datetime('now') WHERE id = ? AND status != 'void'`,
+        `UPDATE quotations SET status = 'void', updated_at = datetime('now')
+         WHERE id = ? AND status != 'void' AND season_id = ?`,
       )
-      .bind(voidQuotationId),
+      .bind(voidQuotationId, season),
   )
 
-  const quotationId = crypto.randomUUID()
   const auditInsert = resolveQuotationQuickBillAuditInsert({ quickBillAudit })
   const requestRow = await db
-    .prepare(`SELECT customer_name, customer_phone, customer_note, status FROM customer_requests WHERE id = ?`)
-    .bind(requestId)
+    .prepare(
+      `SELECT customer_name, customer_phone, customer_note, status FROM customer_requests WHERE id = ? AND season_id = ?`,
+    )
+    .bind(requestId, season)
     .first()
 
   const { buildQuotationWhatsAppMessage } = await import('../lib/quotationWhatsApp.js')
@@ -402,14 +510,7 @@ export async function adjustPendingCustomerRequestBill(db, requestId, items, opt
 
   statements.push(
     db
-      .prepare(
-        `INSERT INTO quotations (
-          id, customer_request_id, status, customer_name, customer_phone, customer_note,
-          subtotal_paise, adjustment_paise, total_paise, wa_message_text, created_by_email,
-          pricing_mode, selling_subtotal_paise, final_subtotal_paise, bargain_floor_paise,
-          accepted_amount_paise, updated_at
-        ) VALUES (?, ?, 'draft', ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-      )
+      .prepare(INSERT_QUOTATION_WITH_SEASON_SQL)
       .bind(
         quotationId,
         requestId,
@@ -425,8 +526,11 @@ export async function adjustPendingCustomerRequestBill(db, requestId, items, opt
         auditInsert.final_subtotal_paise,
         auditInsert.bargain_floor_paise,
         auditInsert.accepted_amount_paise,
+        season,
       ),
   )
+
+  if (customerRequestScope(db) && built.adjustmentPaise) statements.push(db.prepare(`UPDATE quotations SET adjustment_paise = ?, updated_at = datetime('now') WHERE id = ? AND season_id = ?`).bind(built.adjustmentPaise, quotationId, season))
 
   for (const line of built.quoteLines) {
     statements.push(
@@ -451,6 +555,7 @@ export async function adjustPendingCustomerRequestBill(db, requestId, items, opt
   try {
     await db.batch(statements)
   } catch (err) {
+    if (customerRequestScope(db) && /NOT NULL constraint failed: customer_requests.status/.test(String(err?.message ?? err))) return transactionChanged()
     return {
       ok: false,
       status: 500,
@@ -459,8 +564,8 @@ export async function adjustPendingCustomerRequestBill(db, requestId, items, opt
     }
   }
 
-  const request = await getAdminCustomerRequestById(db, requestId)
-  const quotation = await getActiveQuotationForRequest(db, requestId)
+  const request = await getAdminCustomerRequestById(db, requestId, season)
+  const quotation = await getActiveQuotationForRequest(db, requestId, season)
   return {
     ok: true,
     request,

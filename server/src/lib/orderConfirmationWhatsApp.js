@@ -19,9 +19,10 @@ export function buildOrderConfirmationWhatsAppMessage(request, quotation) {
     request.publicReference ?? request.public_reference ?? quotation.id ?? '',
   ).trim()
   const totalPaise = Number(quotation.totalPaise ?? quotation.total_paise ?? 0)
-  const totalLine = `Order Total: ₹${formatInrFromPaise(totalPaise)}`
+  const totalLine = quotation.pricingUnavailable === true
+    ? 'Order Total: unavailable' : `Order Total: ₹${formatInrFromPaise(totalPaise)}`
   const source = String(request.source ?? '').trim()
-  const freeDelivery = isFreeDoorDeliveryEligiblePaise(totalPaise)
+  const freeDelivery = quotation.pricingUnavailable !== true && isFreeDoorDeliveryEligiblePaise(totalPaise)
 
   const lines = ['DIWALI STALL — ORDER CONFIRMATION 🎆', '', `Hello ${name}!`, '', 'Thank you for your order.', '']
 

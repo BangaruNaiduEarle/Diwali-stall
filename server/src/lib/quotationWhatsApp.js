@@ -19,7 +19,8 @@ export function buildQuotationWhatsAppMessage(quotation, items, options = {}) {
   const format = resolveQuotationWhatsAppFormat(options.requestSource)
   const ref = String(quotation.id ?? '').trim()
   const totalPaise = Number(quotation.totalPaise ?? quotation.total_paise ?? 0)
-  const grandTotalLine = `Grand total: ₹${formatInrFromPaise(totalPaise)}`
+  const grandTotalLine = quotation.pricingUnavailable === true
+    ? 'Grand total: unavailable' : `Grand total: ₹${formatInrFromPaise(totalPaise)}`
 
   const lines = ['DIWALI CRACKERS QUOTATION']
   if (ref) lines.push(`Ref: ${ref}`)

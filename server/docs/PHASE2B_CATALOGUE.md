@@ -24,6 +24,11 @@
 
 ## Import pipeline
 
+**Safety update:** The import command below is historical. Argument-free imports
+now refuse to run. Use only an explicit disposable TEMP workspace and reviewed
+scope as described in [Catalogue import safety](CATALOGUE_IMPORT_SAFETY.md).
+Global cleanup has been removed; omitted products are preserved.
+
 1. `npm run catalogue:generate` — reads frontend module, writes reviewable `data/catalogue-import.json` + `reports/catalogue-import-report.json`.
 2. `npm run catalogue:import:local` — idempotent UPSERT into local D1 via generated SQL.
 

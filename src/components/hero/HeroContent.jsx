@@ -11,7 +11,7 @@ const HERO_BENEFITS = [
 
 export default function HeroContent() {
   return (
-    <div className="hero-content w-full text-left md:max-w-xl lg:max-w-[34rem]">
+    <div className="hero-content w-full text-left md:max-w-[42rem]">
       <div className="hero-mobile-body">
         <div className="hero-mobile-copy">
           <p className="hero-eyebrow text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-ivory)]/92 md:text-xs md:tracking-[0.2em]">

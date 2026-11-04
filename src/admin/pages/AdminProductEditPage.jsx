@@ -19,6 +19,7 @@ import ProductForm, {
 } from '../components/ProductForm.jsx'
 import AdminToast from '../components/AdminToast.jsx'
 import { useAdminFlash } from '../lib/useAdminFlash.js'
+import { useAdminSeasonReadOnly } from '../hooks/useAdminSeasonReadOnly.js'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
 import { showAdminProductSensitiveColumns } from '../lib/adminProductTableColumns.js'
 import { canDeleteAdminProducts } from '../lib/adminRoles.js'
@@ -29,9 +30,11 @@ const backToProductsClassName =
   'focus-ring inline-flex min-h-11 items-center text-sm font-semibold text-[var(--color-maroon)] hover:text-[var(--color-maroon-deep)] hover:underline'
 
 export default function AdminProductEditPage() {
-  const { role } = useAdminSession()
-  const showSensitiveColumns = showAdminProductSensitiveColumns(role)
-  const canDeleteProduct = canDeleteAdminProducts(role)
+  const { role, permissionRole: seasonRole, activeSeasonId } = useAdminSession()
+  const { isReadOnly } = useAdminSeasonReadOnly()
+  const pricingPermissionRole = activeSeasonId != null ? seasonRole : role
+  const showSensitiveColumns = showAdminProductSensitiveColumns(pricingPermissionRole)
+  const canDeleteProduct = canDeleteAdminProducts(role) && !isReadOnly
   const { id: routeId } = useParams()
   const productId = String(routeId ?? '').trim()
   const navigate = useNavigate()
@@ -117,7 +120,7 @@ export default function AdminProductEditPage() {
   }
 
   async function handleSubmit(values) {
-    if (submitting) return
+    if (isReadOnly || submitting) return
     setServerError(null)
     setServerFields(null)
     clearFlash()
@@ -190,6 +193,7 @@ export default function AdminProductEditPage() {
   }
 
   async function handleStatusToggle() {
+    if (isReadOnly) return
     const result = await patchAdminProductStatus(productId, !initial.active)
     if (!result.ok) {
       setServerError(result.message)
@@ -203,7 +207,7 @@ export default function AdminProductEditPage() {
   }
 
   async function handleDeleteConfirm() {
-    if (deleting) return
+    if (isReadOnly || deleting) return
     setDeleting(true)
     setServerError(null)
     const result = await deleteAdminProduct(productId)
@@ -248,17 +252,20 @@ export default function AdminProductEditPage() {
         uploadCoordinatorRef={uploadCoordinatorRef}
         onUploadBusyChange={setImageUploadBusy}
         showSensitiveColumns={showSensitiveColumns}
+        readOnly={isReadOnly}
       />
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Button type="button" variant="secondary" disabled={submitting || deleting} onClick={handleStatusToggle}>
-          {initial.active ? 'Deactivate' : 'Activate'}
-        </Button>
-        {canDeleteProduct ? (
-          <Button type="button" variant="ghost" disabled={submitting || deleting} onClick={() => setDeleteOpen(true)}>
-            Delete
+      {!isReadOnly ? (
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Button type="button" variant="secondary" disabled={submitting || deleting} onClick={handleStatusToggle}>
+            {initial.active ? 'Deactivate' : 'Activate'}
           </Button>
-        ) : null}
-      </div>
+          {canDeleteProduct ? (
+            <Button type="button" variant="ghost" disabled={submitting || deleting} onClick={() => setDeleteOpen(true)}>
+              Delete
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       <AdminConfirmDialog
         open={deleteOpen}
         title={`Delete “${initial.name.trim() || productId}”?`}

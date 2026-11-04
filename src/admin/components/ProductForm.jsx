@@ -34,6 +34,7 @@ const PRODUCT_ID_RE = /^P\d{3,}$/
  *   onUploadBusyChange?: (busy: boolean) => void,
  *   showSensitiveColumns?: boolean,
  *   initialRevision?: number,
+ *   readOnly?: boolean,
  * }} props
  */
 export default function ProductForm({
@@ -52,6 +53,7 @@ export default function ProductForm({
   uploadCoordinatorRef,
   onUploadBusyChange,
   showSensitiveColumns = false,
+  readOnly = false,
 }) {
   const [values, setValues] = useState(initial)
   const [clientErrors, setClientErrors] = useState(/** @type {Record<string, string>} */ ({}))
@@ -138,6 +140,7 @@ export default function ProductForm({
 
   function handleSubmit(e) {
     e.preventDefault()
+    if (readOnly) return
     if (!validate()) return
     onSubmit(normalizedValues())
   }
@@ -162,7 +165,7 @@ export default function ProductForm({
     setImages(lines.slice(0, MAX_PRODUCT_IMAGES))
   }
 
-  const formDisabled = submitting
+  const formDisabled = submitting || readOnly
 
   return (
     <form className="admin-form" onSubmit={handleSubmit} noValidate>

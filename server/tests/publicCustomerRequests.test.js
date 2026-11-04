@@ -11,6 +11,7 @@ import {
   ensurePublicReferenceOnRequest,
   mapPublicRequestSummary,
 } from '../src/services/publicCustomerRequests.js'
+import { DEFAULT_ADMIN_SEASON_ID } from '../src/services/adminSeasonContext.js'
 
 const TEST_PUBLIC_REFERENCE = 'DWL-23456789'
 async function fixedTestReference() {
@@ -97,6 +98,7 @@ describe('public customer request SQL separation', () => {
     assert.ok(!sql.includes('private_rates'))
     assert.ok(!sql.includes('unit_rate'))
     assert.ok(!sql.includes('paise'))
+    assert.ok(sql.includes('season_id = ?'))
   })
 
   it('public response shape omits rate fields', () => {
@@ -150,6 +152,7 @@ describe('public customer request service (in-memory D1 mock)', () => {
     assert.equal(db.batchCalls, 1)
     assert.equal(db.state.requests.get(requestId)?.status, 'received')
     assert.equal(db.state.requests.get(requestId)?.public_reference, TEST_PUBLIC_REFERENCE)
+    assert.equal(db.state.requests.get(requestId)?.season_id, DEFAULT_ADMIN_SEASON_ID)
     assert.equal(db.state.items.length, 1)
   })
 
@@ -377,6 +380,7 @@ describe('POST /api/public/customer-requests (worker + mock DB)', () => {
     const res = await worker.fetch(
       new Request('https://example.com/api/public/customer-requests', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: '{not-json',
       }),
       { DB: createMockDb({ products: [] }) },

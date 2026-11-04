@@ -7,8 +7,9 @@ import {
 } from '../lib/validation.js'
 import { filterProductsForQuickBillSearch } from '../../../src/lib/quickBillProductSearch.js'
 import { inrToPaise, paiseToInr } from './money.js'
+import { adminCatalogueScope } from '../lib/adminCatalogueScope.js'
 
-const ADMIN_PRODUCT_SELECT = `
+const ADMIN_PRODUCT_COLUMNS = `
   SELECT
     p.id,
     p.category_slug,
@@ -30,11 +31,25 @@ const ADMIN_PRODUCT_SELECT = `
     ppr.unit_rate_paise AS purchase_rate_paise,
     p.created_at,
     p.updated_at
-  FROM products p
-  INNER JOIN categories c ON c.slug = p.category_slug
-  LEFT JOIN private_rates pr ON pr.product_id = p.id AND pr.effective_to IS NULL
-  LEFT JOIN product_purchase_rates ppr ON ppr.product_id = p.id AND ppr.effective_to IS NULL
 `
+const ADMIN_PRODUCT_SELECT = `${ADMIN_PRODUCT_COLUMNS}  FROM products p
+  INNER JOIN categories c ON c.slug = p.category_slug AND c.season_id = p.season_id
+  LEFT JOIN private_rates pr ON pr.product_id = p.id AND pr.effective_to IS NULL AND pr.season_id = p.season_id
+  LEFT JOIN product_purchase_rates ppr ON ppr.product_id = p.id AND ppr.effective_to IS NULL AND ppr.season_id = p.season_id
+`
+
+const LOCATION_PRODUCT_FROM = `FROM products p
+  INNER JOIN categories c ON c.slug = p.category_slug AND c.location_id = p.location_id
+  LEFT JOIN private_rates pr ON pr.product_id = p.id AND pr.effective_to IS NULL AND pr.location_id = p.location_id
+  LEFT JOIN product_purchase_rates ppr ON ppr.product_id = p.id AND ppr.effective_to IS NULL AND ppr.location_id = p.location_id`
+
+const productSelect = (scope) => scope.locationId
+  ? `${ADMIN_PRODUCT_COLUMNS}  ${LOCATION_PRODUCT_FROM}` : ADMIN_PRODUCT_SELECT
+
+// Used on mutations too: malformed cross-location category references are never
+// made visible or mutated by an ID-only parent check.
+const ownedCategory = (scope) => scope.locationId
+  ? ' AND EXISTS (SELECT 1 FROM categories c WHERE c.slug = products.category_slug AND c.location_id = products.location_id)' : ''
 
 /** @param {Record<string, unknown>} row */
 export function mapAdminProductRow(row) {
@@ -120,16 +135,20 @@ export function mapAdminProductRow(row) {
  *   missingRateOnly?: boolean
  *   missingPurchaseRateOnly?: boolean
  *   flexSearch?: boolean
+ *   seasonId: string
  * }} opts
  */
 const QUICK_BILL_FLEX_SEARCH_CATALOGUE_CAP = 2500
 
 export async function listAdminProductsPage(db, opts) {
+  const scope = adminCatalogueScope(db, opts.seasonId, opts.context)
+  const seasonId = scope.seasonId
   const flexQuery = opts.flexSearch && opts.q && String(opts.q).trim()
   if (flexQuery) {
     const q = String(opts.q).trim()
     const catalogue = await listAdminProductsPage(db, {
       ...opts,
+      seasonId,
       flexSearch: false,
       q: undefined,
       limit: QUICK_BILL_FLEX_SEARCH_CATALOGUE_CAP,
@@ -145,8 +164,8 @@ export async function listAdminProductsPage(db, opts) {
     }
   }
 
-  const wheres = []
-  const binds = []
+  const wheres = [`p.${scope.column} = ?`]
+  const binds = [scope.value]
 
   if (opts.activeFilter === 'active') {
     wheres.push('p.active = 1')
@@ -179,15 +198,15 @@ export async function listAdminProductsPage(db, opts) {
   }
 
   const whereSql = wheres.length ? `WHERE ${wheres.join(' AND ')}` : ''
-  const countSql = `
+  const countSql = scope.locationId ? `SELECT COUNT(*) AS total ${LOCATION_PRODUCT_FROM} ${whereSql}` : `
     SELECT COUNT(*) AS total
     FROM products p
-    INNER JOIN categories c ON c.slug = p.category_slug
-    LEFT JOIN private_rates pr ON pr.product_id = p.id AND pr.effective_to IS NULL
-    LEFT JOIN product_purchase_rates ppr ON ppr.product_id = p.id AND ppr.effective_to IS NULL
+    INNER JOIN categories c ON c.slug = p.category_slug AND c.season_id = p.season_id
+    LEFT JOIN private_rates pr ON pr.product_id = p.id AND pr.effective_to IS NULL AND pr.season_id = p.season_id
+    LEFT JOIN product_purchase_rates ppr ON ppr.product_id = p.id AND ppr.effective_to IS NULL AND ppr.season_id = p.season_id
     ${whereSql}
   `
-  const listSql = `${ADMIN_PRODUCT_SELECT} ${whereSql} ORDER BY p.sort_order ASC, p.id ASC LIMIT ? OFFSET ?`
+  const listSql = `${productSelect(scope)} ${whereSql} ORDER BY p.sort_order ASC, p.id ASC LIMIT ? OFFSET ?`
 
   const countRow = await db.prepare(countSql).bind(...binds).first()
   const total = Number(countRow?.total ?? 0)
@@ -207,21 +226,23 @@ export async function listAdminProductsPage(db, opts) {
  * @param {{ includeArchived?: boolean, limit?: number, offset?: number }} opts
  */
 export async function listAdminProducts(db, opts = {}) {
+  const scope = adminCatalogueScope(db, opts.seasonId, opts.context)
   const includeArchived = Boolean(opts.includeArchived)
   const limit = Math.min(200, Math.max(1, Number(opts.limit) || 100))
   const offset = Math.max(0, Number(opts.offset) || 0)
 
-  const where = includeArchived ? '' : 'WHERE p.active = 1'
-  const sql = `${ADMIN_PRODUCT_SELECT} ${where} ORDER BY p.sort_order ASC, p.id ASC LIMIT ? OFFSET ?`
-  const result = await db.prepare(sql).bind(limit, offset).all()
+  const activeClause = includeArchived ? '' : ' AND p.active = 1'
+  const sql = `${productSelect(scope)} WHERE p.${scope.column} = ?${activeClause} ORDER BY p.sort_order ASC, p.id ASC LIMIT ? OFFSET ?`
+  const result = await db.prepare(sql).bind(scope.value, limit, offset).all()
   return (result.results ?? []).map(mapAdminProductRow)
 }
 
-/** @param {D1Database} db @param {string} id */
-export async function getAdminProductById(db, id) {
+/** @param {D1Database} db @param {string} seasonId @param {string} id */
+export async function getAdminProductById(db, seasonId, id, context) {
+  const scope = adminCatalogueScope(db, seasonId, context)
   const result = await db
-    .prepare(`${ADMIN_PRODUCT_SELECT} WHERE p.id = ?`)
-    .bind(id)
+    .prepare(`${productSelect(scope)} WHERE p.id = ? AND p.${scope.column} = ?`)
+    .bind(id, scope.value)
     .first()
   return result ? mapAdminProductRow(result) : null
 }
@@ -230,7 +251,9 @@ export async function getAdminProductById(db, id) {
  * @param {D1Database} db
  * @param {Record<string, unknown>} body
  */
-export async function createAdminProduct(db, body) {
+export async function createAdminProduct(db, seasonId, body, context) {
+  const scope = adminCatalogueScope(db, seasonId, context, true)
+  const season = scope.seasonId
   const errors = validateProductPayload(body, { isCreate: true })
   if (Object.keys(errors).length) return { ok: false, errors }
 
@@ -239,10 +262,13 @@ export async function createAdminProduct(db, body) {
   if (exists) return { ok: false, errors: { id: 'Product id already exists.' } }
 
   const category_slug = String(body.categorySlug).trim()
-  const cat = await db.prepare('SELECT 1 FROM categories WHERE slug = ?').bind(category_slug).first()
+  const cat = await db
+    .prepare(`SELECT 1 FROM categories WHERE slug = ? AND ${scope.column} = ?`)
+    .bind(category_slug, scope.value)
+    .first()
   if (!cat) return { ok: false, errors: { categorySlug: 'Unknown category.' } }
 
-  const images = /** @type {string[]} */ (body.images)
+  const images = /** @type {string[]} */ (body.images ?? [])
   const images_json = JSON.stringify(images)
 
   let selling_price_paise = null
@@ -254,49 +280,71 @@ export async function createAdminProduct(db, body) {
     final_price_paise = inrToPaise(Number(body.finalPriceInr))
   }
 
-  await db
-    .prepare(
+  const insertSql = scope.locationId ? `INSERT INTO products (
+    id, category_slug, name, pack, description, featured, stock_status,
+    active, sort_order, images_json, company, selling_price_paise, final_price_paise,
+    pieces_per_pack, allow_loose_sale, season_id, location_id
+  ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    WHERE EXISTS (SELECT 1 FROM categories WHERE slug = ? AND location_id = ?)` :
       `INSERT INTO products (
         id, category_slug, name, pack, description, featured, stock_status,
         active, sort_order, images_json, company, selling_price_paise, final_price_paise,
-        pieces_per_pack, allow_loose_sale
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .bind(
-      id,
-      category_slug,
-      String(body.name).trim(),
-      String(body.pack ?? '').trim(),
-      String(body.description ?? '').trim(),
-      body.featured ? 1 : 0,
-      String(body.stockStatus).trim(),
-      body.active === false ? 0 : 1,
-      Number(body.sortOrder) || 0,
-      images_json,
-      body.company ? String(body.company).trim() : null,
-      selling_price_paise,
-      final_price_paise,
-      resolvePiecesPerPackBind(body.piecesPerPack),
-      body.allowLooseSale === true ? 1 : 0,
-    )
-    .run()
+        pieces_per_pack, allow_loose_sale, season_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  let inserted
+  try {
+    inserted = await db
+      .prepare(insertSql)
+      .bind(
+        id,
+        category_slug,
+        String(body.name).trim(),
+        String(body.pack ?? '').trim(),
+        String(body.description ?? '').trim(),
+        body.featured ? 1 : 0,
+        String(body.stockStatus).trim(),
+        body.active === false ? 0 : 1,
+        Number(body.sortOrder) || 0,
+        images_json,
+        body.company ? String(body.company).trim() : null,
+        selling_price_paise,
+        final_price_paise,
+        resolvePiecesPerPackBind(body.piecesPerPack),
+        body.allowLooseSale === true ? 1 : 0,
+        season,
+        ...(scope.locationId ? [scope.locationId, category_slug, scope.locationId] : []),
+      )
+      .run()
+  } catch (error) {
+    if (scope.locationId && /UNIQUE constraint failed: products\.id/i.test(String(error?.message))) {
+      return { ok: false, errors: { id: 'Product id already exists.' } }
+    }
+    throw error
+  }
+  if (scope.locationId && !inserted.meta?.changes) return { ok: false, errors: { categorySlug: 'Unknown category.' } }
 
-  const product = await getAdminProductById(db, id)
+  const product = await getAdminProductById(db, season, id, context)
   return { ok: true, product }
 }
 
 /**
  * @param {D1Database} db
+ * @param {string} seasonId
  * @param {string} id
  * @param {Record<string, unknown>} body
  */
-export async function updateAdminProduct(db, id, body) {
+export async function updateAdminProduct(db, seasonId, id, body, context) {
+  const scope = adminCatalogueScope(db, seasonId, context, true)
+  const season = scope.seasonId
   const productId = String(id).trim()
   if (!isValidProductId(productId)) {
     return { ok: false, errors: { id: 'Invalid product id.' } }
   }
 
-  const existing = await db.prepare('SELECT id FROM products WHERE id = ?').bind(productId).first()
+  const existing = await db
+    .prepare(`SELECT id FROM products WHERE id = ? AND ${scope.column} = ?${ownedCategory(scope)}`)
+    .bind(productId, scope.value)
+    .first()
   if (!existing) return { ok: false, status: 404, code: 'not_found' }
 
   const errors = validateProductPayload(body, { isCreate: false, partial: true })
@@ -307,7 +355,10 @@ export async function updateAdminProduct(db, id, body) {
 
   if (body.categorySlug !== undefined) {
     const category_slug = String(body.categorySlug).trim()
-    const cat = await db.prepare('SELECT 1 FROM categories WHERE slug = ?').bind(category_slug).first()
+    const cat = await db
+      .prepare(`SELECT 1 FROM categories WHERE slug = ? AND ${scope.column} = ?`)
+      .bind(category_slug, scope.value)
+      .first()
     if (!cat) return { ok: false, errors: { categorySlug: 'Unknown category.' } }
     sets.push('category_slug = ?')
     binds.push(category_slug)
@@ -382,29 +433,35 @@ export async function updateAdminProduct(db, id, body) {
   sets.push("updated_at = datetime('now')")
   binds.push(productId)
 
-  await db.prepare(`UPDATE products SET ${sets.join(', ')} WHERE id = ?`).bind(...binds).run()
+  const targetCategory = scope.locationId && body.categorySlug !== undefined
+    ? ' AND EXISTS (SELECT 1 FROM categories c WHERE c.slug = ? AND c.location_id = ?)' : ''
+  const updated = await db
+    .prepare(`UPDATE products SET ${sets.join(', ')} WHERE id = ? AND ${scope.column} = ?${ownedCategory(scope)}${targetCategory}`)
+    .bind(...binds, scope.value, ...(targetCategory ? [String(body.categorySlug).trim(), scope.locationId] : []))
+    .run()
+  if (scope.locationId && !updated.meta?.changes) return { ok: false, status: 404, code: 'not_found' }
 
-  const product = await getAdminProductById(db, productId)
+  const product = await getAdminProductById(db, season, productId, context)
   return { ok: true, product }
 }
 
-/** @param {D1Database} db @param {string} id */
-export async function archiveAdminProduct(db, id) {
-  return setAdminProductActive(db, id, false)
+/** @param {D1Database} db @param {string} seasonId @param {string} id */
+export async function archiveAdminProduct(db, seasonId, id, context) {
+  return setAdminProductActive(db, seasonId, id, false, context)
 }
 
-/** @param {D1Database} db @param {string} id */
-export async function restoreAdminProduct(db, id) {
-  return setAdminProductActive(db, id, true)
+/** @param {D1Database} db @param {string} seasonId @param {string} id */
+export async function restoreAdminProduct(db, seasonId, id, context) {
+  return setAdminProductActive(db, seasonId, id, true, context)
 }
 
-/** @param {D1Database} db @param {string} id @param {boolean} active */
-export async function setAdminProductActive(db, id, active) {
-  return setActiveFlag(db, id, active ? 1 : 0)
+/** @param {D1Database} db @param {string} seasonId @param {string} id @param {boolean} active */
+export async function setAdminProductActive(db, seasonId, id, active, context) {
+  return setActiveFlag(db, seasonId, id, active ? 1 : 0, context)
 }
 
 /** @param {D1Database} db @param {string} productId */
-export async function countProductReferenceRows(db, productId) {
+async function countProductReferenceRows(db, productId, scope) {
   const id = String(productId)
   const tables = [
     'SELECT COUNT(*) AS total FROM customer_request_items WHERE product_id = ?',
@@ -413,7 +470,11 @@ export async function countProductReferenceRows(db, productId) {
   ]
   let total = 0
   for (const sql of tables) {
-    const row = await db.prepare(sql).bind(id).first()
+    // References across ALL seasons must still block deletion. Only the owned
+    // product is selected; filtering its historical references would break FKs.
+    const ownedSql = scope?.locationId
+      ? `${sql} AND EXISTS (SELECT 1 FROM products p WHERE p.id = ? AND p.location_id = ?)` : sql
+    const row = await db.prepare(ownedSql).bind(id, ...(scope?.locationId ? [id, scope.locationId] : [])).first()
     total += Number(row?.total ?? 0)
   }
   return total
@@ -423,16 +484,20 @@ export async function countProductReferenceRows(db, productId) {
  * @param {D1Database} db
  * @param {string} id
  */
-export async function deleteAdminProduct(db, id) {
+export async function deleteAdminProduct(db, seasonId, id, context) {
+  const scope = adminCatalogueScope(db, seasonId, context, true)
   const productId = String(id ?? '').trim()
   if (!isValidProductId(productId)) {
     return { ok: false, errors: { id: 'Invalid product id.' } }
   }
-  const existing = await db.prepare('SELECT id, name FROM products WHERE id = ?').bind(productId).first()
+  const existing = await db
+    .prepare(`SELECT id, name FROM products WHERE id = ? AND ${scope.column} = ?${ownedCategory(scope)}`)
+    .bind(productId, scope.value)
+    .first()
   if (!existing) {
     return { ok: false, status: 404, error: 'not_found', message: 'Product not found.' }
   }
-  const referenceCount = await countProductReferenceRows(db, productId)
+  const referenceCount = await countProductReferenceRows(db, productId, scope)
   if (referenceCount > 0) {
     return {
       ok: false,
@@ -443,28 +508,36 @@ export async function deleteAdminProduct(db, id) {
       referenceCount,
     }
   }
-  const run = await db.prepare('DELETE FROM products WHERE id = ?').bind(productId).run()
+  const run = await db
+    .prepare(`DELETE FROM products WHERE id = ? AND ${scope.column} = ?${ownedCategory(scope)}`)
+    .bind(productId, scope.value)
+    .run()
   if (!run.meta?.changes) {
     return { ok: false, status: 404, error: 'not_found', message: 'Product not found.' }
   }
   return { ok: true, id: productId, name: String(existing.name ?? '') }
 }
 
-/** @param {D1Database} db @param {string} id @param {0|1} active */
-async function setActiveFlag(db, id, active) {
+/** @param {D1Database} db @param {string} seasonId @param {string} id @param {0|1} active */
+async function setActiveFlag(db, seasonId, id, active, context) {
+  const scope = adminCatalogueScope(db, seasonId, context, true)
+  const season = scope.seasonId
   const productId = String(id).trim()
   if (!isValidProductId(productId)) {
     return { ok: false, errors: { id: 'Invalid product id.' } }
   }
   await db
-    .prepare("UPDATE products SET active = ?, updated_at = datetime('now') WHERE id = ?")
-    .bind(active, productId)
+    .prepare(`UPDATE products SET active = ?, updated_at = datetime('now') WHERE id = ? AND ${scope.column} = ?${ownedCategory(scope)}`)
+    .bind(active, productId, scope.value)
     .run()
-  const stillThere = await db.prepare('SELECT id FROM products WHERE id = ?').bind(productId).first()
+  const stillThere = await db
+    .prepare(`SELECT id FROM products WHERE id = ? AND ${scope.column} = ?${ownedCategory(scope)}`)
+    .bind(productId, scope.value)
+    .first()
   if (!stillThere) {
     return { ok: false, status: 404, code: 'not_found' }
   }
-  const product = await getAdminProductById(db, productId)
+  const product = await getAdminProductById(db, season, productId, context)
   return { ok: true, product }
 }
 

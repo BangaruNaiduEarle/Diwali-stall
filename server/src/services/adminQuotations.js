@@ -1,3 +1,5 @@
+import { customerRequestDb, customerRequestScope, validateTransactionCatalogueReferences } from '../lib/adminCustomerRequestScope.js'
+import { quotationReplacementGuard, transactionChanged } from '../lib/adminTransactionIntegrity.js'
 import { validateCustomerRequestStatusTransition } from '../lib/adminCustomerRequestValidation.js'
 import {
   presentCustomerFacingQuotation,
@@ -22,6 +24,51 @@ export const GET_REQUEST_ITEMS_FOR_QUOTE_SQL = `
   WHERE request_id = ?
   ORDER BY line_number ASC
 `.trim()
+
+export const GET_REQUEST_ITEMS_FOR_QUOTE_WITH_SEASON_SQL = `
+  SELECT i.line_number, i.product_id, i.family_pack_id, i.product_name, i.quantity, i.unit_price_paise
+  FROM customer_request_items i
+  INNER JOIN customer_requests r ON r.id = i.request_id
+  WHERE i.request_id = ? AND r.season_id = ?
+  ORDER BY i.line_number ASC
+`.trim()
+
+const INSERT_QUOTATION_SQL = `
+  INSERT INTO quotations (
+    id, customer_request_id, status, customer_name, customer_phone, customer_note,
+    subtotal_paise, adjustment_paise, total_paise, wa_message_text, created_by_email,
+    pricing_mode, selling_subtotal_paise, final_subtotal_paise, bargain_floor_paise,
+    accepted_amount_paise, updated_at
+  ) VALUES (?, ?, 'draft', ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+`.trim()
+
+export const INSERT_QUOTATION_WITH_SEASON_SQL = `
+  INSERT INTO quotations (
+    id, customer_request_id, status, customer_name, customer_phone, customer_note,
+    subtotal_paise, adjustment_paise, total_paise, wa_message_text, created_by_email,
+    pricing_mode, selling_subtotal_paise, final_subtotal_paise, bargain_floor_paise,
+    accepted_amount_paise, season_id, updated_at
+  ) VALUES (?, ?, 'draft', ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+`.trim()
+
+/** @param {unknown} seasonId */
+function trimSeasonId(seasonId) {
+  return String(seasonId ?? '').trim()
+}
+
+/** @param {unknown} seasonId */
+function requireQuotationSeasonId(seasonId) {
+  const season = trimSeasonId(seasonId)
+  if (!season) {
+    return {
+      ok: false,
+      status: 403,
+      code: 'forbidden',
+      message: 'Active business season is required for quotation writes.',
+    }
+  }
+  return { ok: true, season }
+}
 
 /** @typedef {'selling' | 'bargain'} QuickBillPricingMode */
 
@@ -90,21 +137,38 @@ export function resolveQuotationQuickBillAuditInsert(opts = {}) {
 /**
  * @param {D1Database} db
  * @param {string} requestId
+ * @param {string} [seasonId]
  */
-export async function getActiveQuotationForRequest(db, requestId) {
-  const row = await db
-    .prepare(
-      `SELECT id, customer_request_id, status, customer_name, customer_phone, customer_note,
-              currency, subtotal_paise, adjustment_paise, total_paise, wa_message_text,
-              created_by_email, created_at, updated_at,
-              ${QUOTATION_QUICK_BILL_AUDIT_SELECT_SQL}
-       FROM quotations
-       WHERE customer_request_id = ? AND status != 'void'
-       ORDER BY created_at DESC
-       LIMIT 1`,
-    )
-    .bind(requestId)
-    .first()
+export async function getActiveQuotationForRequest(db, requestId, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context)
+  const season = trimSeasonId(seasonId)
+  const row = season
+    ? await db
+        .prepare(
+          `SELECT id, customer_request_id, status, customer_name, customer_phone, customer_note,
+                  currency, subtotal_paise, adjustment_paise, total_paise, wa_message_text,
+                  created_by_email, created_at, updated_at,
+                  ${QUOTATION_QUICK_BILL_AUDIT_SELECT_SQL}
+           FROM quotations
+           WHERE customer_request_id = ? AND status != 'void' AND season_id = ?
+           ORDER BY created_at DESC
+           LIMIT 1`,
+        )
+        .bind(requestId, season)
+        .first()
+    : await db
+        .prepare(
+          `SELECT id, customer_request_id, status, customer_name, customer_phone, customer_note,
+                  currency, subtotal_paise, adjustment_paise, total_paise, wa_message_text,
+                  created_by_email, created_at, updated_at,
+                  ${QUOTATION_QUICK_BILL_AUDIT_SELECT_SQL}
+           FROM quotations
+           WHERE customer_request_id = ? AND status != 'void'
+           ORDER BY created_at DESC
+           LIMIT 1`,
+        )
+        .bind(requestId)
+        .first()
   if (!row) return null
   const items = await db
     .prepare(
@@ -119,6 +183,7 @@ export async function getActiveQuotationForRequest(db, requestId) {
 /** @param {Record<string, unknown>} row @param {Record<string, unknown>[]} items */
 export function mapQuotationDetail(row, items) {
   return {
+    requestRevision: row.request_revision ?? null,
     id: row.id,
     customerRequestId: row.customer_request_id,
     status: row.status,
@@ -141,6 +206,10 @@ export function mapQuotationDetail(row, items) {
 /** @param {Record<string, unknown>} row */
 function mapQuotationItemRow(row) {
   return {
+    requestLineId: row.request_line_id ?? null,
+    unitType: row.unit_type ?? null,
+    packSnapshot: row.pack_snapshot ? JSON.parse(row.pack_snapshot) : null,
+    productDetails: row.product_details_json ? JSON.parse(row.product_details_json) : null,
     lineNumber: row.line_number,
     productId: row.product_id ?? null,
     productName: row.product_name,
@@ -154,8 +223,12 @@ function mapQuotationItemRow(row) {
  * Quotation line builder — catalogue selling_price_paise only (no private_rates / X4).
  * @param {D1Database} db
  * @param {{ line_number: number, product_id: string, product_name: string, quantity: number }[]} requestItems
+ * @param {string} [seasonId]
  */
-export async function buildQuoteLinesForRequestItems(db, requestItems) {
+export async function buildQuoteLinesForRequestItems(db, requestItems, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context)
+  const season = trimSeasonId(seasonId)
+  await validateTransactionCatalogueReferences(db, requestItems)
   /** @type {string[]} */
   const missingSellingPriceProductIds = []
   /** @type {{ line_number: number, product_id: string, product_name: string, quantity: number, unit_rate_paise: number, line_total_paise: number }[]} */
@@ -177,9 +250,19 @@ export async function buildQuoteLinesForRequestItems(db, requestItems) {
       }
       let unitPaise = Number(line.unit_price_paise)
       if (!Number.isInteger(unitPaise) || unitPaise <= 0) {
+        if (!season) {
+          return {
+            ok: false,
+            status: 400,
+            code: 'validation_error',
+            fields: { [`items[${line.line_number}]`]: 'Family pack is not available.' },
+          }
+        }
         const pack = await db
-          .prepare('SELECT id, name, active, selling_price_paise FROM family_packs WHERE id = ?')
-          .bind(familyPackId)
+          .prepare(
+            'SELECT id, name, active, selling_price_paise FROM family_packs WHERE id = ? AND season_id = ?',
+          )
+          .bind(familyPackId, season)
           .first()
         if (!pack || Number(pack.active) !== 1) {
           return {
@@ -228,10 +311,17 @@ export async function buildQuoteLinesForRequestItems(db, requestItems) {
       }
     }
 
-    const product = await db
-      .prepare('SELECT id, name, active, selling_price_paise FROM products WHERE id = ?')
-      .bind(productId)
-      .first()
+    const product = season
+      ? await db
+          .prepare(
+            'SELECT id, name, active, selling_price_paise FROM products WHERE id = ? AND season_id = ?',
+          )
+          .bind(productId, season)
+          .first()
+      : await db
+          .prepare('SELECT id, name, active, selling_price_paise FROM products WHERE id = ?')
+          .bind(productId)
+          .first()
     if (!product || !product.active) {
       return {
         ok: false,
@@ -246,6 +336,7 @@ export async function buildQuoteLinesForRequestItems(db, requestItems) {
       productId,
       line.product_name ?? product.name,
       line.unit_price_paise,
+      season,
     )
     if (!resolved.ok) {
       missingSellingPriceProductIds.push(productId)
@@ -300,26 +391,39 @@ export function mapBuiltQuoteLineToApi(line) {
  *   finalSubtotalPaise?: number | null,
  *   bargainFloorPaise?: number | null,
  *   acceptedAmountPaise?: number | null,
- * } | null }} opts
+ * } | null, seasonId?: string }} opts
  */
 export async function createOrGetQuotationForRequest(db, requestId, opts = {}) {
-  const request = await db.prepare(GET_REQUEST_FOR_QUOTE_SQL).bind(requestId).first()
+  db = customerRequestDb(db, opts.seasonId, opts.context, true)
+  const seasonGate = requireQuotationSeasonId(opts.seasonId)
+  if (!seasonGate.ok) return seasonGate
+  const { season } = seasonGate
+
+  const request = await db
+    .prepare(`${customerRequestScope(db) ? GET_REQUEST_FOR_QUOTE_SQL.replace('SELECT id, status,', 'SELECT id, finalization_status, status,') : GET_REQUEST_FOR_QUOTE_SQL} AND season_id = ?`)
+    .bind(requestId, season)
+    .first()
   if (!request) {
     return { ok: false, status: 404, code: 'not_found', message: 'Customer request not found.' }
   }
 
-  const existing = await getActiveQuotationForRequest(db, requestId)
+  const existing = await getActiveQuotationForRequest(db, requestId, season)
   if (existing && !opts.regenerate) {
     return { ok: true, quotation: existing, created: false }
   }
 
-  const itemsResult = await db.prepare(GET_REQUEST_ITEMS_FOR_QUOTE_SQL).bind(requestId).all()
+  if (customerRequestScope(db) && (['closed', 'void'].includes(request.status) || request.finalization_status === 'finalized')) return transactionChanged()
+
+  const itemsResult = await db
+    .prepare(GET_REQUEST_ITEMS_FOR_QUOTE_WITH_SEASON_SQL)
+    .bind(requestId, season)
+    .all()
   const requestItems = itemsResult.results ?? []
   if (requestItems.length === 0) {
     return { ok: false, status: 400, code: 'validation_error', message: 'Request has no items.', fields: { items: 'No line items.' } }
   }
 
-  const built = await buildQuoteLinesForRequestItems(db, requestItems)
+  const built = await buildQuoteLinesForRequestItems(db, requestItems, season)
   if (!built.ok) {
     return built
   }
@@ -351,27 +455,22 @@ export async function createOrGetQuotationForRequest(db, requestId, opts = {}) {
 
   /** @type {import('@cloudflare/workers-types').D1PreparedStatement[]} */
   const statements = []
+  if (customerRequestScope(db)) statements.push(quotationReplacementGuard(db, request, existing, season))
 
   if (voidQuotationId) {
     statements.push(
       db
         .prepare(
-          `UPDATE quotations SET status = 'void', updated_at = datetime('now') WHERE id = ? AND status != 'void'`,
+          `UPDATE quotations SET status = 'void', updated_at = datetime('now')
+           WHERE id = ? AND status != 'void' AND season_id = ?`,
         )
-        .bind(voidQuotationId),
+        .bind(voidQuotationId, season),
     )
   }
 
   statements.push(
     db
-      .prepare(
-        `INSERT INTO quotations (
-          id, customer_request_id, status, customer_name, customer_phone, customer_note,
-          subtotal_paise, adjustment_paise, total_paise, wa_message_text, created_by_email,
-          pricing_mode, selling_subtotal_paise, final_subtotal_paise, bargain_floor_paise,
-          accepted_amount_paise, updated_at
-        ) VALUES (?, ?, 'draft', ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-      )
+      .prepare(INSERT_QUOTATION_WITH_SEASON_SQL)
       .bind(
         quotationId,
         requestId,
@@ -387,6 +486,7 @@ export async function createOrGetQuotationForRequest(db, requestId, opts = {}) {
         quickBillAuditInsert.final_subtotal_paise,
         quickBillAuditInsert.bargain_floor_paise,
         quickBillAuditInsert.accepted_amount_paise,
+        season,
       ),
   )
 
@@ -416,9 +516,9 @@ export async function createOrGetQuotationForRequest(db, requestId, opts = {}) {
     statements.push(
       db
         .prepare(
-          `UPDATE customer_requests SET status = ?, updated_at = datetime('now') WHERE id = ?`,
+          `UPDATE customer_requests SET status = ?, updated_at = datetime('now') WHERE id = ? AND season_id = ?`,
         )
-        .bind(nextStatus, requestId),
+        .bind(nextStatus, requestId, season),
     )
   }
 
@@ -426,8 +526,9 @@ export async function createOrGetQuotationForRequest(db, requestId, opts = {}) {
     await db.batch(statements)
   } catch (err) {
     const message = String(err?.message ?? err)
+    if (customerRequestScope(db) && /NOT NULL constraint failed: customer_requests.status/.test(message)) return transactionChanged()
     if (message.includes('UNIQUE constraint failed') && message.includes('quotations')) {
-      const raced = await getActiveQuotationForRequest(db, requestId)
+      const raced = await getActiveQuotationForRequest(db, requestId, season)
       if (raced) {
         return { ok: true, quotation: raced, created: false, concurrentReplay: true }
       }
@@ -443,7 +544,8 @@ export async function createOrGetQuotationForRequest(db, requestId, opts = {}) {
  * @param {D1Database} db
  * @param {string} quotationId
  */
-export async function getQuotationById(db, quotationId) {
+export async function getQuotationById(db, quotationId, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context)
   const row = await db
     .prepare(
       `SELECT id, customer_request_id, status, customer_name, customer_phone, customer_note,
@@ -469,19 +571,44 @@ export async function getQuotationById(db, quotationId) {
  * @param {D1Database} db
  * @param {string} quotationId
  */
-export async function getQuotationWhatsAppPayload(db, quotationId) {
+/**
+ * @param {D1Database} db
+ * @param {string} quotationId
+ * @param {string} seasonId
+ */
+export async function getQuotationWhatsAppPayload(db, quotationId, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context)
+  const seasonGate = requireQuotationSeasonId(seasonId)
+  if (!seasonGate.ok) return seasonGate
+  const { season } = seasonGate
+
+  const seasonRow = await db
+    .prepare('SELECT season_id FROM quotations WHERE id = ?')
+    .bind(quotationId)
+    .first()
+  if (!seasonRow || String(seasonRow.season_id ?? '') !== season) {
+    return { ok: false, status: 404, code: 'not_found', message: 'Quotation not found.' }
+  }
+
   const quotation = await getQuotationById(db, quotationId)
   if (!quotation) {
     return { ok: false, status: 404, code: 'not_found', message: 'Quotation not found.' }
   }
   const request = quotation.customerRequestId
     ? await db
-        .prepare('SELECT customer_phone, pickup_preference, source FROM customer_requests WHERE id = ?')
-        .bind(quotation.customerRequestId)
+        .prepare(
+          'SELECT customer_phone, pickup_preference, source FROM customer_requests WHERE id = ? AND season_id = ?',
+        )
+        .bind(quotation.customerRequestId, season)
         .first()
     : null
   const requestSource = request?.source ?? null
-  const presented = await presentCustomerFacingQuotation(db, quotation, quotation.customerRequestId)
+  const presented = await presentCustomerFacingQuotation(
+    db,
+    quotation,
+    quotation.customerRequestId,
+    season,
+  )
   const message = buildQuotationWhatsAppMessage(presented, presented.items, { requestSource })
   return {
     ok: true,
@@ -501,9 +628,21 @@ export async function getQuotationWhatsAppPayload(db, quotationId) {
  * @param {D1Database} db
  * @param {string} requestId
  * @param {number} acceptedAmountPaise
+ * @param {string} [seasonId]
  */
-export async function patchActiveQuotationCustomerAgreedAmount(db, requestId, acceptedAmountPaise) {
-  const quotation = await getActiveQuotationForRequest(db, requestId)
+export async function patchActiveQuotationCustomerAgreedAmount(
+  db,
+  requestId,
+  acceptedAmountPaise,
+  seasonId,
+  context,
+) {
+  db = customerRequestDb(db, seasonId, context, true)
+  const seasonGate = requireQuotationSeasonId(seasonId)
+  if (!seasonGate.ok) return seasonGate
+  const { season } = seasonGate
+
+  const quotation = await getActiveQuotationForRequest(db, requestId, season)
   if (!quotation) {
     return { ok: false, status: 404, code: 'not_found', message: 'No quotation for this request.' }
   }
@@ -512,9 +651,9 @@ export async function patchActiveQuotationCustomerAgreedAmount(db, requestId, ac
     .prepare(
       `UPDATE quotations
        SET accepted_amount_paise = ?, updated_at = datetime('now')
-       WHERE id = ? AND status != 'void'`,
+       WHERE id = ? AND status != 'void' AND season_id = ?${customerRequestScope(db) ? ' AND accepted_amount_paise IS ?' : ''}`,
     )
-    .bind(acceptedAmountPaise, quotation.id)
+    .bind(acceptedAmountPaise, quotation.id, season, ...(customerRequestScope(db) ? [quotation.acceptedAmountPaise ?? null] : []))
     .run()
 
   if (!run.meta?.changes) {
@@ -530,25 +669,35 @@ export async function patchActiveQuotationCustomerAgreedAmount(db, requestId, ac
   return { ok: true, quotation: updated }
 }
 
-export async function getOrderConfirmationWhatsAppPayload(db, requestId) {
+/**
+ * @param {D1Database} db
+ * @param {string} requestId
+ * @param {string} seasonId
+ */
+export async function getOrderConfirmationWhatsAppPayload(db, requestId, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context)
+  const seasonGate = requireQuotationSeasonId(seasonId)
+  if (!seasonGate.ok) return seasonGate
+  const { season } = seasonGate
+
   const row = await db
     .prepare(
       `SELECT id, public_reference, status, source, customer_name, customer_phone, customer_area,
               pickup_preference, customer_note, delivery_address, delivery_landmark, delivery_maps_url,
               created_at, updated_at
-       FROM customer_requests WHERE id = ?`,
+       FROM customer_requests WHERE id = ? AND season_id = ?`,
     )
-    .bind(requestId)
+    .bind(requestId, season)
     .first()
   if (!row) {
     return { ok: false, status: 404, code: 'not_found', message: 'Customer request not found.' }
   }
-  const quotation = await getActiveQuotationForRequest(db, requestId)
+  const quotation = await getActiveQuotationForRequest(db, requestId, season)
   if (!quotation) {
     return { ok: false, status: 404, code: 'not_found', message: 'No quotation for this request.' }
   }
   const request = mapAdminCustomerRequestDetail(row, [])
-  const presented = await presentCustomerFacingQuotation(db, quotation, requestId)
+  const presented = await presentCustomerFacingQuotation(db, quotation, requestId, season)
   const built = buildOrderConfirmationWhatsAppMessage(request, presented)
   if (!built.ok) {
     return {

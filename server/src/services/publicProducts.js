@@ -1,3 +1,5 @@
+import { resolvePublicCatalogueContext } from './publicCatalogueSeason.js'
+
 /**
  * Public catalogue reads — never joins private_rates or exposes rate fields.
  */
@@ -17,8 +19,8 @@ export const PUBLIC_PRODUCT_LIST_SQL = `
     p.images_json,
     p.selling_price_paise
   FROM products p
-  INNER JOIN categories c ON c.slug = p.category_slug
-  WHERE p.active = 1 AND p.selling_price_paise > 0
+  INNER JOIN categories c ON c.slug = p.category_slug AND c.season_id = p.season_id
+  WHERE p.active = 1 AND p.selling_price_paise > 0 AND p.season_id = ?
   ORDER BY p.sort_order ASC, p.id ASC
   LIMIT ? OFFSET ?
 `.trim()
@@ -37,8 +39,8 @@ export const PUBLIC_PRODUCT_BY_ID_SQL = `
     p.images_json,
     p.selling_price_paise
   FROM products p
-  INNER JOIN categories c ON c.slug = p.category_slug
-  WHERE p.id = ? AND p.active = 1 AND p.selling_price_paise > 0
+  INNER JOIN categories c ON c.slug = p.category_slug AND c.season_id = p.season_id
+  WHERE p.id = ? AND p.active = 1 AND p.selling_price_paise > 0 AND p.season_id = ?
 `.trim()
 
 /** Approved public API fields only. */
@@ -95,20 +97,34 @@ export function mapPublicProductRow(row) {
  * @param {D1Database} db
  * @param {{ limit?: number, offset?: number }} [opts]
  */
-export async function listPublicProducts(db, opts = {}) {
+export async function listPublicProducts(db, opts = {}, env = {}, prepared) {
+  const seasonGate = await resolvePublicCatalogueContext(db, env, prepared)
+  if (!seasonGate.ok) return []
+  const seasonId = seasonGate.seasonId
+
   const limit = Math.min(100, Math.max(1, Number(opts.limit) || 50))
   const offset = Math.max(0, Number(opts.offset) || 0)
   const result = await db
-    .prepare(PUBLIC_PRODUCT_LIST_SQL)
-    .bind(limit, offset)
+    .prepare(seasonGate.scope ? locationProductSql(PUBLIC_PRODUCT_LIST_SQL) : PUBLIC_PRODUCT_LIST_SQL)
+    .bind(seasonGate.scope?.locationId ?? seasonId, limit, offset)
     .all()
   const rows = result.results ?? []
   return rows.map(mapPublicProductRow)
 }
 
 /** @param {D1Database} db @param {string} id */
-export async function getPublicProductById(db, id) {
+export async function getPublicProductById(db, id, env = {}, prepared) {
+  const seasonGate = await resolvePublicCatalogueContext(db, env, prepared)
+  if (!seasonGate.ok) return null
+  const seasonId = seasonGate.seasonId
+
   const productId = String(id ?? '').trim()
-  const row = await db.prepare(PUBLIC_PRODUCT_BY_ID_SQL).bind(productId).first()
+  const row = await db.prepare(seasonGate.scope ? locationProductSql(PUBLIC_PRODUCT_BY_ID_SQL) : PUBLIC_PRODUCT_BY_ID_SQL)
+    .bind(productId, seasonGate.scope?.locationId ?? seasonId).first()
   return row ? mapPublicProductRow(row) : null
+}
+
+function locationProductSql(sql) {
+  return sql.replace('c.season_id = p.season_id', 'c.location_id = p.location_id')
+    .replace('p.season_id = ?', 'p.location_id = ?')
 }

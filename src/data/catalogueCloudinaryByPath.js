@@ -1,6 +1,8 @@
 /**
  * Local catalogue image paths mapped to Cloudinary secure_url (public catalogue subset only).
- * Generated from server upload mapping; unmapped paths stay on Vercel /images/... via productImage.js.
+ * Generated from server upload mapping. Storefront `productImage.js` serves the local path when the
+ * file exists under `public/images/products/images-mobile-webp/`; this map supports reverse lookup
+ * for stored Cloudinary delivery URLs.
  */
 
 export const catalogueCloudinaryByPath = {

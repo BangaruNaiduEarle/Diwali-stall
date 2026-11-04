@@ -6,6 +6,7 @@ import {
   adminRoleDisplayLabel,
   canDeleteAdminProducts,
   canManageAdminUsers,
+  canManageSeasonUsers,
   canViewSensitiveProductPricing,
   normalizeAdminRole,
 } from './adminRoles.js'
@@ -42,12 +43,18 @@ describe('adminRoles (frontend)', () => {
     assert.deepEqual(ADMIN_USER_EDIT_ROLES, ['admin', 'super_admin', 'owner'])
   })
 
-  it('grants user management nav only to owner', () => {
+  it('grants legacy user management nav only to global owner role', () => {
     assert.equal(canManageAdminUsers('owner'), true)
     assert.equal(canManageAdminUsers('super_admin'), false)
     assert.equal(canManageAdminUsers('admin'), false)
     assert.equal(canManageAdminUsers(''), false)
     assert.equal(canManageAdminUsers('guest'), false)
+  })
+
+  it('grants season Users access to owner and super_admin season roles', () => {
+    assert.equal(canManageSeasonUsers('owner'), true)
+    assert.equal(canManageSeasonUsers('super_admin'), true)
+    assert.equal(canManageSeasonUsers('admin'), false)
   })
 
   it('grants product delete only to owner', () => {

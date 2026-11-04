@@ -1,3 +1,5 @@
+import { customerRequestDb, customerRequestScope } from '../lib/adminCustomerRequestScope.js'
+import { prepareAtomicQuickBill, commitAtomicQuickBill } from './adminQuickBillAtomic.js'
 import {
   stripLooseProductNameSuffix,
   withLooseProductNameSuffix,
@@ -6,20 +8,22 @@ import {
   buildAcceptedBelowFinalSubtotalWarning,
   QUICK_BILL_BARGAIN_FLOOR_MARGIN_PAISE,
 } from '../lib/quickBillBargain.js'
-import {
-  createOrGetQuotationForRequest,
-  mapBuiltQuoteLineToApi,
-} from './adminQuotations.js'
-import { markCustomerRequestPendingFinalization } from './adminCustomerRequests.js'
-import { createManualCustomerRequest } from './publicCustomerRequests.js'
+import { mapBuiltQuoteLineToApi } from './adminQuotations.js'
+import { resolveQuickBillAssignee } from './adminCustomerRequests.js'
 import { lineTotalPaise, sumPaise } from './money.js'
+import { appendOfflineFamilyPackPricing } from './offlineFamilyPacks.js'
 
 const QUICK_BILL_PRODUCT_SQL = `
   SELECT id, name, company, active, stock_status,
          selling_price_paise, final_price_paise, pieces_per_pack, allow_loose_sale
   FROM products
-  WHERE id = ?
+  WHERE id = ? AND season_id = ?
 `.trim()
+
+/** @param {string} seasonId */
+function requireSeasonId(seasonId) {
+  return String(seasonId ?? '').trim()
+}
 
 /** @param {Record<string, unknown>} row @returns {number | null} */
 function catalogueBoxSellingPricePaise(row) {
@@ -53,8 +57,19 @@ function looseUnitPaiseFromBox(boxPaise, piecesPerPack) {
 /**
  * @param {D1Database} db
  * @param {{ productId: string, quantity: number, unitType?: 'box' | 'piece' }[]} items
+ * @param {string} seasonId
  */
-export async function resolveQuickBillProductPricing(db, items) {
+export async function resolveQuickBillProductPricing(db, items, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context)
+  const season = requireSeasonId(seasonId)
+  if (!season) {
+    return {
+      ok: false,
+      status: 403,
+      code: 'forbidden',
+      message: 'Active business season is required for quick bill access.',
+    }
+  }
   /** @type {Record<string, string>} */
   const fieldErrors = {}
   /** @type {string[]} */
@@ -81,7 +96,7 @@ export async function resolveQuickBillProductPricing(db, items) {
     const productId = item.productId
     const quantity = item.quantity
 
-    const row = await db.prepare(QUICK_BILL_PRODUCT_SQL).bind(productId).first()
+    const row = await db.prepare(QUICK_BILL_PRODUCT_SQL).bind(productId, season).first()
     if (!row) {
       fieldErrors[`items[${i}].productId`] = 'Product not found.'
       continue
@@ -96,7 +111,8 @@ export async function resolveQuickBillProductPricing(db, items) {
       continue
     }
 
-    const sellingBoxPaise = catalogueBoxSellingPricePaise(row)
+    const sellingBoxPaise = customerRequestScope(db) && !Number.isSafeInteger(row.selling_price_paise)
+      ? null : catalogueBoxSellingPricePaise(row)
     if (sellingBoxPaise === null) {
       missingSellingPriceProductIds.push(productId)
       continue
@@ -117,7 +133,7 @@ export async function resolveQuickBillProductPricing(db, items) {
         continue
       }
       const pieces = Number(row.pieces_per_pack)
-      if (!Number.isInteger(pieces) || pieces < 1) {
+      if (!Number.isInteger(pieces) || pieces < 1 || (customerRequestScope(db) && !Number.isSafeInteger(row.pieces_per_pack))) {
         fieldErrors[`items[${i}].unitType`] = 'Pieces per pack is not configured for loose sale.'
         continue
       }
@@ -154,6 +170,12 @@ export async function resolveQuickBillProductPricing(db, items) {
       finalUnitPaise,
       unitType,
       finalUsesSellingFallback: !hasCatalogueFinalBoxPrice(row),
+      catalogueSnapshot: {
+        selling_price_paise: row.selling_price_paise ?? null,
+        final_price_paise: row.final_price_paise ?? null,
+        pieces_per_pack: row.pieces_per_pack ?? null,
+        allow_loose_sale: row.allow_loose_sale ?? null,
+      },
     })
   }
 
@@ -188,8 +210,9 @@ export async function resolveQuickBillProductPricing(db, items) {
 }
 
 /** @deprecated use resolveQuickBillProductPricing */
-export async function resolveQuickBillProductLines(db, items, _adminRole) {
-  const resolved = await resolveQuickBillProductPricing(db, items)
+export async function resolveQuickBillProductLines(db, items, seasonId, _adminRole, context) {
+  db = customerRequestDb(db, seasonId, context)
+  const resolved = await resolveQuickBillProductPricing(db, items, seasonId)
   if (!resolved.ok) return resolved
   return { ok: true, lines: resolved.lines }
 }
@@ -220,6 +243,7 @@ export function buildQuickBillQuoteLines(lines) {
     return {
       line_number: index + 1,
       product_id: line.productId,
+      ...(line.familyPackId?{family_pack_id:line.familyPackId}:{}),
       product_name: `${line.productName}${unitLabel}`,
       quantity: line.quantity,
       unit_rate_paise: unitRatePaise,
@@ -278,11 +302,12 @@ function attachBargainFieldsToPreview(previewBase, pricingMode, audit) {
 /**
  * @param {D1Database} db
  * @param {{ productId: string, quantity: number, unitType?: 'box' | 'piece' }[]} items
- * @param {{ pricingMode?: import('../lib/quickBillBargain.js').QuickBillPricingMode }} [opts]
+ * @param {{ pricingMode?: import('../lib/quickBillBargain.js').QuickBillPricingMode, seasonId?: string }} [opts]
  */
 export async function previewQuickBill(db, items, opts = {}) {
+  db = customerRequestDb(db, opts.seasonId, opts.context)
   const pricingMode = opts.pricingMode ?? 'selling'
-  const resolved = await resolveQuickBillProductPricing(db, items)
+  const resolved = await resolveQuickBillProductPricing(db, items, opts.seasonId)
   if (!resolved.ok) {
     return resolved
   }
@@ -339,11 +364,38 @@ export function mapQuickBillLinesForRequestInsert(resolvedLines) {
  *   adminRole?: unknown,
  *   pricingMode?: import('../lib/quickBillBargain.js').QuickBillPricingMode,
  *   acceptedAmountPaise?: number | null,
+ *   seasonId?: string,
+ *   idempotencyKey?: string,
  * }} opts
  */
 export async function checkoutQuickBill(db, data, opts = {}) {
+  db = customerRequestDb(db, opts.seasonId, opts.context, true)
+  const season = requireSeasonId(opts.seasonId)
+  if (!season) {
+    return {
+      ok: false,
+      status: 403,
+      code: 'forbidden',
+      message: 'Active business season is required for quick bill access.',
+    }
+  }
+
+  const operation = await prepareAtomicQuickBill(db, data, opts)
+  if (operation && !operation.ok) return operation
+  if (operation?.replay) return operation.replay
+  let assignee = null
+  if (data.assigneeUserId) {
+    if (!customerRequestScope(db)) return { ok: false, status: 400, code: 'location_required', message: 'Select an authorized location for atomic checkout handover.' }
+    assignee = await resolveQuickBillAssignee(db, { assigneeUserId: data.assigneeUserId }, season)
+    if (!assignee.ok) return assignee
+  }
+
   const pricingMode = opts.pricingMode ?? 'selling'
-  const resolved = await resolveQuickBillProductPricing(db, data.items)
+  let resolved = await resolveQuickBillProductPricing(db, data.items.filter(item=>!item.familyPackId), season)
+  if(data.items.some(item=>item.familyPackId)){
+    if(!opts.offlineFamilyPacks)return {ok:false,status:400,code:'family_pack_snapshot_required',message:'Family Pack checkout requires verified offline snapshots.'}
+    resolved=appendOfflineFamilyPackPricing(resolved,data.items,opts.offlineFamilyPacks)
+  }
   if (!resolved.ok) {
     return resolved
   }
@@ -360,40 +412,10 @@ export async function checkoutQuickBill(db, data, opts = {}) {
     if (warning) warnings.push(warning)
   }
 
-  const requestId = crypto.randomUUID()
-  const created = await createManualCustomerRequest(db, data, {
-    requestId,
-    resolvedLines: mapQuickBillLinesForRequestInsert(resolved.lines),
+  return commitAtomicQuickBill(db, data, { ...opts, assigneeEmail: assignee?.email }, operation, {
+    resolved, built: buildQuickBillQuoteLines(resolved.lines.map(line => ({
+      ...line, productName: line.familyPackId ? line.productName : stripLooseProductNameSuffix(line.productName),
+    }))),
+    audit: buildQuickBillQuotationAudit(pricingMode, resolved.audit, acceptedAmountPaise), warnings,
   })
-  if (!created.ok) {
-    return created
-  }
-
-  await markCustomerRequestPendingFinalization(db, requestId)
-
-  const quickBillAudit = buildQuickBillQuotationAudit(
-    pricingMode,
-    resolved.audit,
-    acceptedAmountPaise,
-  )
-
-  const quote = await createOrGetQuotationForRequest(db, requestId, {
-    createdByEmail: opts.createdByEmail ?? null,
-    quickBillAudit,
-  })
-  if (!quote.ok) {
-    return {
-      ...quote,
-      request: created.request,
-      requestId,
-    }
-  }
-
-  return {
-    ok: true,
-    request: created.request,
-    quotation: quote.quotation,
-    quotationCreated: quote.created,
-    warnings: warnings.length ? warnings : undefined,
-  }
 }

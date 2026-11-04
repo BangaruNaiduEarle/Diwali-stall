@@ -5,6 +5,7 @@ import {
   validateFamilyPackPayload,
 } from '../lib/familyPackValidation.js'
 import { paiseToInr } from './money.js'
+import { adminCatalogueScope } from '../lib/adminCatalogueScope.js'
 
 const PACK_SELECT = `
   SELECT
@@ -21,6 +22,93 @@ const PACK_SELECT = `
     fp.updated_at
   FROM family_packs fp
 `
+
+export const DELETE_FAMILY_PACK_IMAGES_FOR_SEASON_SQL = `
+  DELETE FROM family_pack_images
+  WHERE family_pack_id = ?
+    AND family_pack_id IN (SELECT id FROM family_packs WHERE id = ? AND season_id = ?)
+`.trim()
+
+export const DELETE_FAMILY_PACK_ITEMS_FOR_SEASON_SQL = `
+  DELETE FROM family_pack_items
+  WHERE family_pack_id = ?
+    AND family_pack_id IN (SELECT id FROM family_packs WHERE id = ? AND season_id = ?)
+`.trim()
+
+const COUNT_FAMILY_PACK_REQUEST_REFS_FOR_SEASON_SQL = `
+  SELECT COUNT(*) AS total
+  FROM customer_request_items cri
+  INNER JOIN customer_requests cr ON cr.id = cri.request_id AND cr.season_id = ?
+  WHERE cri.family_pack_id = ?
+    AND EXISTS (
+      SELECT 1 FROM family_packs fp WHERE fp.id = cri.family_pack_id AND fp.season_id = ?
+    )
+`.trim()
+
+const packNotFound = () => ({ ok: false, status: 404, error: 'not_found', message: 'Family pack not found.' })
+
+function childDeleteSql(table, scope) {
+  if (!scope.locationId) return table === 'family_pack_images'
+    ? DELETE_FAMILY_PACK_IMAGES_FOR_SEASON_SQL : DELETE_FAMILY_PACK_ITEMS_FOR_SEASON_SQL
+  return `DELETE FROM ${table} WHERE family_pack_id = ?
+    AND family_pack_id IN (SELECT id FROM family_packs WHERE id = ? AND location_id = ?)`
+}
+
+function imageInsert(db, id, image, index, scope) {
+  return db.prepare(scope.locationId
+    ? `INSERT INTO family_pack_images (family_pack_id, sort_order, url, is_cover)
+       VALUES ((SELECT id FROM family_packs WHERE id = ? AND location_id = ?), ?, ?, ?)`
+    : `INSERT INTO family_pack_images (family_pack_id, sort_order, url, is_cover)
+       VALUES (?, ?, ?, ?)`)
+    .bind(id, ...(scope.locationId ? [scope.locationId] : []), image.sortOrder ?? index, image.url, image.isCover ? 1 : 0)
+}
+
+function itemInsert(db, id, item, index, scope) {
+  return db.prepare(scope.locationId
+    ? `INSERT INTO family_pack_items (family_pack_id, product_id, quantity, unit_label, sort_order)
+       VALUES ((SELECT id FROM family_packs WHERE id = ? AND location_id = ?),
+               (SELECT id FROM products WHERE id = ? AND location_id = ?), ?, ?, ?)`
+    : `INSERT INTO family_pack_items (family_pack_id, product_id, quantity, unit_label, sort_order)
+       VALUES (?, ?, ?, ?, ?)`)
+    .bind(id, ...(scope.locationId ? [scope.locationId] : []), item.productId,
+      ...(scope.locationId ? [scope.locationId] : []), item.quantity, item.unitLabel, item.sortOrder ?? index)
+}
+
+async function writePackBatch(db, statements, scope) {
+  try {
+    await db.batch(statements)
+    return { ok: true }
+  } catch (error) {
+    if (scope.locationId) {
+      const message = String(error?.message)
+      if (/UNIQUE constraint failed: family_packs\.slug/i.test(message)) {
+        return { ok: false, errors: { slug: 'Slug already in use.' } }
+      }
+      // Guarded scalar subqueries deliberately yield NULL if ownership changes
+      // after prevalidation. Existing NOT NULL constraints fail the whole batch,
+      // rather than committing a partial replacement of items/images.
+      if (/NOT NULL constraint failed: family_pack_(?:images|items)\.family_pack_id/i.test(message)) return packNotFound()
+      if (/NOT NULL constraint failed: family_pack_items\.product_id/i.test(message)) {
+        return { ok: false, errors: { items: 'A referenced product is no longer available in this location.' } }
+      }
+    }
+    throw error
+  }
+}
+
+/** @param {string | null | undefined} seasonId */
+function requireAdminFamilyPackSeasonId(seasonId) {
+  const season = String(seasonId ?? '').trim()
+  if (!season) {
+    return {
+      ok: false,
+      status: 403,
+      code: 'forbidden',
+      message: 'Active business season is required.',
+    }
+  }
+  return { ok: true, season }
+}
 
 /** @param {Record<string, unknown>} row */
 export function mapAdminFamilyPackRow(row) {
@@ -43,17 +131,22 @@ export function mapAdminFamilyPackRow(row) {
 
 /**
  * @param {D1Database} db
+ * @param {string} seasonId
  * @param {{ includeArchived?: boolean, includeInactive?: boolean, q?: string }} [opts]
  */
-export async function listAdminFamilyPacks(db, opts = {}) {
+export async function listAdminFamilyPacks(db, seasonId, opts = {}) {
+  const scope = adminCatalogueScope(db, seasonId, opts.context)
+  const seasonGate = requireAdminFamilyPackSeasonId(seasonId)
+  if (!seasonGate.ok) return []
+
   const includeInactive = opts.includeInactive !== false
   const q = String(opts.q ?? '').trim().toLowerCase()
 
-  const clauses = []
+  const clauses = [`fp.${scope.column} = ?`]
   if (!includeInactive) clauses.push('fp.active = 1')
-  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''
+  const where = `WHERE ${clauses.join(' AND ')}`
   const sql = `${PACK_SELECT} ${where} ORDER BY fp.sort_order ASC, fp.id ASC`
-  const result = await db.prepare(sql).bind().all()
+  const result = await db.prepare(sql).bind(scope.value).all()
   let rows = (result.results ?? []).map(mapAdminFamilyPackRow)
   if (q) {
     rows = rows.filter(
@@ -66,18 +159,27 @@ export async function listAdminFamilyPacks(db, opts = {}) {
   return rows
 }
 
-/** @param {D1Database} db @param {string} id */
-export async function getAdminFamilyPackById(db, id) {
+/** @param {D1Database} db @param {string} id @param {string} seasonId */
+export async function getAdminFamilyPackById(db, id, seasonId, context) {
+  const scope = adminCatalogueScope(db, seasonId, context)
+  const seasonGate = requireAdminFamilyPackSeasonId(seasonId)
+  if (!seasonGate.ok) return null
+
   if (!isValidFamilyPackId(id)) return null
-  const packRow = await db.prepare(`${PACK_SELECT} WHERE fp.id = ?`).bind(id).first()
+  const packRow = await db
+    .prepare(`${PACK_SELECT} WHERE fp.id = ? AND fp.${scope.column} = ?`)
+    .bind(id, scope.value)
+    .first()
   if (!packRow) return null
 
   const imagesResult = await db
     .prepare(
       `SELECT id, url, sort_order, is_cover FROM family_pack_images
-       WHERE family_pack_id = ? ORDER BY sort_order ASC, id ASC`,
+       WHERE family_pack_id = ?
+         AND family_pack_id IN (SELECT id FROM family_packs WHERE id = ? AND ${scope.column} = ?)
+       ORDER BY sort_order ASC, id ASC`,
     )
-    .bind(id)
+    .bind(id, id, scope.value)
     .all()
 
   const itemsResult = await db
@@ -91,11 +193,12 @@ export async function getAdminFamilyPackById(db, id) {
          p.name AS product_name,
          p.pack AS product_pack
        FROM family_pack_items fpi
-       INNER JOIN products p ON p.id = fpi.product_id
+       INNER JOIN products p ON p.id = fpi.product_id AND p.${scope.column} = ?
        WHERE fpi.family_pack_id = ?
+         AND fpi.family_pack_id IN (SELECT id FROM family_packs WHERE id = ? AND ${scope.column} = ?)
        ORDER BY fpi.sort_order ASC, fpi.id ASC`,
     )
-    .bind(id)
+    .bind(scope.value, id, id, scope.value)
     .all()
 
   const pack = mapAdminFamilyPackRow(packRow)
@@ -136,9 +239,15 @@ async function allocateFamilyPackId(db) {
 
 /**
  * @param {D1Database} db
+ * @param {string} seasonId
  * @param {Record<string, unknown>} body
  */
-export async function createAdminFamilyPack(db, body) {
+export async function createAdminFamilyPack(db, seasonId, body, context) {
+  const scope = adminCatalogueScope(db, seasonId, context, true)
+  const seasonGate = requireAdminFamilyPackSeasonId(seasonId)
+  if (!seasonGate.ok) return seasonGate
+  const { season } = seasonGate
+
   const validated = validateFamilyPackPayload(body, { isCreate: true })
   if (!validated.ok) return validated
 
@@ -152,7 +261,10 @@ export async function createAdminFamilyPack(db, body) {
   if (slugTaken) return { ok: false, errors: { slug: 'Slug already in use.' } }
 
   for (const item of data.items) {
-    const product = await db.prepare('SELECT 1 FROM products WHERE id = ?').bind(item.productId).first()
+    const product = await db
+      .prepare(`SELECT 1 FROM products WHERE id = ? AND ${scope.column} = ?`)
+      .bind(item.productId, scope.value)
+      .first()
     if (!product) {
       return { ok: false, errors: { items: `Product ${item.productId} not found.` } }
     }
@@ -164,8 +276,8 @@ export async function createAdminFamilyPack(db, body) {
       .prepare(
         `INSERT INTO family_packs (
           id, slug, name, short_description, selling_price_paise, pack_label,
-          sort_order, active, archived, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))`,
+          sort_order, active, archived, season_id, updated_at${scope.locationId ? ', location_id' : ''}
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, datetime('now')${scope.locationId ? ', ?' : ''})`,
       )
       .bind(
         id,
@@ -176,51 +288,50 @@ export async function createAdminFamilyPack(db, body) {
         data.packLabel,
         data.sortOrder,
         data.active ? 1 : 0,
+        season,
+        ...(scope.locationId ? [scope.locationId] : []),
       ),
   ]
 
   data.images.forEach((img, index) => {
-    statements.push(
-      db
-        .prepare(
-          `INSERT INTO family_pack_images (family_pack_id, sort_order, url, is_cover)
-           VALUES (?, ?, ?, ?)`,
-        )
-        .bind(id, img.sortOrder ?? index, img.url, img.isCover ? 1 : 0),
-    )
+    statements.push(imageInsert(db, id, img, index, scope))
   })
 
   data.items.forEach((item, index) => {
-    statements.push(
-      db
-        .prepare(
-          `INSERT INTO family_pack_items (family_pack_id, product_id, quantity, unit_label, sort_order)
-           VALUES (?, ?, ?, ?, ?)`,
-        )
-        .bind(id, item.productId, item.quantity, item.unitLabel, item.sortOrder ?? index),
-    )
+    statements.push(itemInsert(db, id, item, index, scope))
   })
 
-  await db.batch(statements)
-  const pack = await getAdminFamilyPackById(db, id)
+  const written = await writePackBatch(db, statements, scope)
+  if (!written.ok) return written
+  const pack = await getAdminFamilyPackById(db, id, season, context)
+  if (scope.locationId && !pack) return packNotFound()
   return { ok: true, pack }
 }
 
 /**
  * @param {D1Database} db
  * @param {string} id
+ * @param {string} seasonId
  * @param {Record<string, unknown>} body
  */
-export async function updateAdminFamilyPack(db, id, body) {
+export async function updateAdminFamilyPack(db, id, seasonId, body, context) {
+  const scope = adminCatalogueScope(db, seasonId, context, true)
+  const seasonGate = requireAdminFamilyPackSeasonId(seasonId)
+  if (!seasonGate.ok) return seasonGate
+  const { season } = seasonGate
+
   if (!isValidFamilyPackId(id)) return { ok: false, errors: { id: 'Invalid family pack id.' } }
-  const existing = await db.prepare('SELECT id, slug FROM family_packs WHERE id = ?').bind(id).first()
+  const existing = await db
+    .prepare(`SELECT id, slug FROM family_packs WHERE id = ? AND ${scope.column} = ?`)
+    .bind(id, scope.value)
+    .first()
   if (!existing) return { ok: false, status: 404, error: 'not_found', message: 'Family pack not found.' }
 
   const validated = validateFamilyPackPayload(body, { isCreate: false })
   if (!validated.ok) return validated
 
   const { data } = validated
-  const existingFull = await getAdminFamilyPackById(db, id)
+  const existingFull = await getAdminFamilyPackById(db, id, season, context)
   if (!existingFull) return { ok: false, status: 404, error: 'not_found', message: 'Family pack not found.' }
   const sellingPricePaise = data.sellingPricePaise ?? existingFull.sellingPricePaise
   const slug = data.slug || normalizeFamilyPackSlug(String(existing.slug))
@@ -236,7 +347,10 @@ export async function updateAdminFamilyPack(db, id, body) {
 
   if (data.items.length) {
     for (const item of data.items) {
-      const product = await db.prepare('SELECT 1 FROM products WHERE id = ?').bind(item.productId).first()
+      const product = await db
+        .prepare(`SELECT 1 FROM products WHERE id = ? AND ${scope.column} = ?`)
+        .bind(item.productId, scope.value)
+        .first()
       if (!product) {
         return { ok: false, errors: { items: `Product ${item.productId} not found.` } }
       }
@@ -256,7 +370,7 @@ export async function updateAdminFamilyPack(db, id, body) {
           sort_order = ?,
           active = ?,
           updated_at = datetime('now')
-        WHERE id = ?`,
+        WHERE id = ? AND ${scope.column} = ?`,
       )
       .bind(
         slug,
@@ -267,60 +381,72 @@ export async function updateAdminFamilyPack(db, id, body) {
         data.sortOrder,
         data.active ? 1 : 0,
         id,
+        scope.value,
       ),
   ]
 
   if (body.images !== undefined) {
-    statements.push(db.prepare('DELETE FROM family_pack_images WHERE family_pack_id = ?').bind(id))
+    statements.push(
+      db.prepare(childDeleteSql('family_pack_images', scope)).bind(id, id, scope.value),
+    )
     data.images.forEach((img, index) => {
       statements.push(
-        db
-          .prepare(
-            `INSERT INTO family_pack_images (family_pack_id, sort_order, url, is_cover)
-             VALUES (?, ?, ?, ?)`,
-          )
-          .bind(id, img.sortOrder ?? index, img.url, img.isCover ? 1 : 0),
+        imageInsert(db, id, img, index, scope),
       )
     })
   }
 
   if (body.items !== undefined) {
-    statements.push(db.prepare('DELETE FROM family_pack_items WHERE family_pack_id = ?').bind(id))
+    statements.push(
+      db.prepare(childDeleteSql('family_pack_items', scope)).bind(id, id, scope.value),
+    )
     data.items.forEach((item, index) => {
       statements.push(
-        db
-          .prepare(
-            `INSERT INTO family_pack_items (family_pack_id, product_id, quantity, unit_label, sort_order)
-             VALUES (?, ?, ?, ?, ?)`,
-          )
-          .bind(id, item.productId, item.quantity, item.unitLabel, item.sortOrder ?? index),
+        itemInsert(db, id, item, index, scope),
       )
     })
   }
 
-  await db.batch(statements)
-  const pack = await getAdminFamilyPackById(db, id)
+  const written = await writePackBatch(db, statements, scope)
+  if (!written.ok) return written
+  const pack = await getAdminFamilyPackById(db, id, season, context)
+  if (scope.locationId && !pack) return packNotFound()
   return { ok: true, pack }
 }
 
-/** @param {D1Database} db @param {string} id @param {boolean} active */
-export async function setAdminFamilyPackActive(db, id, active) {
+/** @param {D1Database} db @param {string} id @param {boolean} active @param {string} seasonId */
+export async function setAdminFamilyPackActive(db, id, active, seasonId, context) {
+  const scope = adminCatalogueScope(db, seasonId, context, true)
+  const seasonGate = requireAdminFamilyPackSeasonId(seasonId)
+  if (!seasonGate.ok) return seasonGate
+  const { season } = seasonGate
+
   if (!isValidFamilyPackId(id)) return { ok: false, errors: { id: 'Invalid family pack id.' } }
   const result = await db
-    .prepare(`UPDATE family_packs SET active = ?, updated_at = datetime('now') WHERE id = ?`)
-    .bind(active ? 1 : 0, id)
+    .prepare(
+      `UPDATE family_packs SET active = ?, updated_at = datetime('now') WHERE id = ? AND ${scope.column} = ?`,
+    )
+    .bind(active ? 1 : 0, id, scope.value)
     .run()
   if (!result.meta.changes) {
-    const row = await db.prepare('SELECT id FROM family_packs WHERE id = ?').bind(id).first()
+    const row = await db
+      .prepare(`SELECT id FROM family_packs WHERE id = ? AND ${scope.column} = ?`)
+      .bind(id, scope.value)
+      .first()
     if (!row) return { ok: false, status: 404, error: 'not_found', message: 'Family pack not found.' }
     return { ok: false, status: 404, error: 'not_found', message: 'Family pack not found.' }
   }
-  const pack = await getAdminFamilyPackById(db, id)
+  const pack = await getAdminFamilyPackById(db, id, season, context)
   return { ok: true, pack }
 }
 
-/** @param {D1Database} db @param {string} id @param {boolean} archived */
-export async function setAdminFamilyPackArchived(db, id, archived) {
+/** @param {D1Database} db @param {string} id @param {boolean} archived @param {string} seasonId */
+export async function setAdminFamilyPackArchived(db, id, archived, seasonId, context) {
+  const scope = adminCatalogueScope(db, seasonId, context, true)
+  const seasonGate = requireAdminFamilyPackSeasonId(seasonId)
+  if (!seasonGate.ok) return seasonGate
+  const { season } = seasonGate
+
   if (!isValidFamilyPackId(id)) return { ok: false, errors: { id: 'Invalid family pack id.' } }
   await db
     .prepare(
@@ -328,20 +454,31 @@ export async function setAdminFamilyPackArchived(db, id, archived) {
         archived = ?,
         active = CASE WHEN ? = 1 THEN 0 ELSE active END,
         updated_at = datetime('now')
-      WHERE id = ?`,
+      WHERE id = ? AND ${scope.column} = ?`,
     )
-    .bind(archived ? 1 : 0, archived ? 1 : 0, id)
+    .bind(archived ? 1 : 0, archived ? 1 : 0, id, scope.value)
     .run()
-  const pack = await getAdminFamilyPackById(db, id)
+  const pack = await getAdminFamilyPackById(db, id, season, context)
   if (!pack) return { ok: false, status: 404, error: 'not_found', message: 'Family pack not found.' }
   return { ok: true, pack }
 }
 
-/** @param {D1Database} db @param {string} id */
-export async function countFamilyPackCustomerRequestReferences(db, id) {
+/** @param {D1Database} db @param {string} id @param {string} seasonId */
+export async function countFamilyPackCustomerRequestReferences(db, id, seasonId, context) {
+  const scope = adminCatalogueScope(db, seasonId, context)
+  const seasonGate = requireAdminFamilyPackSeasonId(seasonId)
+  if (!seasonGate.ok) return 0
+  const { season } = seasonGate
+
   const row = await db
-    .prepare('SELECT COUNT(*) AS total FROM customer_request_items WHERE family_pack_id = ?')
-    .bind(id)
+    // A location-owned pack can be referenced by transactions in older seasons.
+    // Count every FK reference, including malformed/unmapped parents, to avoid
+    // deleting history. Ownership of the target pack is still required.
+    .prepare(scope.locationId ? `SELECT COUNT(*) AS total FROM customer_request_items cri
+      WHERE cri.family_pack_id = ? AND EXISTS (
+        SELECT 1 FROM family_packs fp WHERE fp.id = cri.family_pack_id AND fp.location_id = ?
+      )` : COUNT_FAMILY_PACK_REQUEST_REFS_FOR_SEASON_SQL)
+    .bind(...(scope.locationId ? [id, scope.locationId] : [season, id, season]))
     .first()
   return Number(row?.total ?? 0)
 }
@@ -351,20 +488,26 @@ export async function countFamilyPackCustomerRequestReferences(db, id) {
  * Child images and items are removed via ON DELETE CASCADE.
  * @param {D1Database} db
  * @param {string} id
+ * @param {string} seasonId
  */
-export async function deleteAdminFamilyPack(db, id) {
+export async function deleteAdminFamilyPack(db, id, seasonId, context) {
+  const scope = adminCatalogueScope(db, seasonId, context, true)
+  const seasonGate = requireAdminFamilyPackSeasonId(seasonId)
+  if (!seasonGate.ok) return seasonGate
+  const { season } = seasonGate
+
   if (!isValidFamilyPackId(id)) {
     return { ok: false, errors: { id: 'Invalid family pack id.' } }
   }
   const existing = await db
-    .prepare('SELECT id, name FROM family_packs WHERE id = ?')
-    .bind(id)
+    .prepare(`SELECT id, name FROM family_packs WHERE id = ? AND ${scope.column} = ?`)
+    .bind(id, scope.value)
     .first()
   if (!existing) {
     return { ok: false, status: 404, error: 'not_found', message: 'Family pack not found.' }
   }
 
-  const referenceCount = await countFamilyPackCustomerRequestReferences(db, id)
+  const referenceCount = await countFamilyPackCustomerRequestReferences(db, id, season, context)
   if (referenceCount > 0) {
     return {
       ok: false,
@@ -376,7 +519,10 @@ export async function deleteAdminFamilyPack(db, id) {
     }
   }
 
-  const run = await db.prepare('DELETE FROM family_packs WHERE id = ?').bind(id).run()
+  const run = await db
+    .prepare(`DELETE FROM family_packs WHERE id = ? AND ${scope.column} = ?`)
+    .bind(id, scope.value)
+    .run()
   if (!run.meta?.changes) {
     return { ok: false, status: 404, error: 'not_found', message: 'Family pack not found.' }
   }

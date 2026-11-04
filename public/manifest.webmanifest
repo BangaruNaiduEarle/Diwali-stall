@@ -1,0 +1,17 @@
+{
+  "id": "/admin/offline",
+  "name": "Diwali Stall Billing",
+  "short_name": "Diwali",
+  "description": "Prepared stall catalogue, local drafts and pending billing synchronization.",
+  "lang": "en-IN",
+  "start_url": "/admin/offline",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fff7ed",
+  "theme_color": "#9a3412",
+  "icons": [
+    { "src": "/icons/diwali-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/diwali-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/diwali-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

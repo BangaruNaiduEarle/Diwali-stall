@@ -196,19 +196,30 @@ Build: root `npm run build`; output `dist` (standard Vercel Vite settings). **Co
 - Unauthenticated admin: `GET /api/admin/session` → **401**.
 - Public JSON must not include purchase or X4 rate fields (see `tests/publicProductsSeparation.test.js`).
 
+### Public catalogue season (customer-facing)
+
+Public product and family-pack APIs read **`platform_settings.public_catalogue_season_id`** (set by Platform Admin). Validation is shared via `resolveActivePublicCatalogueSeasonId` — **no fallback** to another season, `DEFAULT_ADMIN_SEASON_ID`, or “latest active” season.
+
+| Condition | `GET /api/public/products`, `GET /api/public/family-packs` | Product/pack detail | `POST /api/public/customer-requests` |
+|-----------|--------------------------------------------------------------|---------------------|--------------------------------------|
+| Setting missing, season missing, or season **not** `active` | **200** with **empty list** `[]` | **404** `not_found` | **503** `error: catalogue_unavailable` |
+
+Operators must set an **active** public catalogue season before customers can browse or submit requests. Archiving the configured season effectively takes the public catalogue offline until Platform Admin points at another active season.
+
 ### Admin login (first-party cookie via proxy)
 
 1. DevTools → **Network** → `POST /api/admin/auth/login` (URL on **vercel.app**, not workers.dev) → **200** and **Set-Cookie: diwali_admin_session=…** (`SameSite=Lax` when proxied).
-2. `GET /api/admin/session` → request includes **Cookie** → **200** with email/role.
+2. `GET /api/admin/session` → request includes **Cookie** → **200** with email, legacy **`role`** (login row only), **`seasonRole`** / **`activeSeasonId`** from **`season_members`**, and **`platformAdmin`**. Use **`seasonRole`** / **`platformAdmin`** in the UI — not legacy **`role`**. Send **`X-Admin-Season-Id`** on season-scoped admin calls after the operator selects a season (required when the user has multiple memberships).
 3. **Application → Cookies** → **`https://diwali-stall.vercel.app`** → session cookie present after login.
 4. Sign out → cookie cleared; admin routes **401**.
 
-Direct Worker calls from Postman still work with cookies on the Worker origin; browser production must use the Vercel `/api` proxy.
+Direct Worker calls from Postman still work with cookies on the Worker origin; cookie-based mutations must explicitly send a trusted `Origin` (for example the Worker URL origin). Browser production must use the Vercel `/api` proxy, preserving the frontend `Origin`. See [ADMIN_REQUEST_SECURITY.md](./ADMIN_REQUEST_SECURITY.md).
 
 ### Admin features
 
 - `/admin/login` → `/admin` → sign out.
-- Owner: `/admin/users` — create **admin** only (max **5** active including owner).
+- **Season context:** Season-scoped admin APIs authorize with **`season_members.role`**. **`X-Admin-Season-Id`** selects the active season when set. With **one** active membership and no header, that season is selected automatically; with **multiple** memberships and no header, **`activeSeasonId`** is **null** until the operator chooses (no silent `season-2026` default). **`DEFAULT_ADMIN_SEASON_ID`** is for migration/bootstrap only. Platform routes under **`/api/admin/platform/*`** use **`platform_admins`**, not season header. See [AUTH_PASSWORD.md](./AUTH_PASSWORD.md).
+- **`/admin/users`:** Season-scoped listing and invites — **Owner** may add **super_admin** or **admin**; **Super Admin** may add **admin** only; **Owner** alone may change roles, disable/enable **season memberships**, or reset passwords. New login accounts still respect the global **5** active-user cap. **`GET /api/admin/users/assignees`** uses active-season memberships for Quick Bill assignees.
 - Customer request → quotation; admin product/rate edits unchanged.
 - `/admin/family-packs` — CRUD, images (Cloudinary folder `diwali/family-packs`), public `/packs` from `GET /api/public/family-packs`.
 

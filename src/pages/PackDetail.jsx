@@ -12,6 +12,7 @@ import { useProductImageLightbox } from '../context/ProductImageLightboxContext'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { formatINR } from '../utils/currency'
 import { applyPackToEstimate, getPackAddBlockers } from '../utils/crackerPacks'
+import { normalizeProductImageUrl } from '../utils/productImage.js'
 
 export default function PackDetail() {
   const { packSlug } = useParams()
@@ -68,9 +69,12 @@ export default function PackDetail() {
 
   const imageUrls = useMemo(() => {
     if (!pack?.images?.length) {
-      return pack?.coverImageUrl ? [String(pack.coverImageUrl)] : []
+      const cover = pack?.coverImageUrl ? normalizeProductImageUrl(String(pack.coverImageUrl)) : ''
+      return cover ? [cover] : []
     }
-    return pack.images.map((img) => String(img.url ?? '')).filter(Boolean)
+    return pack.images
+      .map((img) => normalizeProductImageUrl(String(img.url ?? '')))
+      .filter(Boolean)
   }, [pack])
 
   usePageTitle(viewPack ? viewPack.displayName : loading ? 'Loading pack' : 'Pack not found')

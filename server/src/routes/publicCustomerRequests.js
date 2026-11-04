@@ -9,6 +9,7 @@ import {
   ensurePublicReferenceOnRequest,
   getPublicRequestSummary,
 } from '../services/publicCustomerRequests.js'
+import { preparePublicCustomerRequestWriter } from '../services/publicCustomerRequestContext.js'
 
 const MAX_BODY_BYTES = 32768
 
@@ -49,14 +50,26 @@ export async function handlePublicCustomerRequestPost(request, env) {
     return validationErrorResponse({ 'Idempotency-Key': 'Invalid idempotency key format.' })
   }
 
+  const writer = await preparePublicCustomerRequestWriter(env.DB, env)
+  if (!writer.ok) {
+    return Response.json(
+      { error: writer.error, message: writer.message },
+      { status: writer.status, headers: { ...JSON_HEADERS, 'Cache-Control': 'no-store' } },
+    )
+  }
+  const db = writer.db
+
   let requestId = crypto.randomUUID()
   let idempotentReplay = false
 
   if (idempotencyHeader) {
-    requestId = await deriveRequestIdFromIdempotencyKey(idempotencyHeader)
-    const existing = await getPublicRequestSummary(env.DB, requestId)
+    const key = writer.scope
+      ? JSON.stringify([writer.scope.businessId, writer.scope.locationId, writer.scope.seasonId, idempotencyHeader])
+      : idempotencyHeader
+    requestId = await deriveRequestIdFromIdempotencyKey(key)
+    const existing = await getPublicRequestSummary(db, requestId)
     if (existing) {
-      const ensured = await ensurePublicReferenceOnRequest(env.DB, requestId)
+      const ensured = await ensurePublicReferenceOnRequest(db, requestId)
       if (ensured && typeof ensured === 'object' && 'ok' in ensured && ensured.ok === false) {
         return Response.json(
           { error: ensured.error ?? 'server_error', message: ensured.message ?? 'Request failed.' },
@@ -71,10 +84,10 @@ export async function handlePublicCustomerRequestPost(request, env) {
     idempotentReplay = false
   }
 
-  const result = await createPublicCustomerRequest(env.DB, validated.data, {
+  const result = await createPublicCustomerRequest(db, validated.data, {
     requestId,
     idempotentReplay,
-  })
+  }, env)
 
   if (!result.ok) {
     if (result.error === 'validation_error' && result.fields) {

@@ -50,7 +50,7 @@ export function buildWhatsAppEstimateMessage(estimateItems, customerDetails = nu
   }
 
   lines.push('Selected items', ...itemLines, '')
-  lines.push('Please confirm availability and share your quotation.')
+
 
   return lines.join('\n')
 }

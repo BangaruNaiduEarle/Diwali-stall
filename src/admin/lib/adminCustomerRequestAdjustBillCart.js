@@ -1,4 +1,5 @@
 import { productNameIsLoosePiece } from './adminCustomerRequestQuotationDisplay.js'
+import { paiseInputValue } from './billAdjustment.js'
 
 /**
  * @param {unknown[]} items
@@ -16,12 +17,14 @@ export function customerRequestItemsToAdjustCart(items) {
     const quantity = Number(row.quantity)
     if (!Number.isInteger(quantity) || quantity < 1) continue
     const name = String(row.productName ?? productId)
-    const unitType = productNameIsLoosePiece(name) ? 'piece' : 'box'
+    const unitType = row.unitType ?? (productNameIsLoosePiece(name) ? 'piece' : 'box')
     cart.push({
       productId,
       name: name.replace(/\s*\(\s*loose\s*pc\s*\)\s*$/i, '').trim() || name,
       quantity,
       unitType,
+      lineId: row.lineId ?? null,
+      priceInr: paiseInputValue(row.productDetails?.billing?.sellingUnitPaise),
     })
   }
   return cart

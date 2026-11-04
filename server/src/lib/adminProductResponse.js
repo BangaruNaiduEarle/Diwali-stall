@@ -4,8 +4,9 @@ import { canViewSensitiveProductPricing } from './adminRoles.js'
  * Strip purchase-rate and Excel mapping fields for restricted admin roles.
  * @param {Record<string, unknown>} product
  * @param {unknown} role
+ * @param {boolean} canViewFinalRate Trusted current stall capability, never client input.
  */
-export function filterAdminProductForRole(product, role) {
+export function filterAdminProductForRole(product, role, canViewFinalRate = false) {
   if (canViewSensitiveProductPricing(role)) return product
   const next = { ...product }
   delete next.purchaseRatePaise
@@ -18,13 +19,15 @@ export function filterAdminProductForRole(product, role) {
   delete next.privateX4Inr
   delete next.hasPrivateX4Rate
   delete next.pricingMapping
-  delete next.finalPricePaise
-  delete next.finalPriceInr
-  delete next.hasFinalPrice
+  if (canViewFinalRate !== true) {
+    delete next.finalPricePaise
+    delete next.finalPriceInr
+    delete next.hasFinalPrice
+  }
   return next
 }
 
-/** @param {Record<string, unknown>[]} products @param {unknown} role */
-export function filterAdminProductsForRole(products, role) {
-  return products.map((p) => filterAdminProductForRole(p, role))
+/** @param {Record<string, unknown>[]} products @param {unknown} role @param {boolean} canViewFinalRate */
+export function filterAdminProductsForRole(products, role, canViewFinalRate = false) {
+  return products.map((p) => filterAdminProductForRole(p, role, canViewFinalRate))
 }

@@ -1,0 +1,69 @@
+/* Calm Retail POS: semantic tokens shared by the shop and billing workspace. */
+:root {
+  color-scheme: light;
+  --color-page: #F4F6F8;
+  --color-white: #FFFFFF;
+  --color-navy: #263B53;
+  --color-navy-hover: #1D2F44;
+  --color-slate: #64748B;
+  --color-charcoal: #202938;
+  --color-muted: #64748B;
+  /* Small text on the page canvas needs a darker tone than text on white. */
+  --color-muted-on-page: #56667C;
+  --color-border: #E2E8F0;
+  --color-border-control: #8492A6;
+  --color-surface-muted: #EEF2F6;
+  --color-surface-hover: #E8EDF3;
+  --color-success-soft: #E8F1EB;
+  --color-success-text: #345C42;
+  --color-warning-soft: #F5F0E5;
+  --color-warning-text: #735A2C;
+  --color-error-soft: #F8EAEA;
+  --color-error-text: #873F3F;
+  --color-focus: var(--color-navy);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --touch-target: 3rem;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --shadow-card: 0 1px 3px rgb(32 41 56 / 5%);
+  --shadow-raised: 0 4px 16px rgb(32 41 56 / 8%);
+  --container-max: 80rem;
+  --section-y: clamp(2.5rem, 5vw, 5rem);
+  --section-y-compact: clamp(2rem, 4vw, 3.5rem);
+  --space-page-x: 1rem;
+  --font-sans: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  --ease-out: ease-out;
+  --transition-fast: 140ms ease-out;
+
+  /* Compatibility aliases let existing screens adopt the foundation incrementally. */
+  --color-brand: var(--color-navy);
+  --color-brand-dark: var(--color-navy-hover);
+  --color-brand-deep: var(--color-navy);
+  --color-brand-text: var(--color-navy);
+  --color-maroon: var(--color-navy);
+  --color-maroon-deep: var(--color-navy-hover);
+  --color-maroon-soft: var(--color-slate);
+  --color-gold: var(--color-slate);
+  --color-gold-light: var(--color-surface-muted);
+  --color-red: var(--color-error-text);
+  --color-saffron: var(--color-slate);
+  --color-ivory: var(--color-page);
+  --color-ink: var(--color-charcoal);
+  --color-paper: var(--color-white);
+  --color-ref-price: var(--color-muted-on-page);
+  --color-border-warm: var(--color-border-control);
+  --color-border-faint: var(--color-border);
+  --color-image-well: var(--color-page);
+  --shadow-hover: var(--shadow-card);
+  --btn-radius: var(--radius-md);
+  --btn-shadow-hover: var(--shadow-card);
+  --hero-maroon-bg: var(--color-navy);
+}

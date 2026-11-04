@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Button from '../../components/ui/Button.jsx'
 import {
@@ -10,19 +10,26 @@ import AdminConfirmDialog from '../components/AdminConfirmDialog.jsx'
 import AdminFamilyPackCard from '../components/AdminFamilyPackCard.jsx'
 import { adminFamilyPackEditPath } from '../lib/adminFamilyPackPaths.js'
 import { formatINR } from '../../utils/currency.js'
+import { useAdminSession } from '../context/AdminSessionContext.jsx'
+import { useAdminSeasonReadOnly } from '../hooks/useAdminSeasonReadOnly.js'
 
 export default function AdminFamilyPacksPage() {
+  const { activeSeasonId } = useAdminSession()
+  const { isReadOnly } = useAdminSeasonReadOnly()
   const [packs, setPacks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [includeInactive, setIncludeInactive] = useState(true)
   const [deleteTarget, setDeleteTarget] = useState(/** @type {{ id: string, name: string } | null} */ (null))
   const [deleting, setDeleting] = useState(false)
+  const requestSeq = useRef(0)
 
   const load = useCallback(async () => {
+    const seq = ++requestSeq.current
     setLoading(true)
     setError('')
     const result = await fetchAdminFamilyPacks({ includeInactive })
+    if (seq !== requestSeq.current) return
     if (!result.ok) {
       setError(result.message)
       setPacks([])
@@ -30,20 +37,25 @@ export default function AdminFamilyPacksPage() {
       setPacks(result.familyPacks)
     }
     setLoading(false)
-  }, [includeInactive])
+  }, [includeInactive, activeSeasonId])
 
   useEffect(() => {
     load()
   }, [load])
 
+  useEffect(() => {
+    setDeleteTarget(null)
+  }, [activeSeasonId])
+
   async function toggleActive(id, active) {
+    if (isReadOnly) return
     const result = await patchAdminFamilyPackStatus(id, !active)
     if (result.ok) load()
     else setError(result.message || 'Could not update status.')
   }
 
   async function confirmDelete() {
-    if (!deleteTarget || deleting) return
+    if (isReadOnly || !deleteTarget || deleting) return
     setDeleting(true)
     setError('')
     const result = await deleteAdminFamilyPack(deleteTarget.id)
@@ -64,9 +76,11 @@ export default function AdminFamilyPacksPage() {
           <p className="admin-page__eyebrow">Catalogue</p>
           <h1 className="admin-page__title">Family packs</h1>
         </div>
-        <Button to="/admin/family-packs/new" variant="primary">
-          New family pack
-        </Button>
+        {!isReadOnly ? (
+          <Button to="/admin/family-packs/new" variant="primary">
+            New family pack
+          </Button>
+        ) : null}
       </header>
 
       <div className="admin-toolbar mt-4 flex flex-wrap items-center gap-3">
@@ -104,6 +118,7 @@ export default function AdminFamilyPacksPage() {
                 pack={pack}
                 onToggleActive={toggleActive}
                 onDelete={setDeleteTarget}
+                readOnly={isReadOnly}
               />
             ))}
           </div>
@@ -138,17 +153,26 @@ export default function AdminFamilyPacksPage() {
                           <Link to={editPath} className="admin-table__link">
                             Edit
                           </Link>
-                          <Button type="button" variant="ghost" size="sm" onClick={() => toggleActive(id, pack.active)}>
-                            {pack.active ? 'Deactivate' : 'Activate'}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDeleteTarget({ id, name: String(pack.name ?? id) })}
-                          >
-                            Delete
-                          </Button>
+                          {!isReadOnly ? (
+                            <>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleActive(id, pack.active)}
+                              >
+                                {pack.active ? 'Deactivate' : 'Activate'}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeleteTarget({ id, name: String(pack.name ?? id) })}
+                              >
+                                Delete
+                              </Button>
+                            </>
+                          ) : null}
                         </div>
                       </td>
                     </tr>

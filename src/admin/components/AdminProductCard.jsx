@@ -33,6 +33,7 @@ function formatOptionalInr(value) {
 export default function AdminProductCard({
   product,
   showSensitiveColumns = true,
+  showFinalRate = showSensitiveColumns,
   showUnitInSummary = showSensitiveColumns,
   activeInlineEdit = null,
   onActivateInlineEdit,
@@ -133,11 +134,11 @@ export default function AdminProductCard({
             )}
           </dd>
         </div>
-        {showSensitiveColumns ? (
+        {showFinalRate ? (
           <div>
-            <dt>Final Price</dt>
+            <dt>Final Rate</dt>
             <dd className="tabular-nums">
-              {inlineEnabled ? (
+              {inlineEnabled && showSensitiveColumns ? (
                 <AdminProductTableInlineCell
                   productId={id}
                   field="finalPriceInr"

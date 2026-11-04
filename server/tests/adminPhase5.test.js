@@ -1,3 +1,4 @@
+import { bindAdminServiceMode } from '../src/lib/adminServiceMode.js'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -13,6 +14,14 @@ import {
 } from '../src/services/adminQuotations.js'
 import { upsertCurrentPrivateRate } from '../src/services/adminPrivateRates.js'
 import { listAdminProductsPage, updateAdminProduct } from '../src/services/adminProducts.js'
+import { DEFAULT_ADMIN_SEASON_ID } from '../src/services/adminSeasonContext.js'
+
+const SEASON = DEFAULT_ADMIN_SEASON_ID
+
+/** @param {Record<string, unknown>} [extra] */
+function quotationOpts(extra = {}) {
+  return { seasonId: SEASON, ...extra }
+}
 
 const LOCAL_SECRET = 'local-dev-secret-at-least-32-characters-long'
 const ALLOWED_EMAIL = 'owner@example.com'
@@ -73,7 +82,7 @@ describe('admin phase 5 API (mock D1)', () => {
   it('updates selling price without changing private rate', async () => {
     const db = createPhase5MockDb()
     const beforeRate = db.state.rates.get('P001')
-    await updateAdminProduct(db, 'P001', { sellingPriceInr: 999 })
+    await updateAdminProduct(db, SEASON, 'P001', { sellingPriceInr: 999 })
     const product = db.state.products.get('P001')
     assert.equal(product.selling_price_paise, 99900)
     assert.equal(db.state.rates.get('P001'), beforeRate)
@@ -82,7 +91,7 @@ describe('admin phase 5 API (mock D1)', () => {
   it('updates private rate without changing selling price', async () => {
     const db = createPhase5MockDb()
     db.state.products.get('P001').selling_price_paise = 50000
-    await upsertCurrentPrivateRate(db, 'P001', 12345)
+    await upsertCurrentPrivateRate(db, 'P001', 12345, SEASON)
     assert.equal(db.state.products.get('P001').selling_price_paise, 50000)
     assert.equal(db.state.rates.get('P001'), 12345)
   })
@@ -90,7 +99,11 @@ describe('admin phase 5 API (mock D1)', () => {
   it('creates quotation from request lines with integer paise totals', async () => {
     const db = createPhase5MockDb()
     const requestId = '11111111-1111-4111-8111-111111111111'
-    const result = await createOrGetQuotationForRequest(db, requestId, { createdByEmail: ALLOWED_EMAIL })
+    const result = await createOrGetQuotationForRequest(
+      db,
+      requestId,
+      quotationOpts({ createdByEmail: ALLOWED_EMAIL }),
+    )
     assert.equal(result.ok, true)
     if (!result.ok) return
     const q = result.quotation
@@ -104,17 +117,21 @@ describe('admin phase 5 API (mock D1)', () => {
   it('blocks quotation when private rate missing', async () => {
     const db = createPhase5MockDb()
     db.state.rates.delete('P002')
-    const result = await createOrGetQuotationForRequest(db, '22222222-2222-4222-8222-222222222222')
+    const result = await createOrGetQuotationForRequest(
+      db,
+      '22222222-2222-4222-8222-222222222222',
+      quotationOpts(),
+    )
     assert.equal(result.ok, false)
     if (result.ok) return
-    assert.equal(result.code, 'missing_private_rates')
+    assert.equal(result.code, 'missing_selling_price')
   })
 
   it('returns existing quotation on retry without duplicate active rows', async () => {
     const db = createPhase5MockDb()
     const requestId = '11111111-1111-4111-8111-111111111111'
-    const first = await createOrGetQuotationForRequest(db, requestId)
-    const second = await createOrGetQuotationForRequest(db, requestId)
+    const first = await createOrGetQuotationForRequest(db, requestId, quotationOpts())
+    const second = await createOrGetQuotationForRequest(db, requestId, quotationOpts())
     assert.equal(first.ok, true)
     assert.equal(second.ok, true)
     if (!first.ok || !second.ok) return
@@ -126,12 +143,12 @@ describe('admin phase 5 API (mock D1)', () => {
   it('keeps quotation snapshot stable after rate change', async () => {
     const db = createPhase5MockDb()
     const requestId = '11111111-1111-4111-8111-111111111111'
-    const created = await createOrGetQuotationForRequest(db, requestId)
+    const created = await createOrGetQuotationForRequest(db, requestId, quotationOpts())
     assert.equal(created.ok, true)
     if (!created.ok) return
     const quoteId = created.quotation.id
     const totalBefore = created.quotation.totalPaise
-    await upsertCurrentPrivateRate(db, 'P001', 1)
+    await upsertCurrentPrivateRate(db, 'P001', 1, SEASON)
     const reloaded = await getQuotationById(db, quoteId)
     assert.equal(reloaded?.totalPaise, totalBefore)
   })
@@ -148,13 +165,14 @@ function createPhase5MockDb() {
           name: 'EMERALD GIFT BOX',
           active: 1,
           stock_status: 'available',
-          selling_price_paise: null,
+          selling_price_paise: 169400,
           sort_order: 1,
           images_json: '[]',
           pack: '',
           description: '',
           featured: 0,
           company: null,
+          season_id: SEASON,
         },
       ],
       [
@@ -172,6 +190,7 @@ function createPhase5MockDb() {
           description: '',
           featured: 0,
           company: null,
+          season_id: SEASON,
         },
       ],
     ]),
@@ -191,6 +210,7 @@ function createPhase5MockDb() {
           customer_phone: '9876543210',
           customer_note: null,
           pickup_preference: null,
+          season_id: SEASON,
         },
       ],
       [
@@ -202,6 +222,7 @@ function createPhase5MockDb() {
           customer_phone: '9123456789',
           customer_note: null,
           pickup_preference: null,
+          season_id: SEASON,
         },
       ],
     ]),
@@ -234,11 +255,22 @@ function createPhase5MockDb() {
           return makeStmt(next.length ? next : params)
         },
         async first() {
-          if (normalized.includes('admin_users')) {
-            return String(params[0]).toLowerCase() === ALLOWED_EMAIL.toLowerCase() ? { ok: 1 } : null
+          if (normalized.includes('FROM admin_users WHERE lower(email)')) {
+            return String(params[0]).toLowerCase() === ALLOWED_EMAIL.toLowerCase()
+              ? {
+                  id: 'u-owner',
+                  email: ALLOWED_EMAIL,
+                  display_name: 'Owner',
+                  role: 'owner',
+                  password_hash: 'x',
+                  disabled_at: null,
+                }
+              : null
           }
           if (normalized.includes('COUNT(*) AS total') && normalized.includes('products p')) {
+            const seasonFilter = normalized.includes('p.season_id = ?') ? String(params[0]) : null
             let n = [...state.products.values()].filter((p) => {
+              if (seasonFilter && p.season_id !== seasonFilter) return false
               if (normalized.includes('pr.id IS NULL')) return !state.rates.has(p.id)
               return true
             }).length
@@ -247,6 +279,7 @@ function createPhase5MockDb() {
           if (normalized.includes('FROM products WHERE id = ?')) {
             const p = state.products.get(String(params[0]))
             if (!p) return null
+            if (normalized.includes('season_id = ?') && String(params[1]) !== p.season_id) return null
             return { ...p, category_label: state.categories.get(p.category_slug)?.label }
           }
           if (normalized.includes('FROM private_rates') && normalized.includes('effective_to IS NULL')) {
@@ -257,8 +290,37 @@ function createPhase5MockDb() {
             const r = state.requests.get(String(params[0]))
             return r ? { id: r.id, status: r.status } : null
           }
+          if (
+            normalized.includes('FROM customer_requests') &&
+            normalized.includes('WHERE id = ?') &&
+            normalized.includes('season_id = ?')
+          ) {
+            const id = String(params[0])
+            const seasonId = String(params[1])
+            const r = state.requests.get(id)
+            if (!r || String(r.season_id ?? '') !== seasonId) return null
+            return r
+          }
           if (normalized.includes('FROM customer_requests') && normalized.includes('WHERE id = ?')) {
             return state.requests.get(String(params[0])) ?? null
+          }
+          if (
+            normalized.includes('FROM quotations') &&
+            normalized.includes('customer_request_id = ?') &&
+            normalized.includes('season_id = ?')
+          ) {
+            const requestId = String(params[0])
+            const seasonId = String(params[1])
+            for (const q of state.quotations.values()) {
+              if (
+                q.customer_request_id === requestId &&
+                q.status !== 'void' &&
+                String(q.season_id ?? '') === seasonId
+              ) {
+                return q
+              }
+            }
+            return null
           }
           if (normalized.includes('FROM quotations') && normalized.includes('customer_request_id = ?')) {
             for (const q of state.quotations.values()) {
@@ -272,6 +334,35 @@ function createPhase5MockDb() {
           return null
         },
         async all() {
+          if (normalized.includes('FROM season_members sm')) {
+            return {
+              results: [
+                {
+                  season_id: SEASON,
+                  role: 'owner',
+                  disabled_at: null,
+                  created_at: '',
+                  code: '2026',
+                  label: 'Diwali 2026',
+                  status: 'active',
+                },
+              ],
+            }
+          }
+          if (
+            normalized.includes('FROM customer_request_items i') &&
+            normalized.includes('INNER JOIN customer_requests r')
+          ) {
+            const requestId = String(params[0])
+            const seasonId = String(params[1])
+            const req = state.requests.get(requestId)
+            if (!req || String(req.season_id ?? '') !== seasonId) {
+              return { results: [] }
+            }
+            return {
+              results: state.requestItems.filter((i) => i.request_id === requestId),
+            }
+          }
           if (normalized.includes('FROM customer_request_items')) {
             return {
               results: state.requestItems.filter((i) => i.request_id === params[0]),
@@ -283,18 +374,25 @@ function createPhase5MockDb() {
             }
           }
           if (normalized.includes('FROM products p')) {
-            const rows = [...state.products.values()].map((p) => ({
-              ...p,
-              category_label: state.categories.get(p.category_slug)?.label,
-              private_x4_paise: state.rates.get(p.id) ?? null,
-            }))
+            const seasonFilter = normalized.includes('p.season_id = ?') ? String(params[0]) : null
+            const rows = [...state.products.values()]
+              .filter((p) => !seasonFilter || p.season_id === seasonFilter)
+              .map((p) => ({
+                ...p,
+                category_label: state.categories.get(p.category_slug)?.label,
+                private_x4_paise: state.rates.get(p.id) ?? null,
+                x4_selling_paise: state.rates.get(p.id) ?? null,
+                purchase_rate_paise: null,
+              }))
             return { results: rows.slice(0, params[params.length - 2] ?? 10) }
           }
           return { results: [] }
         },
         async run() {
           if (normalized.startsWith('UPDATE products SET')) {
-            const id = params[params.length - 1]
+            const id = normalized.includes('season_id = ?')
+              ? params[params.length - 2]
+              : params[params.length - 1]
             const p = state.products.get(String(id))
             if (!p) return { meta: { changes: 0 } }
             if (normalized.includes('selling_price_paise')) {
@@ -311,6 +409,9 @@ function createPhase5MockDb() {
             return { meta: { changes: 1 } }
           }
           if (normalized.startsWith('INSERT INTO quotations')) {
+            const seasonId = normalized.includes('season_id')
+              ? String(params[params.length - 1])
+              : null
             state.quotations.set(params[0], {
               id: params[0],
               customer_request_id: params[1],
@@ -324,6 +425,12 @@ function createPhase5MockDb() {
               total_paise: params[6],
               wa_message_text: params[7],
               created_by_email: params[8],
+              pricing_mode: params[9] ?? null,
+              selling_subtotal_paise: params[10] ?? null,
+              final_subtotal_paise: params[11] ?? null,
+              bargain_floor_paise: params[12] ?? null,
+              accepted_amount_paise: params[13] ?? null,
+              season_id: seasonId,
             })
             return { meta: { changes: 1 } }
           }
@@ -340,13 +447,25 @@ function createPhase5MockDb() {
             return { meta: { changes: 1 } }
           }
           if (normalized.includes('UPDATE customer_requests SET status')) {
-            const r = state.requests.get(String(params[1]))
-            if (r) r.status = params[0]
+            const hasSeason = normalized.includes('season_id = ?')
+            const status = String(params[0])
+            const requestId = String(hasSeason ? params[1] : params[1])
+            const seasonId = hasSeason ? String(params[2]) : null
+            const r = state.requests.get(requestId)
+            if (!r || (hasSeason && String(r.season_id ?? '') !== seasonId)) {
+              return { meta: { changes: 0 } }
+            }
+            r.status = status
             return { meta: { changes: 1 } }
           }
           if (normalized.includes("UPDATE quotations SET status = 'void'")) {
-            const q = state.quotations.get(String(params[0]))
-            if (q) q.status = 'void'
+            const id = String(params[0])
+            const seasonId = normalized.includes('season_id = ?') ? String(params[1]) : null
+            const q = state.quotations.get(id)
+            if (!q || (seasonId != null && String(q.season_id ?? '') !== seasonId)) {
+              return { meta: { changes: 0 } }
+            }
+            q.status = 'void'
             return { meta: { changes: 1 } }
           }
           return { meta: { changes: 1 } }
@@ -361,5 +480,5 @@ function createPhase5MockDb() {
     },
   }
 
-  return db
+  return bindAdminServiceMode(db, { ADMIN_LOCATION_MODE: '0' })
 }

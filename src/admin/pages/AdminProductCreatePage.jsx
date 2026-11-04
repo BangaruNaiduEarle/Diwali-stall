@@ -14,6 +14,7 @@ import ProductForm, {
   getPurchaseRateInrFromForm,
 } from '../components/ProductForm.jsx'
 import { adminNavigationFlashState } from '../lib/adminNavigationFlash.js'
+import { useAdminSeasonReadOnly } from '../hooks/useAdminSeasonReadOnly.js'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
 import { showAdminProductSensitiveColumns } from '../lib/adminProductTableColumns.js'
 
@@ -23,8 +24,10 @@ const backToProductsClassName =
   'focus-ring inline-flex min-h-11 items-center text-sm font-semibold text-[var(--color-maroon)] hover:text-[var(--color-maroon-deep)] hover:underline'
 
 export default function AdminProductCreatePage() {
-  const { role } = useAdminSession()
-  const showSensitiveColumns = showAdminProductSensitiveColumns(role)
+  const { role, permissionRole: seasonRole, activeSeasonId } = useAdminSession()
+  const { isReadOnly } = useAdminSeasonReadOnly()
+  const pricingPermissionRole = activeSeasonId != null ? seasonRole : role
+  const showSensitiveColumns = showAdminProductSensitiveColumns(pricingPermissionRole)
   const navigate = useNavigate()
   const [categories, setCategories] = useState(/** @type {{ slug: string, label: string }[]} */ ([]))
   const [loadingCategories, setLoadingCategories] = useState(true)
@@ -109,6 +112,7 @@ export default function AdminProductCreatePage() {
   }
 
   async function handleSubmit(values) {
+    if (isReadOnly) return
     if (submitting) return
     setServerError(null)
     setServerFields(null)
@@ -202,6 +206,7 @@ export default function AdminProductCreatePage() {
         uploadCoordinatorRef={uploadCoordinatorRef}
         onUploadBusyChange={setImageUploadBusy}
         showSensitiveColumns={showSensitiveColumns}
+        readOnly={isReadOnly}
       />
     </div>
   )

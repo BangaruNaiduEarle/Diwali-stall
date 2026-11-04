@@ -12,6 +12,7 @@ import {
 import { stallBillFinalizationDisplay } from '../lib/stallBillFinalization.js'
 import AdminCustomerRequestListAudit from './AdminCustomerRequestListAudit.jsx'
 import AdminCustomerRequestWorkflowAudit from './AdminCustomerRequestWorkflowAudit.jsx'
+import AdminPaymentSummary from './AdminPaymentSummary.jsx'
 
 /** @param {{ request: Record<string, unknown>, showListAudit?: boolean }} props */
 export default function AdminCustomerRequestCard({ request, showListAudit = false }) {
@@ -66,6 +67,7 @@ export default function AdminCustomerRequestCard({ request, showListAudit = fals
             variant="inline"
           />
         ) : null}
+        <AdminPaymentSummary summary={request.paymentSummary} />
         <div className="admin-request-card__foot">
           <span className="admin-request-card__id" title={publicRefLabel !== '—' ? publicRefLabel : id}>
             {publicRefLabel !== '—' ? publicRefLabel : shortId}

@@ -1,5 +1,6 @@
 import { CUSTOMER_REQUEST_LIMITS, validateCustomerRequestBody } from './customerRequestValidation.js'
 import { parseQuickBillAcceptedAmountPaise, parseQuickBillPricingMode } from './quickBillBargain.js'
+import { validateCustomerRequestAssignBody } from './adminCustomerRequestFinalization.js'
 
 const QUICK_BILL_CHECKOUT_BODY_KEYS = new Set([
   'pricingMode',
@@ -8,6 +9,7 @@ const QUICK_BILL_CHECKOUT_BODY_KEYS = new Set([
   'accepted_amount_paise',
   'acceptedAmountInr',
   'accepted_amount_inr',
+  'assigneeUserId',
 ])
 
 /** @param {Record<string, unknown>} record */
@@ -74,6 +76,8 @@ export function validateQuickBillCheckoutBody(body, adminRole) {
     return { ok: false, errors: { _body: 'JSON object required.' } }
   }
   const record = /** @type {Record<string, unknown>} */ (body)
+  const assignment = record.assigneeUserId == null ? null : validateCustomerRequestAssignBody({ assigneeUserId: record.assigneeUserId })
+  if (assignment && !assignment.ok) return assignment
   const pricing = parseQuickBillPricingMode(record.pricingMode ?? record.pricing_mode, adminRole)
   if (!pricing.ok) {
     if (pricing.errors) {
@@ -101,6 +105,7 @@ export function validateQuickBillCheckoutBody(body, adminRole) {
     ok: true,
     data: {
       ...base.data,
+      ...(assignment ? { assigneeUserId: assignment.data.assigneeUserId } : {}),
       pricingMode: pricing.pricingMode,
       acceptedAmountPaise: accepted.acceptedAmountPaise,
     },

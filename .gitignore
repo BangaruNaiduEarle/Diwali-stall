@@ -1,5 +1,5 @@
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,90 +7,67 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Cloudflare Workers (server/)
-server/.env
-server/.dev.vars
-server/.wrangler/
-server/dist-worker/
-*.sqlite
-*.sqlite3
-*.db
-.wrangler/
-
-# Backend secrets / credentials (never commit)
-.env
-.env.*
-!.env.example
-server/.env.*
-!server/.env.example
-**/credentials.json
-**/*service-account*.json
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-```gitignore
-# Local environment secrets
-.env
-.env.*
-!.env.example
-
-server/.env
-server/.env.*
-!server/.env.example
-server/.dev.vars
-
-# Cloudflare local development
-.wrangler/
-server/.wrangler/
-
 # Dependencies and build output
 node_modules/
 server/node_modules/
 dist/
+dist-ssr/
 server/dist-worker/
+*.local
+
+# Environment secrets - never commit
+.env
+.env.*
+!.env.example
+
+server/.env
+server/.env.*
+!server/.env.example
+server/.dev.vars
+
+# Credentials
+**/credentials.json
+**/*service-account*.json
+
+# Cloudflare Workers
+.wrangler/
+server/.wrangler/
 
 # Local databases and backups
+*.sqlite
+*.sqlite3
+*.db
 backups/
 server/data/backups/
 server/data/*.sqlite
 server/data/*.sqlite-*
 server/data/*.sqlite3
 server/data/*.db
+server/*.sql
 
-# Generated catalogue and private-rate SQL
+# Generated catalogue and private-rate data
 server/data/generated/
-
-# Local import artefacts (scripts write here; not for git)
 server/data/catalogue-import.json
 server/data/catalogue-public-prices.json
-# Storefront copy is committed: src/data/catalogue-public-prices.json (see scripts/generate-catalogue-public-prices.mjs)
 
 # Local reports and temporary files
 server/reports/
+server/scripts/_tmp-*
+location-audit-result.txt
 scripts/pack-preview.txt
-```
-# Explicitly ignore local backup and generated data contents
-/backups/**
-/server/data/backups/**
-/server/data/generated/**
 
-# Local test databases and Wrangler caches
+# Local acceptance evidence - keep out of Git
+docs/report-evidence/
+
+# Editor and operating system files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# Local Miniflare persistence data
 **/.persist/
-**/.wrangler/
-server/data/backups/
-server/data/generated/
-server/reports/

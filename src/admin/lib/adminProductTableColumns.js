@@ -6,6 +6,11 @@ export function showAdminProductSensitiveColumns(role) {
   return canViewSensitiveProductPricing(role)
 }
 
+/** Viewing Final Rate never grants purchase/mapping access or pricing edits. */
+export function showAdminProductFinalRate(role, capabilities = {}) {
+  return canViewSensitiveProductPricing(role) || (normalizeAdminRole(role) === 'admin' && capabilities.viewFinalRate === true)
+}
+
 /** Unit / pack column (owner / super_admin only). */
 /** @param {unknown} role */
 export function showAdminProductUnitColumn(role) {

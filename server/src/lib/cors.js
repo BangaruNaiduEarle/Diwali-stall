@@ -5,7 +5,7 @@
 
 export const CORS_ALLOW_METHODS = 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS'
 
-export const CORS_ALLOW_HEADERS = 'Content-Type, Idempotency-Key, Cf-Access-Jwt-Assertion, Cookie'
+export const CORS_ALLOW_HEADERS = 'Content-Type, Idempotency-Key, Cf-Access-Jwt-Assertion, Cookie, X-Admin-Season-Id, X-Admin-Location-Id, If-Match, X-Device-Id, X-Device-Occurred-At'
 
 /**
  * @param {Record<string, unknown>} env

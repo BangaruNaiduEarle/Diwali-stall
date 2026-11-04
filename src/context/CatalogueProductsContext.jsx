@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchAllPublicProducts } from '../api/publicProducts.js'
 import { mapAndSortPublicProducts } from '../utils/mapPublicProduct.js'
+import { buildCatalogueCategories } from '../utils/catalogueCategories.js'
 import { setEstimateCatalogueProducts } from '../utils/estimateHelpers.js'
 
 /** @typedef {ReturnType<import('../utils/mapPublicProduct.js').mapPublicProductFromApi> & {}} StorefrontProduct */
@@ -8,6 +9,7 @@ import { setEstimateCatalogueProducts } from '../utils/estimateHelpers.js'
 const CatalogueProductsContext = createContext(
   /** @type {null | {
    *   products: StorefrontProduct[],
+   *   categories: Array<{ slug: string, label: string }>,
    *   loading: boolean,
    *   error: string | null,
    *   refresh: () => void,
@@ -60,18 +62,20 @@ export function CatalogueProductsProvider({ children }) {
   }, [refreshToken])
 
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products])
+  const categories = useMemo(() => buildCatalogueCategories(products), [products])
 
   const getProductById = useCallback((id) => productById.get(String(id ?? '').trim()) ?? null, [productById])
 
   const value = useMemo(
     () => ({
       products,
+      categories,
       loading,
       error,
       refresh,
       getProductById,
     }),
-    [products, loading, error, refresh, getProductById],
+    [products, categories, loading, error, refresh, getProductById],
   )
 
   return <CatalogueProductsContext.Provider value={value}>{children}</CatalogueProductsContext.Provider>

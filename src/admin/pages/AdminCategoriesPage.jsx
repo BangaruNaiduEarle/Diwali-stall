@@ -6,6 +6,9 @@ import {
   updateAdminCategory,
 } from '../api/adminApi.js'
 import AdminFeedbackBanner from '../components/AdminFeedbackBanner.jsx'
+import { useAdminSession } from '../context/AdminSessionContext.jsx'
+import { useAdminSeasonReadOnly } from '../hooks/useAdminSeasonReadOnly.js'
+import { preventArchivedSeasonFormSubmit } from '../lib/adminSeasonReadOnly.js'
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
@@ -30,6 +33,8 @@ function fieldErrorsMessage(fields) {
 }
 
 export default function AdminCategoriesPage() {
+  const { activeSeasonId } = useAdminSession()
+  const { isReadOnly, seasonStatus } = useAdminSeasonReadOnly()
   const [categories, setCategories] = useState(/** @type {{ slug: string, label: string, sortOrder: number }[]} */ ([]))
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -62,7 +67,7 @@ export default function AdminCategoriesPage() {
       )
     }
     setLoading(false)
-  }, [])
+  }, [activeSeasonId])
 
   useEffect(() => {
     load()
@@ -70,6 +75,7 @@ export default function AdminCategoriesPage() {
 
   async function handleCreate(e) {
     e.preventDefault()
+    if (preventArchivedSeasonFormSubmit(e, seasonStatus)) return
     setCreating(true)
     setError('')
     setSuccess('')
@@ -97,6 +103,7 @@ export default function AdminCategoriesPage() {
   }
 
   async function handleSaveRow(slug) {
+    if (isReadOnly) return
     const draft = editDraft[slug]
     if (!draft) return
     const label = draft.label.trim()
@@ -147,6 +154,7 @@ export default function AdminCategoriesPage() {
       <AdminFeedbackBanner variant="error" message={error} onDismiss={() => setError('')} className="mt-4" />
       <AdminFeedbackBanner variant="success" message={success} onDismiss={() => setSuccess('')} className="mt-4" />
 
+      {!isReadOnly ? (
       <section className="admin-panel mt-6" aria-labelledby="create-category-heading">
         <h2 id="create-category-heading" className="text-sm font-semibold text-[var(--color-charcoal)]">
           New category
@@ -201,6 +209,7 @@ export default function AdminCategoriesPage() {
           </div>
         </form>
       </section>
+      ) : null}
 
       {loading ? <p className="mt-6 text-sm text-[var(--color-muted)]">Loading categories…</p> : null}
 
@@ -235,6 +244,8 @@ export default function AdminCategoriesPage() {
                         value={draft.label}
                         onChange={(e) => updateDraft(row.slug, { label: e.target.value })}
                         aria-label={`Label for ${row.slug}`}
+                        readOnly={isReadOnly}
+                        disabled={isReadOnly}
                       />
                     </td>
                     <td>
@@ -244,19 +255,23 @@ export default function AdminCategoriesPage() {
                         value={draft.sortOrder}
                         onChange={(e) => updateDraft(row.slug, { sortOrder: e.target.value })}
                         aria-label={`Sort order for ${row.slug}`}
+                        readOnly={isReadOnly}
+                        disabled={isReadOnly}
                       />
                     </td>
                     <td className="admin-table__actions-col">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        disabled={!dirty || savingSlug === row.slug}
-                        loading={savingSlug === row.slug}
-                        onClick={() => handleSaveRow(row.slug)}
-                      >
-                        Save
-                      </Button>
+                      {!isReadOnly ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          disabled={!dirty || savingSlug === row.slug}
+                          loading={savingSlug === row.slug}
+                          onClick={() => handleSaveRow(row.slug)}
+                        >
+                          Save
+                        </Button>
+                      ) : null}
                     </td>
                   </tr>
                 )

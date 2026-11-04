@@ -3,8 +3,14 @@ import {
   resolveOwnerListRequestAuditAmounts,
 } from '../lib/adminCustomerRequestListAudit.js'
 import { buildRequestInternalPricingView } from '../lib/adminInternalPricingPreview.js'
-import { canViewSensitiveProductPricing } from '../lib/adminRoles.js'
+import {
+  canFinalizeQuickBillCustomerRequests,
+  canViewSensitiveProductPricing,
+  strictParseAdminRole,
+} from '../lib/adminRoles.js'
 import { getActiveQuotationForRequest } from './adminQuotations.js'
+import { customerRequestDb, customerRequestScope } from '../lib/adminCustomerRequestScope.js'
+import { activeQuotationSnapshot } from '../lib/adminTransactionIntegrity.js'
 import { validateCustomerRequestStatusTransition } from '../lib/adminCustomerRequestValidation.js'
 import {
   getAdminUserByEmail,
@@ -12,6 +18,7 @@ import {
   isAdminUserActive,
 } from './adminUserStore.js'
 import {
+  activeQuotationAuditRowFromApi,
   bargainFinalizeBlockedForActiveQuotation,
   dbRowBlocksFinalizeMissingAgreedAmount,
   finalizeBlockedForMissingSavedAgreedAmount,
@@ -37,7 +44,11 @@ export const ADMIN_LIST_CUSTOMER_REQUESTS_SQL = `
     r.assigned_at,
     r.closed_by_email,
     r.closed_at,
+    r.revision, r.creator_user_id, r.creator_name, r.creator_role,
+    r.assigned_to_user_id, r.assigned_to_name, r.assigned_to_role,
+    r.assigned_by_user_id, r.assigned_by_name, r.assigned_by_role,
     r.created_at,
+    r.season_id,
     (
       SELECT COUNT(*)
       FROM customer_request_items i
@@ -66,8 +77,12 @@ export const ADMIN_GET_CUSTOMER_REQUEST_SQL = `
     assigned_at,
     closed_by_email,
     closed_at,
+    revision, creator_user_id, creator_name, creator_role,
+    assigned_to_user_id, assigned_to_name, assigned_to_role,
+    assigned_by_user_id, assigned_by_name, assigned_by_role,
     created_at,
-    updated_at
+    updated_at,
+    season_id
   FROM customer_requests
   WHERE id = ?
 `.trim()
@@ -78,8 +93,14 @@ const ADMIN_GET_CUSTOMER_REQUEST_QUEUE_SQL = `
   WHERE id = ?
 `.trim()
 
+const ADMIN_GET_CUSTOMER_REQUEST_QUEUE_WITH_SEASON_SQL = `
+  SELECT id, source, finalization_status, assigned_to_email, assigned_to_user_id, assigned_by_email, status
+  FROM customer_requests
+  WHERE id = ? AND season_id = ?
+`.trim()
+
 export const ADMIN_LIST_CUSTOMER_REQUEST_ITEMS_SQL = `
-  SELECT line_number, product_id, family_pack_id, product_name, quantity, unit_price_paise
+  SELECT line_id, unit_type, pack_snapshot, product_details_json, line_number, product_id, family_pack_id, product_name, quantity, unit_price_paise
   FROM customer_request_items
   WHERE request_id = ?
   ORDER BY line_number ASC
@@ -88,8 +109,22 @@ export const ADMIN_LIST_CUSTOMER_REQUEST_ITEMS_SQL = `
 export const ADMIN_UPDATE_CUSTOMER_REQUEST_STATUS_SQL = `
   UPDATE customer_requests
   SET status = ?, updated_at = datetime('now')
-  WHERE id = ?
+  WHERE id = ? AND season_id = ?
 `.trim()
+
+/** @param {unknown} seasonId */
+function requireCustomerRequestSeasonId(seasonId) {
+  const season = String(seasonId ?? '').trim()
+  if (!season) {
+    return {
+      ok: false,
+      status: 403,
+      code: 'forbidden',
+      message: 'Active business season is required for customer request updates.',
+    }
+  }
+  return { ok: true, season }
+}
 
 /**
  * Phone match key. Must stay aligned with CUSTOMER_PHONE_SEARCH_SQL:
@@ -119,6 +154,12 @@ export function buildAdminCustomerRequestListFilter(opts) {
   /** @type {unknown[]} */
   const binds = []
 
+  const seasonId = String(opts.seasonId ?? '').trim()
+  if (seasonId) {
+    wheres.push('r.season_id = ?')
+    binds.push(seasonId)
+  }
+
   if (opts.status) {
     wheres.push('r.status = ?')
     binds.push(opts.status)
@@ -138,8 +179,9 @@ export function buildAdminCustomerRequestListFilter(opts) {
   const q = String(opts.q ?? '').trim()
   if (q) {
     /** @type {string[]} */
-    const match = [`r.customer_name LIKE ? ESCAPE '\\'`]
-    binds.push(`%${escapeSqlLikeFragment(q)}%`)
+    const match = [`r.public_reference LIKE ? ESCAPE '\\'`, `r.customer_name LIKE ? ESCAPE '\\'`]
+    const textPattern = `%${escapeSqlLikeFragment(q)}%`
+    binds.push(textPattern, textPattern)
     const phoneNeedle = normalizeCustomerRequestPhoneSearch(q)
     if (phoneNeedle) {
       match.push(`${CUSTOMER_PHONE_SEARCH_SQL} LIKE ? ESCAPE '\\'`)
@@ -157,6 +199,10 @@ export function buildAdminCustomerRequestListFilter(opts) {
 /** @param {Record<string, unknown>} row */
 export function mapCustomerRequestWorkflowAuditFromRow(row) {
   return {
+    revision: Number(row.revision ?? 0),
+    creatorUserId: row.creator_user_id ?? null, creatorName: row.creator_name ?? null, creatorRole: row.creator_role ?? null,
+    assignedToUserId: row.assigned_to_user_id ?? null, assignedToName: row.assigned_to_name ?? null, assignedToRole: row.assigned_to_role ?? null,
+    assignedByUserId: row.assigned_by_user_id ?? null, assignedByName: row.assigned_by_name ?? null, assignedByRole: row.assigned_by_role ?? null,
     assignedToEmail: row.assigned_to_email != null ? String(row.assigned_to_email) : null,
     assignedByEmail: row.assigned_by_email != null ? String(row.assigned_by_email) : null,
     assignedAt: row.assigned_at != null ? String(row.assigned_at) : null,
@@ -180,6 +226,7 @@ export function mapAdminCustomerRequestListRow(row) {
     customerPhone: row.customer_phone ?? null,
     customerArea: row.customer_area ?? null,
     finalizationStatus: row.finalization_status != null ? String(row.finalization_status) : null,
+    seasonId: row.season_id != null ? String(row.season_id) : null,
     ...mapCustomerRequestWorkflowAuditFromRow(row),
     createdAt: row.created_at,
     itemCount: Number(row.item_count ?? 0),
@@ -206,6 +253,7 @@ export function mapAdminCustomerRequestDetail(row, items) {
     deliveryLandmark: row.delivery_landmark ?? null,
     deliveryMapsUrl: row.delivery_maps_url ?? null,
     finalizationStatus: row.finalization_status != null ? String(row.finalization_status) : null,
+    seasonId: row.season_id != null ? String(row.season_id) : null,
     ...mapCustomerRequestWorkflowAuditFromRow(row),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -218,6 +266,10 @@ export function mapAdminCustomerRequestItemRow(row) {
   const familyPackId = row.family_pack_id ? String(row.family_pack_id) : null
   const productId = row.product_id ? String(row.product_id) : null
   return {
+    lineId: row.line_id ?? null,
+    unitType: row.unit_type ?? null,
+    packSnapshot: row.pack_snapshot ? JSON.parse(row.pack_snapshot) : null,
+    productDetails: row.product_details_json ? JSON.parse(row.product_details_json) : null,
     lineNumber: row.line_number,
     lineType: familyPackId ? 'family_pack' : 'product',
     productId,
@@ -237,9 +289,11 @@ export function mapAdminCustomerRequestItemRow(row) {
  *   q?: string,
  *   finalizationStatus?: string,
  *   assignedToEmail?: string,
+ *   seasonId?: string,
  * }} opts
  */
 export async function listAdminCustomerRequests(db, opts) {
+  db = customerRequestDb(db, opts.seasonId, opts.context)
   const limit = opts.limit
   const offset = opts.offset
   const { whereSql, binds } = buildAdminCustomerRequestListFilter(opts)
@@ -260,16 +314,21 @@ export async function listAdminCustomerRequests(db, opts) {
  * @param {D1Database} db
  * @param {Record<string, unknown>[]} requests
  * @param {unknown} role
+ * @param {string} seasonId
  */
-export async function enrichAdminCustomerRequestListForRole(db, requests, role) {
+export async function enrichAdminCustomerRequestListForRole(db, requests, role, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context)
   if (!canViewSensitiveProductPricing(role)) return requests
+
+  const season = String(seasonId ?? '').trim()
 
   return Promise.all(
     requests.map(async (req) => {
       const requestId = String(req.id ?? '')
       if (!requestId) return req
+      if (season && String(req.seasonId ?? '') !== season) return req
 
-      const quotation = await getActiveQuotationForRequest(db, requestId)
+      const quotation = await getActiveQuotationForRequest(db, requestId, context?.locationModeEnabled ? season : undefined)
       if (!quotation) return req
 
       let internalPricingView = null
@@ -279,7 +338,7 @@ export async function enrichAdminCustomerRequestListForRole(db, requests, role) 
           .bind(requestId)
           .all()
         const items = (itemsResult.results ?? []).map(mapAdminCustomerRequestItemRow)
-        internalPricingView = await buildRequestInternalPricingView(db, items)
+        internalPricingView = await buildRequestInternalPricingView(db, items, season)
       }
 
       const amounts = resolveOwnerListRequestAuditAmounts(quotation, internalPricingView)
@@ -300,9 +359,17 @@ export async function enrichAdminCustomerRequestListForRole(db, requests, role) 
 /**
  * @param {D1Database} db
  * @param {string} requestId
+ * @param {string} [seasonId]
  */
-export async function getAdminCustomerRequestById(db, requestId) {
-  const row = await db.prepare(ADMIN_GET_CUSTOMER_REQUEST_SQL).bind(requestId).first()
+export async function getAdminCustomerRequestById(db, requestId, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context)
+  const season = String(seasonId ?? '').trim()
+  const row = season
+    ? await db
+        .prepare(`${ADMIN_GET_CUSTOMER_REQUEST_SQL} AND season_id = ?`)
+        .bind(requestId, season)
+        .first()
+    : await db.prepare(ADMIN_GET_CUSTOMER_REQUEST_SQL).bind(requestId).first()
   if (!row) return null
   const itemsResult = await db
     .prepare(ADMIN_LIST_CUSTOMER_REQUEST_ITEMS_SQL)
@@ -321,12 +388,17 @@ export async function getAdminCustomerRequestById(db, requestId) {
  * @param {D1Database} db
  * @param {string} requestId
  * @param {string} nextStatus
- * @param {{ actorEmail?: string | null }} [opts]
+ * @param {{ actorEmail?: string | null, seasonId?: string }} [opts]
  */
 export async function updateAdminCustomerRequestStatus(db, requestId, nextStatus, opts = {}) {
+  db = customerRequestDb(db, opts.seasonId, opts.context, true)
+  const seasonGate = requireCustomerRequestSeasonId(opts.seasonId)
+  if (!seasonGate.ok) return seasonGate
+  const { season } = seasonGate
+
   const existing = await db
-    .prepare('SELECT id, status FROM customer_requests WHERE id = ?')
-    .bind(requestId)
+    .prepare('SELECT id, status FROM customer_requests WHERE id = ? AND season_id = ?')
+    .bind(requestId, season)
     .first()
   if (!existing) {
     return { ok: false, status: 404, code: 'not_found', message: 'Customer request not found.' }
@@ -353,33 +425,50 @@ export async function updateAdminCustomerRequestStatus(db, requestId, nextStatus
           `UPDATE customer_requests
            SET status = ?, updated_at = datetime('now'),
                closed_by_email = ?, closed_at = datetime('now')
-           WHERE id = ?`,
+           WHERE id = ? AND season_id = ?`,
         )
-        .bind(nextStatus, actorEmail, requestId)
+        .bind(nextStatus, actorEmail, requestId, season)
         .run()
-    : await db.prepare(ADMIN_UPDATE_CUSTOMER_REQUEST_STATUS_SQL).bind(nextStatus, requestId).run()
+    : await db
+        .prepare(ADMIN_UPDATE_CUSTOMER_REQUEST_STATUS_SQL)
+        .bind(nextStatus, requestId, season)
+        .run()
 
   if (!run.meta?.changes) {
     return { ok: false, status: 404, code: 'not_found', message: 'Customer request not found.' }
   }
 
-  const request = await getAdminCustomerRequestById(db, requestId)
+  const request = await getAdminCustomerRequestById(db, requestId, season)
   return { ok: true, request }
 }
 
 /**
  * @param {D1Database} db
  * @param {string} requestId
+ * @param {string} [seasonId]
  */
-export async function markCustomerRequestPendingFinalization(db, requestId) {
-  await db
+export async function markCustomerRequestPendingFinalization(db, requestId, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context, true)
+  const seasonGate = requireCustomerRequestSeasonId(seasonId)
+  if (!seasonGate.ok) return seasonGate
+  const { season } = seasonGate
+
+  if (context?.locationModeEnabled && !await getAdminCustomerRequestById(db, requestId, season)) {
+    return { ok: false, status: 404, code: 'not_found', message: 'Customer request not found.' }
+  }
+
+  const updated = await db
     .prepare(
       `UPDATE customer_requests
        SET finalization_status = 'pending', updated_at = datetime('now')
-       WHERE id = ? AND source = 'manual'`,
+       WHERE id = ? AND source = 'manual' AND season_id = ?`,
     )
-    .bind(requestId)
+    .bind(requestId, season)
     .run()
+  if (context?.locationModeEnabled && !updated.meta?.changes) {
+    return { ok: false, status: 404, code: 'not_found', message: 'Customer request not found.' }
+  }
+  return { ok: true }
 }
 
 /** @param {Record<string, unknown>} row */
@@ -390,7 +479,7 @@ function isPendingFinalization(row) {
 
 /** @param {Record<string, unknown>} row */
 function isManualQuickBillPendingFinalization(row) {
-  return String(row.source ?? '') === 'manual' && isPendingFinalization(row)
+  return ['manual', 'web'].includes(String(row.source ?? '')) && isPendingFinalization(row)
 }
 
 /** @param {Record<string, unknown>} row */
@@ -403,11 +492,30 @@ function isPublicWebRequestEligibleForCustomerAgreement(row) {
   return status !== 'void' && status !== 'closed'
 }
 
+export const SEASON_ASSIGNEE_MEMBERSHIP_SQL = `
+  SELECT sm.role, sm.disabled_at, bs.status
+  FROM season_members sm
+  INNER JOIN business_seasons bs ON bs.id = sm.season_id
+  WHERE sm.season_id = ? AND sm.admin_user_id = ?
+`.trim()
+
 /**
  * @param {D1Database} db
  * @param {{ assigneeUserId?: string, assigneeEmail?: string }} assigneeRef
+ * @param {string} seasonId
  */
-async function resolveQuickBillAssignee(db, assigneeRef) {
+export async function resolveQuickBillAssignee(db, assigneeRef, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context)
+  const season = String(seasonId ?? '').trim()
+  if (!season) {
+    return {
+      ok: false,
+      status: 403,
+      code: 'forbidden',
+      message: 'Active business season is required.',
+    }
+  }
+
   const user = assigneeRef.assigneeUserId
     ? await getAdminUserById(db, assigneeRef.assigneeUserId)
     : await getAdminUserByEmail(db, assigneeRef.assigneeEmail ?? '')
@@ -420,15 +528,47 @@ async function resolveQuickBillAssignee(db, assigneeRef) {
       fields: { assigneeUserId: 'User not found or disabled.' },
     }
   }
-  if (!canViewSensitiveProductPricing(user.role)) {
+
+  const membership = await db.prepare(SEASON_ASSIGNEE_MEMBERSHIP_SQL).bind(season, user.id).first()
+  if (!membership) {
     return {
       ok: false,
       status: 400,
       code: 'invalid_assignee',
-      message: 'Assignee must be an Owner or Super Admin.',
-      fields: { assigneeUserId: 'Only Owner or Super Admin can be assigned.' },
+      message: 'Assignee must be a member of the active business season.',
+      fields: { assigneeUserId: 'User is not a member of this season.' },
     }
   }
+  if (membership.disabled_at != null && String(membership.disabled_at).trim() !== '') {
+    return {
+      ok: false,
+      status: 400,
+      code: 'invalid_assignee',
+      message: 'Assignee season membership is disabled.',
+      fields: { assigneeUserId: 'Season membership is disabled for this user.' },
+    }
+  }
+  if (String(membership.status ?? '') !== 'active') {
+    return {
+      ok: false,
+      status: 400,
+      code: 'invalid_assignee',
+      message: 'Assignee must belong to an active business season.',
+      fields: { assigneeUserId: 'Business season is not active for this assignee.' },
+    }
+  }
+
+  const seasonRole = strictParseAdminRole(membership.role)
+  if (!seasonRole || !canFinalizeQuickBillCustomerRequests(seasonRole)) {
+    return {
+      ok: false,
+      status: 400,
+      code: 'invalid_assignee',
+      message: 'Assignee is not eligible for stall bill assignment in this season.',
+      fields: { assigneeUserId: 'Season role is not eligible for assignment.' },
+    }
+  }
+
   return { ok: true, email: user.email }
 }
 
@@ -436,13 +576,23 @@ async function resolveQuickBillAssignee(db, assigneeRef) {
  * @param {D1Database} db
  * @param {string} requestId
  * @param {{ assigneeUserId?: string, assigneeEmail?: string }} assigneeRef
- * @param {{ assignedByEmail?: string | null }} [opts]
+ * @param {{ assignedByEmail?: string | null, seasonId?: string }} [opts]
  */
 export async function assignAdminCustomerRequest(db, requestId, assigneeRef, opts = {}) {
-  const row = await db.prepare(ADMIN_GET_CUSTOMER_REQUEST_QUEUE_SQL).bind(requestId).first()
+  db = customerRequestDb(db, opts.seasonId, opts.context, true)
+  const seasonGate = requireCustomerRequestSeasonId(opts.seasonId)
+  if (!seasonGate.ok) return seasonGate
+  const { season } = seasonGate
+
+  const row = await db
+    .prepare(ADMIN_GET_CUSTOMER_REQUEST_QUEUE_WITH_SEASON_SQL)
+    .bind(requestId, season)
+    .first()
   if (!row) {
     return { ok: false, status: 404, code: 'not_found', message: 'Customer request not found.' }
   }
+  const sameRecipient = assigneeRef.assigneeUserId ? row.assigned_to_user_id === assigneeRef.assigneeUserId : row.assigned_to_email === String(assigneeRef.assigneeEmail ?? '').trim().toLowerCase()
+  if (sameRecipient && row.assigned_by_email === String(opts.assignedByEmail ?? '').trim().toLowerCase()) return { ok: true, alreadyAssigned: true, request: await getAdminCustomerRequestById(db, requestId, season) }
   if (!isManualQuickBillPendingFinalization(row)) {
     return {
       ok: false,
@@ -453,7 +603,7 @@ export async function assignAdminCustomerRequest(db, requestId, assigneeRef, opt
     }
   }
 
-  const assignee = await resolveQuickBillAssignee(db, assigneeRef)
+  const assignee = await resolveQuickBillAssignee(db, assigneeRef, season)
   if (!assignee.ok) return assignee
 
   const assignedByEmail = String(opts.assignedByEmail ?? '').trim().toLowerCase()
@@ -466,15 +616,12 @@ export async function assignAdminCustomerRequest(db, requestId, assigneeRef, opt
     }
   }
 
-  const run = await db
-    .prepare(
-      `UPDATE customer_requests
-       SET assigned_to_email = ?, assigned_by_email = ?, assigned_at = datetime('now'),
-           updated_at = datetime('now')
-       WHERE id = ? AND source = 'manual' AND finalization_status = 'pending'`,
-    )
-    .bind(assignee.email, assignedByEmail, requestId)
-    .run()
+  if (opts.requireRevision && opts.context?.workflowTransport?.expectedRevision == null) return { ok: false, status: 428, code: 'revision_required', message: 'Refresh the request and send its current revision before handover.' }
+  const results = await db.batch([
+    assignmentMembershipGuard(db, requestId, assignee.email, season),
+    requestAssignmentStatement(db, requestId, assignee.email, assignedByEmail, season),
+  ])
+  const run = results.at(-1)
 
   if (!run.meta?.changes) {
     return {
@@ -485,21 +632,48 @@ export async function assignAdminCustomerRequest(db, requestId, assigneeRef, opt
     }
   }
 
-  const request = await getAdminCustomerRequestById(db, requestId)
+  const request = await getAdminCustomerRequestById(db, requestId, season)
   return { ok: true, request }
 }
 
-/**
- * @param {D1Database} db
- * @param {string} requestId
- */
+export function requestAssignmentStatement(db, requestId, assigneeEmail, actorEmail, season) {
+  return db.prepare(`UPDATE customer_requests
+    SET assigned_to_email = ?, assigned_by_email = ?, assigned_at = datetime('now'), updated_at = datetime('now')
+    WHERE id = ? AND source IN ('manual','web') AND finalization_status = 'pending' AND season_id = ?`)
+    .bind(assigneeEmail, actorEmail, requestId, season)
+}
+
+/** The recipient's authority is checked again inside the business transaction. */
+export function assignmentMembershipGuard(db, requestId, assigneeEmail, season) {
+  const scope = customerRequestScope(db)
+  return db.prepare(`UPDATE customer_requests SET status = CASE WHEN EXISTS (
+    SELECT 1 FROM admin_users recipient JOIN season_members recipient_sm ON recipient_sm.admin_user_id = recipient.id
+    JOIN business_seasons recipient_season ON recipient_season.id = recipient_sm.season_id
+    WHERE lower(recipient.email) = lower(?) AND (recipient.disabled_at IS NULL OR recipient.disabled_at = '')
+      AND recipient_sm.season_id = ? AND (recipient_sm.disabled_at IS NULL OR recipient_sm.disabled_at = '')
+      AND recipient_sm.role IN ('owner','super_admin') AND recipient_season.status = 'active'
+      ${scope ? `AND EXISTS (SELECT 1 FROM location_members recipient_lm WHERE recipient_lm.admin_user_id = recipient.id
+        AND recipient_lm.location_id = customer_requests.location_id AND recipient_lm.season_id = customer_requests.season_id
+        AND (recipient_lm.disabled_at IS NULL OR recipient_lm.disabled_at = '') AND recipient_lm.role IN ('owner','super_admin'))` : ''}
+    ) THEN status ELSE NULL END WHERE id = ? AND season_id = ?`).bind(assigneeEmail, season, requestId, season)
+}
+
 /**
  * Owner/Super Admin — customer agreed on a public web quotation request.
  * @param {D1Database} db
  * @param {string} requestId
+ * @param {string} [seasonId] Required for admin-triggered calls (omit only for legacy internal use).
  */
-export async function recordPublicCustomerAgreementPendingFinalization(db, requestId) {
-  const row = await db.prepare(ADMIN_GET_CUSTOMER_REQUEST_QUEUE_SQL).bind(requestId).first()
+export async function recordPublicCustomerAgreementPendingFinalization(db, requestId, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context, true)
+  const seasonGate = requireCustomerRequestSeasonId(seasonId)
+  if (!seasonGate.ok) return seasonGate
+  const { season } = seasonGate
+
+  const row = await db
+    .prepare(ADMIN_GET_CUSTOMER_REQUEST_QUEUE_WITH_SEASON_SQL)
+    .bind(requestId, season)
+    .first()
   if (!row) {
     return { ok: false, status: 404, code: 'not_found', message: 'Customer request not found.' }
   }
@@ -517,9 +691,9 @@ export async function recordPublicCustomerAgreementPendingFinalization(db, reque
     .prepare(
       `UPDATE customer_requests
        SET finalization_status = 'pending', updated_at = datetime('now')
-       WHERE id = ? AND source = 'web' AND finalization_status IS NULL`,
+       WHERE id = ? AND source = 'web' AND finalization_status IS NULL AND season_id = ?`,
     )
-    .bind(requestId)
+    .bind(requestId, season)
     .run()
 
   if (!run.meta?.changes) {
@@ -531,7 +705,7 @@ export async function recordPublicCustomerAgreementPendingFinalization(db, reque
     }
   }
 
-  const request = await getAdminCustomerRequestById(db, requestId)
+  const request = await getAdminCustomerRequestById(db, requestId, season)
   return { ok: true, request }
 }
 
@@ -548,15 +722,24 @@ export function isBargainFinalizeBlockedMissingAgreedAmount(quotation) {
 /**
  * @param {D1Database} db
  * @param {string} requestId
- * @param {{ actorEmail?: string | null }} [opts]
+ * @param {{ actorEmail?: string | null, seasonId?: string }} [opts]
  */
 export async function finalizeAdminCustomerRequest(db, requestId, opts = {}) {
+  db = customerRequestDb(db, opts.seasonId, opts.context, true)
+  const scope = customerRequestScope(db)
+  if (scope && !canFinalizeQuickBillCustomerRequests(scope.effectiveRole)) {
+    return { ok: false, status: 403, code: 'forbidden', message: 'Only Owner or Super Admin can finalize requests.' }
+  }
+  const seasonGate = requireCustomerRequestSeasonId(opts.seasonId)
+  if (!seasonGate.ok) return seasonGate
+  const { season } = seasonGate
+
   const row = await db
     .prepare(
       `SELECT id, source, finalization_status, assigned_to_email, status
-       FROM customer_requests WHERE id = ?`,
+       FROM customer_requests WHERE id = ? AND season_id = ?`,
     )
-    .bind(requestId)
+    .bind(requestId, season)
     .first()
   if (!row) {
     return { ok: false, status: 404, code: 'not_found', message: 'Customer request not found.' }
@@ -564,7 +747,7 @@ export async function finalizeAdminCustomerRequest(db, requestId, opts = {}) {
 
   const finalizationStatus = row.finalization_status == null ? null : String(row.finalization_status)
   if (finalizationStatus === 'finalized') {
-    const request = await getAdminCustomerRequestById(db, requestId)
+    const request = await getAdminCustomerRequestById(db, requestId, season)
     return { ok: true, request, alreadyFinalized: true }
   }
 
@@ -610,16 +793,8 @@ export async function finalizeAdminCustomerRequest(db, requestId, opts = {}) {
     }
   }
 
-  const activeQuotationAuditRow = await db
-    .prepare(
-      `SELECT pricing_mode, accepted_amount_paise, bargain_floor_paise
-       FROM quotations
-       WHERE customer_request_id = ? AND status != 'void'
-       ORDER BY created_at DESC
-       LIMIT 1`,
-    )
-    .bind(requestId)
-    .first()
+  const activeQuotation = await getActiveQuotationForRequest(db, requestId, season)
+  const activeQuotationAuditRow = activeQuotationAuditRowFromApi(activeQuotation)
   if (dbRowBlocksFinalizeMissingAgreedAmount(activeQuotationAuditRow)) {
     return {
       ok: false,
@@ -630,6 +805,7 @@ export async function finalizeAdminCustomerRequest(db, requestId, opts = {}) {
     }
   }
 
+  const snapshot = customerRequestScope(db) ? activeQuotationSnapshot(activeQuotation) : null
   const run = await db
     .prepare(
       `UPDATE customer_requests
@@ -638,18 +814,18 @@ export async function finalizeAdminCustomerRequest(db, requestId, opts = {}) {
            closed_by_email = ?,
            closed_at = datetime('now'),
            updated_at = datetime('now')
-       WHERE id = ? AND finalization_status = 'pending'`,
+       WHERE id = ? AND finalization_status = 'pending' AND season_id = ?${snapshot ? ` AND status IS ? AND status NOT IN ('closed', 'void') AND ${snapshot.sql}` : ''}`,
     )
-    .bind(actorEmail, requestId)
+    .bind(actorEmail, requestId, season, ...(snapshot ? [currentStatus, ...snapshot.values] : []))
     .run()
 
   if (!run.meta?.changes) {
     const after = await db
-      .prepare(`SELECT finalization_status FROM customer_requests WHERE id = ?`)
-      .bind(requestId)
+      .prepare(`SELECT finalization_status FROM customer_requests WHERE id = ? AND season_id = ?`)
+      .bind(requestId, season)
       .first()
     if (after && String(after.finalization_status) === 'finalized') {
-      const request = await getAdminCustomerRequestById(db, requestId)
+      const request = await getAdminCustomerRequestById(db, requestId, season)
       return { ok: true, request, alreadyFinalized: true }
     }
     return {
@@ -660,6 +836,6 @@ export async function finalizeAdminCustomerRequest(db, requestId, opts = {}) {
     }
   }
 
-  const request = await getAdminCustomerRequestById(db, requestId)
+  const request = await getAdminCustomerRequestById(db, requestId, season)
   return { ok: true, request }
 }

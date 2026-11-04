@@ -1,14 +1,18 @@
+import { bindAdminServiceMode } from '../src/lib/adminServiceMode.js'
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { upsertCurrentPrivateRate } from '../src/services/adminPrivateRates.js'
 import { upsertCurrentPurchaseRate } from '../src/services/adminPurchaseRates.js'
+import { DEFAULT_ADMIN_SEASON_ID } from '../src/services/adminSeasonContext.js'
 import { inrToPaise } from '../src/services/money.js'
+
+const SEASON = DEFAULT_ADMIN_SEASON_ID
 
 describe('admin product rate edits (independent)', () => {
   it('purchase upsert does not mutate X4 private_rates state', async () => {
     const db = createRateEditMockDb()
     db.state.rates.set('P001', 169400)
-    await upsertCurrentPurchaseRate(db, 'P001', inrToPaise(500))
+    await upsertCurrentPurchaseRate(db, 'P001', inrToPaise(500), SEASON)
     assert.equal(db.state.rates.get('P001'), 169400)
     assert.equal(db.state.purchaseRates.get('P001'), 50000)
   })
@@ -16,7 +20,7 @@ describe('admin product rate edits (independent)', () => {
   it('X4 upsert does not mutate purchase_rates state', async () => {
     const db = createRateEditMockDb()
     db.state.purchaseRates.set('P001', 42350)
-    await upsertCurrentPrivateRate(db, 'P001', 170000)
+    await upsertCurrentPrivateRate(db, 'P001', 170000, SEASON)
     assert.equal(db.state.purchaseRates.get('P001'), 42350)
     assert.equal(db.state.rates.get('P001'), 170000)
   })
@@ -25,12 +29,12 @@ describe('admin product rate edits (independent)', () => {
     const db = createRateEditMockDb()
     db.state.rates.set('P001', 169400)
     db.state.privateInsertCount = 0
-    const first = await upsertCurrentPrivateRate(db, 'P001', 169400)
+    const first = await upsertCurrentPrivateRate(db, 'P001', 169400, SEASON)
     assert.equal(first.ok, true)
     if (!first.ok) return
     assert.equal(first.unchanged, true)
     assert.equal(db.state.privateInsertCount, 0)
-    await upsertCurrentPrivateRate(db, 'P001', 170000)
+    await upsertCurrentPrivateRate(db, 'P001', 170000, SEASON)
     assert.equal(db.state.privateInsertCount, 1)
   })
 
@@ -38,7 +42,7 @@ describe('admin product rate edits (independent)', () => {
     const db = createRateEditMockDb()
     db.state.purchaseRates.set('P001', 42350)
     db.state.purchaseInsertCount = 0
-    const first = await upsertCurrentPurchaseRate(db, 'P001', 42350)
+    const first = await upsertCurrentPurchaseRate(db, 'P001', 42350, SEASON)
     assert.equal(first.ok, true)
     if (!first.ok) return
     assert.equal(first.unchanged, true)
@@ -107,5 +111,5 @@ function createRateEditMockDb() {
       for (const s of stmts) await s.run()
     },
   }
-  return db
+  return bindAdminServiceMode(db, { ADMIN_LOCATION_MODE: '0' })
 }

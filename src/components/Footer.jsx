@@ -126,7 +126,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-8 flex flex-col gap-2 border-t border-[var(--color-gold)]/25 pt-6 text-xs leading-snug text-[var(--color-ivory)]/55 sm:flex-row sm:items-center sm:justify-between md:mt-10">
+        <div className="mt-8 flex flex-col gap-2 border-t border-[var(--color-gold)]/25 pt-6 text-xs leading-snug text-[var(--color-ivory)]/85 sm:flex-row sm:items-center sm:justify-between md:mt-10">
           <p>
             © {year} {brandName}
           </p>

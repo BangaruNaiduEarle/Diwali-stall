@@ -1,3 +1,5 @@
+import { normalizeProductImageUrl } from './productImage.js'
+
 /** @type {Map<string, Record<string, unknown>>} */
 let packById = new Map()
 /** @type {Map<string, Record<string, unknown>>} */
@@ -37,6 +39,14 @@ export function listFamilyPacksFromCatalogue() {
  * @param {Record<string, unknown>} pack
  */
 export function mapPublicPackForCard(pack) {
+  const images = Array.isArray(pack.images)
+    ? pack.images.map((img) => {
+        const row = typeof img === 'object' && img != null ? { ...img } : { url: img }
+        const url = normalizeProductImageUrl(String(row.url ?? ''))
+        return url ? { ...row, url } : row
+      })
+    : []
+  const coverRaw = String(pack.coverImageUrl ?? images[0]?.url ?? '')
   return {
     id: String(pack.id),
     slug: String(pack.slug),
@@ -46,8 +56,8 @@ export function mapPublicPackForCard(pack) {
     sellingPriceInr: Number(pack.sellingPriceInr ?? 0),
     sellingPricePaise: Number(pack.sellingPricePaise ?? 0),
     packLabel: pack.packLabel ? String(pack.packLabel) : null,
-    image: String(pack.coverImageUrl ?? pack.images?.[0]?.url ?? ''),
-    images: Array.isArray(pack.images) ? pack.images : [],
+    image: normalizeProductImageUrl(coverRaw),
+    images,
   }
 }
 

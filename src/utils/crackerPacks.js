@@ -3,6 +3,7 @@ import {
   listFamilyPacksFromCatalogue,
   mapPublicPackForCard,
 } from './familyPackCatalogue.js'
+import { normalizeProductImageUrl } from './productImage.js'
 import {
   buildFamilyPackEstimateSnapshot,
   isFamilyPackEstimateItem,
@@ -26,8 +27,8 @@ export function getResolvedCrackerPackBySlug(slug) {
     sellingPriceInr: Number(pack.sellingPriceInr ?? 0),
     sellingPricePaise: Number(pack.sellingPricePaise ?? 0),
     packLabel: pack.packLabel ? String(pack.packLabel) : null,
-    image: String(pack.coverImageUrl ?? ''),
-    images: (pack.images ?? []).map((img) => String(img.url ?? img)),
+    image: normalizeProductImageUrl(String(pack.coverImageUrl ?? '')),
+    images: (pack.images ?? []).map((img) => normalizeProductImageUrl(String(img.url ?? img))),
     items: (pack.items ?? []).map((row) => ({
       productId: row.productId,
       name: row.name,

@@ -146,7 +146,7 @@ export async function uploadFileToCloudinary(sign, file, opts = {}) {
 
 /**
  * Browser preview URL for an stored image path/URL. Catalogue `/images/...` paths resolve
- * via {@link normalizeProductImageUrl} (Cloudinary when mapped). Stored values are unchanged on save.
+ * via {@link normalizeProductImageUrl} (local when a catalogue file exists). Stored values are unchanged on save.
  * @param {string} src
  */
 export function imagePreviewSrc(src) {

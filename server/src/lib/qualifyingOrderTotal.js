@@ -1,3 +1,4 @@
+import { getPublicCatalogueSeasonId } from '../services/publicFamilyPacks.js'
 import { FREE_DOOR_DELIVERY_MIN_PAISE } from './freeDoorDelivery.js'
 import { lineTotalPaise } from '../services/money.js'
 
@@ -8,6 +9,7 @@ export { FREE_DOOR_DELIVERY_MIN_PAISE }
  * @param {{ productId?: string, familyPackId?: string, quantity: number }[]} items
  */
 export async function computeQualifyingOrderTotalPaise(db, items) {
+  const publicSeasonId = await getPublicCatalogueSeasonId(db)
   let totalPaise = 0
   for (const item of items) {
     const qty = Number(item.quantity)
@@ -15,9 +17,10 @@ export async function computeQualifyingOrderTotalPaise(db, items) {
     const familyPackId = String(item.familyPackId ?? '').trim()
     const productId = String(item.productId ?? '').trim()
     if (familyPackId) {
+      if (!publicSeasonId) continue
       const pack = await db
-        .prepare('SELECT selling_price_paise FROM family_packs WHERE id = ?')
-        .bind(familyPackId)
+        .prepare('SELECT selling_price_paise FROM family_packs WHERE id = ? AND season_id = ?')
+        .bind(familyPackId, publicSeasonId)
         .first()
       const unit = Number(pack?.selling_price_paise)
       if (Number.isInteger(unit) && unit > 0) {

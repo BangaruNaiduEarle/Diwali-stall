@@ -17,7 +17,16 @@ import {
 } from '../lib/passwordHash.js'
 import { classifyAdminLoginFailure, logAdminLoginFailure } from '../lib/adminLoginDiagnostics.js'
 import { normalizeAdminRole } from '../lib/adminRoles.js'
+import { DEFAULT_ADMIN_SEASON_ID } from './adminSeasonContext.js'
 import { getAdminUserByEmail, getAdminUserById, isAdminUserActive } from './adminUserStore.js'
+
+const INITIAL_BOOTSTRAP_SEASON_EXISTS_SQL = `
+  SELECT id FROM business_seasons WHERE id = ? LIMIT 1
+`.trim()
+
+const BOOTSTRAP_SEASON_MEMBER_EXISTS_SQL = `
+  SELECT 1 AS ok FROM season_members WHERE season_id = ? AND admin_user_id = ? LIMIT 1
+`.trim()
 
 const MAX_USERS = 5
 const LOGIN_WINDOW_MINUTES = 15
@@ -301,10 +310,19 @@ export async function bootstrapOwnerAccount(db, env, body) {
     return { ok: false, status: 400, code: 'validation_error', message: policyErr }
   }
 
-  const passwordHash = await hashPassword(String(body.password))
+  if (!(await isInitialBootstrapSeasonAvailable(db))) {
+    return {
+      ok: false,
+      status: 503,
+      code: 'bootstrap_unavailable',
+      message: 'Initial business season is not available. Apply season migrations before owner bootstrap.',
+    }
+  }
+
   const existing = await getAdminUserByEmail(db, email)
   const displayName = String(body.displayName ?? '').trim() || existing?.displayName || 'Owner'
   const userId = existing?.id ?? `admin-${randomBytesHex(8)}`
+  const passwordHash = await hashPassword(String(body.password))
 
   /** @type {D1PreparedStatement[]} */
   const statements = [
@@ -334,6 +352,17 @@ export async function bootstrapOwnerAccount(db, env, body) {
     )
   }
 
+  if (!(await hasBootstrapSeasonMembership(db, DEFAULT_ADMIN_SEASON_ID, userId))) {
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO season_members (season_id, admin_user_id, role, disabled_at)
+           VALUES (?, ?, 'owner', NULL)`,
+        )
+        .bind(DEFAULT_ADMIN_SEASON_ID, userId),
+    )
+  }
+
   try {
     await db.batch(statements)
   } catch (err) {
@@ -341,6 +370,35 @@ export async function bootstrapOwnerAccount(db, env, body) {
   }
 
   return { ok: true, userId, email }
+}
+
+/**
+ * @param {D1Database} db
+ */
+async function isInitialBootstrapSeasonAvailable(db) {
+  try {
+    const row = await db
+      .prepare(INITIAL_BOOTSTRAP_SEASON_EXISTS_SQL)
+      .bind(DEFAULT_ADMIN_SEASON_ID)
+      .first()
+    return row != null
+  } catch {
+    return false
+  }
+}
+
+/**
+ * @param {D1Database} db
+ * @param {string} seasonId
+ * @param {string} userId
+ */
+async function hasBootstrapSeasonMembership(db, seasonId, userId) {
+  try {
+    const row = await db.prepare(BOOTSTRAP_SEASON_MEMBER_EXISTS_SQL).bind(seasonId, userId).first()
+    return row != null
+  } catch {
+    return false
+  }
 }
 
 export { MAX_USERS, hashPassword, validatePasswordPolicy }

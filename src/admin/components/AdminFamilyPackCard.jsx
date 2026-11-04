@@ -9,9 +9,10 @@ import { adminFamilyPackEditPath } from '../lib/adminFamilyPackPaths.js'
  *   pack: { id: string, name: string, slug?: string, sellingPriceInr?: number, active?: boolean }
  *   onToggleActive: (id: string, active: boolean) => void
  *   onDelete: (pack: { id: string, name: string }) => void
+ *   readOnly?: boolean
  * }} props
  */
-export default function AdminFamilyPackCard({ pack, onToggleActive, onDelete }) {
+export default function AdminFamilyPackCard({ pack, onToggleActive, onDelete, readOnly = false }) {
   const id = String(pack.id ?? '')
   const name = String(pack.name ?? '')
   const editPath = adminFamilyPackEditPath(id)
@@ -48,12 +49,16 @@ export default function AdminFamilyPackCard({ pack, onToggleActive, onDelete }) 
         <Button to={editPath} variant="secondary" size="sm">
           Edit
         </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={() => onToggleActive(id, Boolean(pack.active))}>
-          {pack.active ? 'Deactivate' : 'Activate'}
-        </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={() => onDelete({ id, name })}>
-          Delete
-        </Button>
+        {!readOnly ? (
+          <>
+            <Button type="button" variant="ghost" size="sm" onClick={() => onToggleActive(id, Boolean(pack.active))}>
+              {pack.active ? 'Deactivate' : 'Activate'}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => onDelete({ id, name })}>
+              Delete
+            </Button>
+          </>
+        ) : null}
       </div>
     </article>
   )

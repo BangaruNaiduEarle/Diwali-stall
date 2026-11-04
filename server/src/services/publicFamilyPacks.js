@@ -1,4 +1,10 @@
 import { paiseToInr } from './money.js'
+import {
+  getPublicCatalogueSeasonId,
+  resolvePublicCatalogueContext,
+} from './publicCatalogueSeason.js'
+
+export { PUBLIC_CATALOGUE_SEASON_SQL, getPublicCatalogueSeasonId } from './publicCatalogueSeason.js'
 
 export const PUBLIC_FAMILY_PACK_LIST_SQL = `
   SELECT
@@ -10,7 +16,7 @@ export const PUBLIC_FAMILY_PACK_LIST_SQL = `
     fp.pack_label,
     fp.sort_order
   FROM family_packs fp
-  WHERE fp.active = 1
+  WHERE fp.active = 1 AND fp.season_id = ?
   ORDER BY fp.sort_order ASC, fp.id ASC
 `.trim()
 
@@ -24,13 +30,13 @@ export const PUBLIC_FAMILY_PACK_BY_SLUG_SQL = `
     fp.pack_label,
     fp.sort_order
   FROM family_packs fp
-  WHERE fp.slug = ? AND fp.active = 1
+  WHERE fp.slug = ? AND fp.active = 1 AND fp.season_id = ?
 `.trim()
 
 export const PUBLIC_FAMILY_PACK_AVAILABILITY_SQL = `
   SELECT id, name, active, archived, selling_price_paise
   FROM family_packs
-  WHERE id = ?
+  WHERE id = ? AND season_id = ?
 `.trim()
 
 /** @param {Record<string, unknown>} row */
@@ -70,8 +76,14 @@ function mapPublicImages(imageRows) {
 /**
  * @param {D1Database} db
  */
-export async function listPublicFamilyPacks(db) {
-  const result = await db.prepare(PUBLIC_FAMILY_PACK_LIST_SQL).bind().all()
+export async function listPublicFamilyPacks(db, env = {}, prepared) {
+  const seasonGate = await resolvePublicCatalogueContext(db, env, prepared)
+  if (!seasonGate.ok) return []
+  const seasonId = seasonGate.seasonId
+
+  const loc = seasonGate.scope?.locationId
+  const result = await db.prepare(loc ? PUBLIC_FAMILY_PACK_LIST_SQL.replace('fp.season_id = ?', 'fp.location_id = ?') : PUBLIC_FAMILY_PACK_LIST_SQL)
+    .bind(loc ?? seasonId).all()
   const packs = result.results ?? []
   if (!packs.length) return []
 
@@ -82,9 +94,10 @@ export async function listPublicFamilyPacks(db) {
       `SELECT family_pack_id, url, sort_order, is_cover
        FROM family_pack_images
        WHERE family_pack_id IN (${placeholders})
+       ${loc ? 'AND EXISTS (SELECT 1 FROM family_packs fp WHERE fp.id = family_pack_images.family_pack_id AND fp.location_id = ? AND fp.active = 1)' : ''}
        ORDER BY sort_order ASC, id ASC`,
     )
-    .bind(...ids)
+    .bind(...ids, ...(loc ? [loc] : []))
     .all()
 
   /** @type {Map<string, Record<string, unknown>[]>} */
@@ -106,22 +119,34 @@ export async function listPublicFamilyPacks(db) {
  * @param {D1Database} db
  * @param {string} slug
  */
-export async function getPublicFamilyPackBySlug(db, slug) {
-  const packRow = await db.prepare(PUBLIC_FAMILY_PACK_BY_SLUG_SQL).bind(slug).first()
+export async function getPublicFamilyPackBySlug(db, slug, env = {}, prepared) {
+  const seasonGate = await resolvePublicCatalogueContext(db, env, prepared)
+  if (!seasonGate.ok) return null
+  const seasonId = seasonGate.seasonId
+
+  const loc = seasonGate.scope?.locationId
+  const packRow = await db.prepare(loc ? PUBLIC_FAMILY_PACK_BY_SLUG_SQL.replace('fp.season_id = ?', 'fp.location_id = ?') : PUBLIC_FAMILY_PACK_BY_SLUG_SQL)
+    .bind(slug, loc ?? seasonId).first()
   if (!packRow) return null
 
   const id = String(packRow.id)
   const imagesResult = await db
     .prepare(
       `SELECT url, sort_order, is_cover FROM family_pack_images
-       WHERE family_pack_id = ? ORDER BY sort_order ASC, id ASC`,
+       WHERE family_pack_id = ? ${loc ? 'AND EXISTS (SELECT 1 FROM family_packs fp WHERE fp.id = family_pack_images.family_pack_id AND fp.location_id = ? AND fp.active = 1)' : ''} ORDER BY sort_order ASC, id ASC`,
     )
-    .bind(id)
+    .bind(id, ...(loc ? [loc] : []))
     .all()
 
   const itemsResult = await db
     .prepare(
-      `SELECT
+      loc ? `SELECT fpi.quantity, fpi.unit_label, fpi.sort_order,
+         p.id AS product_id, p.name AS product_name, p.pack AS product_pack
+       FROM family_pack_items fpi
+       INNER JOIN family_packs fp ON fp.id = fpi.family_pack_id AND fp.location_id = ? AND fp.active = 1
+       INNER JOIN products p ON p.id = fpi.product_id AND p.active = 1 AND p.location_id = fp.location_id
+       INNER JOIN categories c ON c.slug = p.category_slug AND c.location_id = p.location_id
+       WHERE fpi.family_pack_id = ? ORDER BY fpi.sort_order ASC, fpi.id ASC` : `SELECT
          fpi.quantity,
          fpi.unit_label,
          fpi.sort_order,
@@ -129,11 +154,11 @@ export async function getPublicFamilyPackBySlug(db, slug) {
          p.name AS product_name,
          p.pack AS product_pack
        FROM family_pack_items fpi
-       INNER JOIN products p ON p.id = fpi.product_id AND p.active = 1
+       INNER JOIN products p ON p.id = fpi.product_id AND p.active = 1 AND p.season_id = ?
        WHERE fpi.family_pack_id = ?
        ORDER BY fpi.sort_order ASC, fpi.id ASC`,
     )
-    .bind(id)
+    .bind(loc ?? seasonId, id)
     .all()
 
   const core = mapPublicPackCore(packRow)
@@ -152,9 +177,19 @@ export async function getPublicFamilyPackBySlug(db, slug) {
 /**
  * @param {D1Database} db
  * @param {string} familyPackId
+ * @param {string | null | undefined} [publicSeasonId] Public catalogue season (resolved from platform_settings when omitted).
  */
-export async function assertFamilyPackAvailableForRequest(db, familyPackId) {
-  const row = await db.prepare(PUBLIC_FAMILY_PACK_AVAILABILITY_SQL).bind(familyPackId).first()
+export async function assertFamilyPackAvailableForRequest(db, familyPackId, publicSeasonId) {
+  const seasonId =
+    String(publicSeasonId ?? '').trim() || (await getPublicCatalogueSeasonId(db)) || ''
+  if (!seasonId) {
+    return { ok: false, message: 'Family pack not found.' }
+  }
+
+  const row = await db
+    .prepare(PUBLIC_FAMILY_PACK_AVAILABILITY_SQL)
+    .bind(familyPackId, seasonId)
+    .first()
   if (!row) return { ok: false, message: 'Family pack not found.' }
   if (Number(row.active) !== 1) return { ok: false, message: 'Family pack is not available.' }
   return {

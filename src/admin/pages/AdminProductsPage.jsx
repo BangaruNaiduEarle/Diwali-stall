@@ -18,6 +18,7 @@ import AdminToast from '../components/AdminToast.jsx'
 import { mergeAdminProductRowAfterInlineSave } from '../lib/adminProductInlineSave.js'
 import {
   showAdminProductMappingColumn,
+  showAdminProductFinalRate,
   showAdminProductSensitiveColumns,
   showAdminProductUnitColumn,
 } from '../lib/adminProductTableColumns.js'
@@ -27,6 +28,7 @@ import {
   formatAdminProductPack,
   formatAdminProductPiecesPerPack,
 } from '../lib/adminProductTableDisplay.js'
+import { useAdminSeasonReadOnly } from '../hooks/useAdminSeasonReadOnly.js'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
 import { canDeleteAdminProducts } from '../lib/adminRoles.js'
 
@@ -47,10 +49,13 @@ function formatOptionalInr(value) {
 }
 
 export default function AdminProductsPage() {
-  const { role } = useAdminSession()
-  const showSensitiveColumns = showAdminProductSensitiveColumns(role)
-  const showUnitColumn = showAdminProductUnitColumn(role)
-  const showMappingColumn = showAdminProductMappingColumn(role)
+  const { role, permissionRole: seasonRole, activeSeasonId, capabilities } = useAdminSession()
+  const { isReadOnly } = useAdminSeasonReadOnly()
+  const pricingPermissionRole = activeSeasonId != null ? seasonRole : role
+  const showSensitiveColumns = showAdminProductSensitiveColumns(pricingPermissionRole)
+  const showFinalRate = showAdminProductFinalRate(pricingPermissionRole, capabilities)
+  const showUnitColumn = showAdminProductUnitColumn(pricingPermissionRole)
+  const showMappingColumn = showAdminProductMappingColumn(pricingPermissionRole)
   const canDeleteProduct = canDeleteAdminProducts(role)
   const [products, setProducts] = useState(/** @type {Record<string, unknown>[]} */ ([]))
   const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, totalPages: 0 })
@@ -107,7 +112,7 @@ export default function AdminProductsPage() {
         .filter((c) => c.slug)
       setCategories(mapped)
     })
-  }, [])
+  }, [activeSeasonId])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -129,7 +134,7 @@ export default function AdminProductsPage() {
     setProducts(result.products)
     setPagination(result.pagination)
     setLoading(false)
-  }, [page, debouncedQ, categorySlug, missingRateOnly, missingPurchaseRateOnly, includeArchived])
+  }, [page, debouncedQ, categorySlug, missingRateOnly, missingPurchaseRateOnly, includeArchived, activeSeasonId])
 
   useEffect(() => {
     load()
@@ -189,6 +194,7 @@ export default function AdminProductsPage() {
   }
 
   function openBulkConfirm() {
+    if (isReadOnly) return
     if (!bulkTargetSlug || selectedCount === 0) {
       setListToast({ type: 'error', message: 'Choose a target category and at least one product.' })
       return
@@ -197,7 +203,7 @@ export default function AdminProductsPage() {
   }
 
   async function confirmBulkCategoryUpdate() {
-    if (!bulkTargetSlug || selectedCount === 0 || bulkUpdating) return
+    if (isReadOnly || !bulkTargetSlug || selectedCount === 0 || bulkUpdating) return
     const ids = [...selectedIds]
     setBulkUpdating(true)
     setError(null)
@@ -248,8 +254,14 @@ export default function AdminProductsPage() {
     setListToast({ type: 'error', message: result.message || 'Could not save changes.' })
   }
 
+  /** @param {{ id: string, field: import('../lib/adminProductInlineSave.js').AdminProductInlineField }} edit */
+  function activateInlineEdit(edit) {
+    if (isReadOnly) return
+    setActiveInlineEdit(edit)
+  }
+
   async function confirmDelete() {
-    if (!deleteTarget || deleting) return
+    if (isReadOnly || !deleteTarget || deleting) return
     setDeleting(true)
     setError(null)
     const result = await deleteAdminProduct(deleteTarget.id)
@@ -274,15 +286,17 @@ export default function AdminProductsPage() {
               : 'Manage catalogue products, images, and selling prices.'}
           </p>
         </div>
-        <Button
-          to="/admin/products/new"
-          variant="primary"
-          surface="light"
-          className="admin-page__new-product-btn"
-          icon={Plus}
-        >
-          New product
-        </Button>
+        {!isReadOnly ? (
+          <Button
+            to="/admin/products/new"
+            variant="primary"
+            surface="light"
+            className="admin-page__new-product-btn"
+            icon={Plus}
+          >
+            New product
+          </Button>
+        ) : null}
       </div>
 
       <div className="admin-toolbar admin-toolbar--stack admin-products-toolbar">
@@ -440,7 +454,7 @@ export default function AdminProductsPage() {
         <>
           <p className="admin-hint admin-products-results-meta">{resultsSummary}</p>
 
-          {selectedCount > 0 ? (
+          {selectedCount > 0 && !isReadOnly ? (
             <div className="admin-panel admin-products-bulk mt-4 flex flex-wrap items-end gap-3">
               <p className="text-sm font-medium text-[var(--color-charcoal)]">
                 {selectedCount} selected on this page
@@ -486,12 +500,13 @@ export default function AdminProductsPage() {
                     <AdminProductCard
                       product={p}
                       showSensitiveColumns={showSensitiveColumns}
+                      showFinalRate={showFinalRate}
                       showUnitInSummary={showUnitColumn}
                       activeInlineEdit={activeInlineEdit}
-                      onActivateInlineEdit={setActiveInlineEdit}
+                      onActivateInlineEdit={isReadOnly ? () => {} : setActiveInlineEdit}
                       onInlineSaved={(field, result, draft) => handleInlineSaved(id, field, result, draft)}
                       onDelete={
-                        canDeleteProduct
+                        canDeleteProduct && !isReadOnly
                           ? (target) => setDeleteTarget({ id: target.id, name: target.name })
                           : undefined
                       }
@@ -526,7 +541,7 @@ export default function AdminProductsPage() {
                   {showUnitColumn ? <th scope="col">Unit</th> : null}
                   {showSensitiveColumns ? <th scope="col">Purchase</th> : null}
                   <th scope="col">Selling Price</th>
-                  {showSensitiveColumns ? <th scope="col">Final Price</th> : null}
+                  {showFinalRate ? <th scope="col">Final Rate</th> : null}
                   <th scope="col">Pieces per Pack</th>
                   <th scope="col">Allow Loose Sale</th>
                   {showMappingColumn ? <th scope="col">Mapping</th> : null}
@@ -579,7 +594,7 @@ export default function AdminProductsPage() {
                           editable
                           draftSeed={String(p.name ?? '')}
                           isActive={isEditing('name')}
-                          onActivate={() => setActiveInlineEdit({ id, field: 'name' })}
+                          onActivate={() => activateInlineEdit({ id, field: 'name' })}
                           onDeactivate={() => setActiveInlineEdit(null)}
                           onSaved={(result, draft) => handleInlineSaved(id, 'name', result, draft)}
                           display={<span className="admin-table__primary">{String(p.name ?? '')}</span>}
@@ -594,7 +609,7 @@ export default function AdminProductsPage() {
                           maxLength={120}
                           draftSeed={String(p.company ?? '').trim()}
                           isActive={isEditing('company')}
-                          onActivate={() => setActiveInlineEdit({ id, field: 'company' })}
+                          onActivate={() => activateInlineEdit({ id, field: 'company' })}
                           onDeactivate={() => setActiveInlineEdit(null)}
                           onSaved={(result, draft) => handleInlineSaved(id, 'company', result, draft)}
                           display={formatAdminProductCompany(p.company)}
@@ -608,7 +623,7 @@ export default function AdminProductsPage() {
                             editable
                             draftSeed={String(p.pack ?? '')}
                             isActive={isEditing('pack')}
-                            onActivate={() => setActiveInlineEdit({ id, field: 'pack' })}
+                            onActivate={() => activateInlineEdit({ id, field: 'pack' })}
                             onDeactivate={() => setActiveInlineEdit(null)}
                             onSaved={(result, draft) => handleInlineSaved(id, 'pack', result, draft)}
                             display={formatAdminProductPack(p.pack)}
@@ -624,7 +639,7 @@ export default function AdminProductsPage() {
                             inputMode="decimal"
                             draftSeed={purchaseSeed}
                             isActive={isEditing('purchaseRateInr')}
-                            onActivate={() => setActiveInlineEdit({ id, field: 'purchaseRateInr' })}
+                            onActivate={() => activateInlineEdit({ id, field: 'purchaseRateInr' })}
                             onDeactivate={() => setActiveInlineEdit(null)}
                             onSaved={(result, draft) => handleInlineSaved(id, 'purchaseRateInr', result, draft)}
                             display={
@@ -641,11 +656,11 @@ export default function AdminProductsPage() {
                         <AdminProductTableInlineCell
                           productId={id}
                           field="sellingPriceInr"
-                          editable={showSensitiveColumns}
+                          editable={showSensitiveColumns && !isReadOnly}
                           inputMode="decimal"
                           draftSeed={sellingSeed}
                           isActive={isEditing('sellingPriceInr')}
-                          onActivate={() => setActiveInlineEdit({ id, field: 'sellingPriceInr' })}
+                          onActivate={() => activateInlineEdit({ id, field: 'sellingPriceInr' })}
                           onDeactivate={() => setActiveInlineEdit(null)}
                           onSaved={(result, draft) => handleInlineSaved(id, 'sellingPriceInr', result, draft)}
                           display={
@@ -657,16 +672,16 @@ export default function AdminProductsPage() {
                           }
                         />
                       </td>
-                      {showSensitiveColumns ? (
+                      {showFinalRate ? (
                         <td className="tabular-nums">
                           <AdminProductTableInlineCell
                             productId={id}
                             field="finalPriceInr"
-                            editable={showSensitiveColumns}
+                            editable={showSensitiveColumns && !isReadOnly}
                             inputMode="decimal"
                             draftSeed={finalSeed}
                             isActive={isEditing('finalPriceInr')}
-                            onActivate={() => setActiveInlineEdit({ id, field: 'finalPriceInr' })}
+                            onActivate={() => activateInlineEdit({ id, field: 'finalPriceInr' })}
                             onDeactivate={() => setActiveInlineEdit(null)}
                             onSaved={(result, draft) => handleInlineSaved(id, 'finalPriceInr', result, draft)}
                             display={
@@ -688,7 +703,7 @@ export default function AdminProductsPage() {
                           inputMode="numeric"
                           draftSeed={piecesSeed}
                           isActive={isEditing('piecesPerPack')}
-                          onActivate={() => setActiveInlineEdit({ id, field: 'piecesPerPack' })}
+                          onActivate={() => activateInlineEdit({ id, field: 'piecesPerPack' })}
                           onDeactivate={() => setActiveInlineEdit(null)}
                           onSaved={(result, draft) => handleInlineSaved(id, 'piecesPerPack', result, draft)}
                           display={formatAdminProductPiecesPerPack(p.piecesPerPack)}
@@ -721,7 +736,7 @@ export default function AdminProductsPage() {
                           <Link to={`/admin/products/${encodeURIComponent(id)}/edit`} className="admin-table__link">
                             Edit
                           </Link>
-                          {canDeleteProduct ? (
+                          {canDeleteProduct && !isReadOnly ? (
                             <Button
                               type="button"
                               variant="ghost"

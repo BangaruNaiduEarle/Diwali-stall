@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import Button from './ui/Button'
-import { CATALOG_CATEGORIES } from '../data/categories'
+import { useCatalogueProducts } from '../context/CatalogueProductsContext'
 import { BUDGET_RANGES } from '../data/budgetRanges'
 
 const ICON = { strokeWidth: 1.8 }
@@ -108,10 +108,11 @@ function CategoryChip({ active, onClick, children }) {
 }
 
 function MobileCategoryScroll({ categorySlug, onCategoryChange }) {
+  const { categories } = useCatalogueProducts()
   return (
     <div className="scroll-chips min-w-0 w-full md:hidden">
       <div className="flex w-max min-w-full gap-2 pb-0.5">
-        {CATALOG_CATEGORIES.map(({ slug, label }) => (
+        {categories.map(({ slug, label }) => (
           <CategoryChip
             key={slug}
             active={categorySlug === slug}
@@ -191,12 +192,13 @@ function CategoryBudgetFiltersSheet({
   categorySlugs = null,
   showBudget = true,
 }) {
+  const { categories: availableCategories } = useCatalogueProducts()
   const categories = useMemo(() => {
     if (mobileBudgetOnly) return []
-    const list = CATALOG_CATEGORIES
+    const list = availableCategories
     if (!categorySlugs) return list
     return list.filter((c) => categorySlugs.includes(c.slug))
-  }, [mobileBudgetOnly, categorySlugs])
+  }, [mobileBudgetOnly, categorySlugs, availableCategories])
 
   return (
     <div className="space-y-6">
@@ -275,13 +277,14 @@ function CategoryBudgetFiltersDesktop({
   onBudgetChange,
   showBudget = true,
 }) {
+  const { categories } = useCatalogueProducts()
   return (
     <div className={showBudget ? 'space-y-2.5 md:space-y-3' : ''}>
       <div>
         <p className="sr-only">Category</p>
         <div className="scroll-chips lg:overflow-visible">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 lg:flex-wrap">
-            {CATALOG_CATEGORIES.map(({ slug, label }) => (
+            {categories.map(({ slug, label }) => (
               <FilterLink key={slug} active={categorySlug === slug} onClick={() => onCategoryChange?.(slug)}>
                 {label}
               </FilterLink>
@@ -367,6 +370,7 @@ function FilterBottomSheet({
 }
 
 export default function ProductFilters(props) {
+  const { categories } = useCatalogueProducts()
   const {
     categorySlug,
     onCategoryChange,
@@ -390,12 +394,12 @@ export default function ProductFilters(props) {
   const budgetGroupId = `${uid}-budget`
 
   const previewCategories = useMemo(
-    () => CATALOG_CATEGORIES.slice(0, CATALOGUE_MOBILE_CHIP_PREVIEW),
-    [],
+    () => categories.slice(0, CATALOGUE_MOBILE_CHIP_PREVIEW),
+    [categories],
   )
   const overflowCategorySlugs = useMemo(
-    () => CATALOG_CATEGORIES.slice(CATALOGUE_MOBILE_CHIP_PREVIEW).map((c) => c.slug),
-    [],
+    () => categories.slice(CATALOGUE_MOBILE_CHIP_PREVIEW).map((c) => c.slug),
+    [categories],
   )
 
   useEffect(() => {

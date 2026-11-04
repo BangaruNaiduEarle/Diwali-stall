@@ -6,6 +6,7 @@ import {
   mapBootstrapBatchError,
 } from '../src/services/adminPasswordAuth.js'
 import { createAdminUser } from '../src/services/adminUsersManagement.js'
+import { DEFAULT_ADMIN_SEASON_ID } from '../src/services/adminSeasonContext.js'
 
 describe('single owner policy', () => {
   it('createAdminUser rejects role owner', async () => {
@@ -80,6 +81,23 @@ describe('atomic owner bootstrap', () => {
     assert.equal(await isOwnerBootstrapComplete(db), true)
     const only = [...db.__users.values()][0]
     assert.equal(only.role, 'owner')
+    assert.equal(db.__seasonMembers.get(`${DEFAULT_ADMIN_SEASON_ID}:${only.id}`)?.role, 'owner')
+  })
+
+  it('fails when initial business season is missing without creating owner', async () => {
+    const db = createBootstrapDb({ lockTaken: false, initialSeasonAvailable: false })
+    const result = await bootstrapOwnerAccount(db, { ADMIN_BOOTSTRAP_SECRET: 'z'.repeat(32) }, {
+      email: 'owner@test.com',
+      password: 'stall-password-12',
+      bootstrapSecret: 'z'.repeat(32),
+    })
+    assert.equal(result.ok, false)
+    if (!result.ok) {
+      assert.equal(result.status, 503)
+      assert.equal(result.code, 'bootstrap_unavailable')
+    }
+    assert.equal(db.__users.size, 0)
+    assert.equal(await isOwnerBootstrapComplete(db), false)
   })
 })
 
@@ -134,12 +152,23 @@ function createInsertDb(activeCount) {
   }
 }
 
-/** @param {{ lockTaken: boolean }} opts */
+/** @param {{ lockTaken: boolean, initialSeasonAvailable?: boolean, existingUser?: Record<string, unknown>, existingSeasonMembers?: Record<string, { role: string }> }} opts */
 function createBootstrapDb(opts) {
   /** @type {Map<string, Record<string, unknown>>} */
   const users = new Map()
+  /** @type {Map<string, { season_id: string, admin_user_id: string, role: string }>} */
+  const seasonMembers = new Map()
   let lockTaken = opts.lockTaken
   let lockOwnerId = lockTaken ? 'existing-owner' : null
+  const initialSeasonAvailable = opts.initialSeasonAvailable !== false
+
+  if (opts.existingUser) {
+    users.set(String(opts.existingUser.id), { ...opts.existingUser })
+  }
+  for (const [key, value] of Object.entries(opts.existingSeasonMembers ?? {})) {
+    const [seasonId, userId] = key.split(':')
+    seasonMembers.set(key, { season_id: seasonId, admin_user_id: userId, role: value.role })
+  }
 
   /** @param {string} normalized @param {unknown[]} args */
   function stmtHandlers(normalized, args) {
@@ -148,7 +177,19 @@ function createBootstrapDb(opts) {
         if (normalized.includes('admin_owner_bootstrap')) {
           return lockTaken ? { singleton_id: 1 } : null
         }
+        if (normalized.includes('FROM business_seasons WHERE id =')) {
+          return initialSeasonAvailable ? { id: DEFAULT_ADMIN_SEASON_ID } : null
+        }
+        if (normalized.includes('FROM season_members WHERE season_id =')) {
+          const seasonId = String(args[0])
+          const userId = String(args[1])
+          return seasonMembers.has(`${seasonId}:${userId}`) ? { ok: 1 } : null
+        }
         if (normalized.includes('FROM admin_users WHERE lower(email)')) {
+          const email = String(args[0]).toLowerCase()
+          for (const u of users.values()) {
+            if (String(u.email).toLowerCase() === email) return { ...u }
+          }
           return null
         }
         return null
@@ -169,6 +210,25 @@ function createBootstrapDb(opts) {
             password_hash: args[3],
           })
         }
+        if (normalized.startsWith('UPDATE admin_users')) {
+          const id = String(args[2])
+          const row = users.get(id) ?? { id, email: '', role: 'admin' }
+          users.set(id, {
+            ...row,
+            role: 'owner',
+            password_hash: args[0],
+            display_name: args[1],
+          })
+        }
+        if (normalized.startsWith('INSERT INTO season_members')) {
+          const seasonId = String(args[0])
+          const userId = String(args[1])
+          seasonMembers.set(`${seasonId}:${userId}`, {
+            season_id: seasonId,
+            admin_user_id: userId,
+            role: args[2] != null ? String(args[2]) : 'owner',
+          })
+        }
         return { meta: { changes: 1 } }
       },
     }
@@ -176,6 +236,7 @@ function createBootstrapDb(opts) {
 
   const db = {
     __users: users,
+    __seasonMembers: seasonMembers,
     prepare(sql) {
       const normalized = sql.replace(/\s+/g, ' ').trim()
       const base = stmtHandlers(normalized, [])

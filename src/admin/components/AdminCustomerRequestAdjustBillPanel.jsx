@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2, Minus, Plus, Search, Trash2 } from 'lucide-react'
 import { formatINR } from '../../utils/currency.js'
 import { buildAgreedBelowFinalWarning } from '../../lib/agreedBelowFinalWarning.js'
@@ -15,14 +15,15 @@ import {
   setCartLineQuantity,
 } from '../lib/quickBillCart.js'
 import {
-  adjustCartToApiItems,
   customerRequestItemsToAdjustCart,
 } from '../lib/adminCustomerRequestAdjustBillCart.js'
 import { paiseToInrHelper } from '../lib/moneyDisplay.js'
 import { resolveQuickBillApiImageUrl } from '../lib/quickBillProductImage.js'
+import { adjustmentPayload, draftHasNewerRevision, paiseInputValue } from '../lib/billAdjustment.js'
 
 /** @param {number | null | undefined} paise */
 function formatPaiseLabel(paise) {
+  if (paise == null) return '—'
   const p = Number(paise)
   if (!Number.isInteger(p) || p < 0) return '—'
   return formatINR(paiseToInrHelper(p))
@@ -39,10 +40,19 @@ export default function AdminCustomerRequestAdjustBillPanel({
   requestId,
   requestItems,
   pricingMode = 'selling',
+  privileged = false,
+  revision = null,
+  discountPaise = 0,
+  onReload,
   disabled = false,
   onAdjusted,
 }) {
   const bargainMode = pricingMode === 'bargain'
+  const dirty = useRef(false)
+  const [draftRevision, setDraftRevision] = useState(revision)
+  const draftRevisionRef = useRef(revision)
+  const [conflict, setConflict] = useState(false)
+  const [discountInr, setDiscountInr] = useState(paiseInputValue(discountPaise))
   const [cart, setCart] = useState(() => customerRequestItemsToAdjustCart(requestItems))
   const [query, setQuery] = useState('')
   const [searchBusy, setSearchBusy] = useState(false)
@@ -63,34 +73,46 @@ export default function AdminCustomerRequestAdjustBillPanel({
   const [saveMessage, setSaveMessage] = useState(/** @type {string | null} */ (null))
 
   useEffect(() => {
+    if (dirty.current) {
+      if (draftHasNewerRevision(draftRevisionRef.current, revision, true)) setConflict(true)
+      return
+    }
     setCart(customerRequestItemsToAdjustCart(requestItems))
+    setDraftRevision(revision)
+    draftRevisionRef.current = revision
+    setDiscountInr(paiseInputValue(discountPaise))
     setAgreedAmountInr('')
     setSaveMessage(null)
-  }, [requestItems])
+  }, [requestItems, revision, discountPaise])
 
-  const cartPayload = useMemo(() => adjustCartToApiItems(cart), [cart])
+  const previewPayload = useMemo(() => adjustmentPayload(cart, { privileged, discountInr }), [cart, privileged, discountInr])
 
-  const loadPreview = useCallback(async () => {
+  const loadPreview = useCallback(async (isCancelled) => {
     if (!cart.length) {
       setPreview(null)
       setPreviewError(null)
+      setPreviewBusy(false)
       return
     }
     setPreviewBusy(true)
     setPreviewError(null)
-    const res = await previewAdminCustomerRequestAdjustBill(requestId, { items: cartPayload })
+    if (!previewPayload.ok) { setPreviewError(previewPayload.message); setPreviewBusy(false); return }
+    const res = await previewAdminCustomerRequestAdjustBill(requestId, previewPayload.body, { revision: draftRevision })
+    if (isCancelled()) return
     setPreviewBusy(false)
     if (!res.ok) {
+      if (res.status === 409) setConflict(true)
       setPreviewError(res.message || 'Could not preview adjusted bill.')
       setPreview(null)
       return
     }
     setPreview(/** @type {typeof preview} */ (res.preview))
-  }, [cart.length, cartPayload, requestId])
+  }, [cart.length, previewPayload, requestId, draftRevision])
 
   useEffect(() => {
-    const timer = setTimeout(loadPreview, 280)
-    return () => clearTimeout(timer)
+    let cancelled = false
+    const timer = setTimeout(() => loadPreview(() => cancelled), 280)
+    return () => { cancelled = true; clearTimeout(timer) }
   }, [loadPreview])
 
   useEffect(() => {
@@ -137,7 +159,7 @@ export default function AdminCustomerRequestAdjustBillPanel({
       product.company != null && String(product.company).trim()
         ? String(product.company).trim()
         : null
-    setCart((prev) =>
+    editCart((prev) =>
       addProductToCart(
         prev,
         {
@@ -154,22 +176,27 @@ export default function AdminCustomerRequestAdjustBillPanel({
     setSaveMessage(null)
   }
 
+  function editCart(update) { dirty.current = true; setCart(update) }
+
   async function handleSave() {
-    if (saveBusy || disabled || !cart.length) return
+    if (saveBusy || disabled || conflict || !cart.length) return
     setSaveBusy(true)
     setSaveError(null)
     setSaveMessage(null)
-    /** @type {{ items: typeof cartPayload, acceptedAmountInr?: string }} */
-    const body = { items: cartPayload }
-    if (bargainMode && String(agreedAmountInr).trim()) {
-      body.acceptedAmountInr = String(agreedAmountInr).trim()
-    }
-    const res = await patchAdminCustomerRequestAdjustBill(requestId, body)
+    const parsed = adjustmentPayload(cart, { privileged, discountInr, agreedAmountInr: bargainMode ? agreedAmountInr : '' })
+    if (!parsed.ok) { setSaveError(parsed.message); setSaveBusy(false); return }
+    const body = parsed.body
+    const res = await patchAdminCustomerRequestAdjustBill(requestId, body, { revision: draftRevision })
     setSaveBusy(false)
     if (!res.ok) {
+      if (res.status === 409) setConflict(true)
       setSaveError(res.message || 'Could not save adjusted bill.')
       return
     }
+    dirty.current = false
+    setConflict(false)
+    setDraftRevision(res.request.revision)
+    draftRevisionRef.current = res.request.revision
     const parts = ['Adjusted bill saved. Prior quotation voided; customer-facing totals updated.']
     if (bargainMode && !body.acceptedAmountInr) {
       parts.push('Record customer-agreed amount before finalizing.')
@@ -184,9 +211,13 @@ export default function AdminCustomerRequestAdjustBillPanel({
   return (
     <div className="admin-request-detail__adjust-bill">
       <p className="admin-hint">
-        Manual stall bills only. Change products or quantities before finalize. Saving voids the previous
+        Change products or quantities before finalize. Saving voids the previous
         quotation and never carries over a prior customer-agreed amount.
       </p>
+      {conflict ? <div className="admin-alert admin-alert--warning" role="alert">
+        This request changed. Your draft has been kept. Reload the latest request before making further edits.
+        <button type="button" className="admin-touch-button" onClick={async () => { dirty.current = false; setConflict(false); await onReload?.() }}>Reload latest request</button>
+      </div> : null}
       <label className="admin-field admin-quick-bill__search-field admin-request-detail__adjust-search">
         <span className="admin-label">Add product</span>
         <span className="admin-quick-bill__search-wrap">
@@ -252,7 +283,7 @@ export default function AdminCustomerRequestAdjustBillPanel({
                   aria-label={`Decrease ${unitLabel}`}
                   disabled={disabled || saveBusy}
                   onClick={() =>
-                    setCart((prev) =>
+                    editCart((prev) =>
                       setCartLineQuantity(prev, line.productId, line.quantity - 1, unitType),
                     )
                   }
@@ -266,7 +297,7 @@ export default function AdminCustomerRequestAdjustBillPanel({
                   aria-label={`Increase ${unitLabel}`}
                   disabled={disabled || saveBusy}
                   onClick={() =>
-                    setCart((prev) =>
+                    editCart((prev) =>
                       setCartLineQuantity(prev, line.productId, line.quantity + 1, unitType),
                     )
                   }
@@ -279,10 +310,15 @@ export default function AdminCustomerRequestAdjustBillPanel({
                 className="admin-request-detail__adjust-remove"
                 aria-label={`Remove ${line.name}`}
                 disabled={disabled || saveBusy}
-                onClick={() => setCart((prev) => removeCartLine(prev, line.productId, unitType))}
+                onClick={() => editCart((prev) => removeCartLine(prev, line.productId, unitType))}
               >
                 <Trash2 size={16} aria-hidden="true" />
               </button>
+              {privileged ? <label className="admin-field">
+                <span className="admin-label">Selling price per {unitType === 'piece' ? 'piece' : 'box'} (₹)</span>
+                <input className="admin-input" inputMode="decimal" value={line.priceInr ?? ''} placeholder="Keep saved price"
+                  disabled={disabled || saveBusy || conflict} onChange={event => editCart(previous => previous.map(item => item === line ? { ...item, priceInr: event.target.value } : item))} />
+              </label> : null}
             </li>
           )
         })}
@@ -292,20 +328,20 @@ export default function AdminCustomerRequestAdjustBillPanel({
         <h4 className="admin-request-detail__adjust-summary-title">Adjusted bill summary</h4>
         <dl className="admin-request-detail__summary-dl admin-request-detail__adjust-summary-dl">
           <div>
-            <dt>Adjusted Selling subtotal</dt>
+            <dt>Bill total</dt>
             <dd className="tabular-nums">
-              {previewBusy ? '…' : formatPaiseLabel(preview?.sellingSubtotalPaise)}
+              {previewBusy ? '…' : formatPaiseLabel(preview?.totalPaise)}
             </dd>
           </div>
-          <div>
+          {privileged ? <div>
             <dt>Adjusted Final subtotal</dt>
             <dd className="tabular-nums">
               {previewBusy ? '…' : formatPaiseLabel(preview?.finalSubtotalPaise)}
             </dd>
-          </div>
-          {bargainMode ? (
+          </div> : null}
+          {privileged && bargainMode ? (
             <div>
-              <dt>Final + ₹500 reference floor</dt>
+              <dt>Final Price + ₹500 — reference only</dt>
               <dd className="tabular-nums">
                 {previewBusy ? '…' : formatPaiseLabel(preview?.bargainFloorPaise)}
               </dd>
@@ -317,15 +353,21 @@ export default function AdminCustomerRequestAdjustBillPanel({
             {previewError}
           </p>
         ) : null}
-        <p className="admin-hint">Internal lines only — not shown on quotations or WhatsApp.</p>
+        <p className="admin-hint">Reference amounts never set the bill or customer-agreed amount.</p>
       </div>
 
-      {bargainMode ? (
+      {privileged ? <label className="admin-field">
+        <span className="admin-label">Bill discount (₹)</span>
+        <input className="admin-input" inputMode="decimal" value={discountInr} disabled={disabled || saveBusy || conflict}
+          onChange={event => { dirty.current = true; setDiscountInr(event.target.value) }} />
+      </label> : null}
+
+      {privileged && bargainMode ? (
         <div className="admin-request-detail__adjust-agreed">
           <label className="admin-field" htmlFor={`adjust-agreed-${requestId}`}>
             <span className="admin-label">Customer-agreed amount (₹)</span>
             <span className="admin-hint">
-              Enter what the customer agrees to pay. The reference floor is guidance only — not the agreed
+              Enter what the customer agrees to pay. The reference amount is guidance only — not the agreed
               amount.
             </span>
             <input
@@ -334,7 +376,7 @@ export default function AdminCustomerRequestAdjustBillPanel({
               inputMode="decimal"
               className="admin-input"
               value={agreedAmountInr}
-              onChange={(e) => setAgreedAmountInr(e.target.value)}
+              onChange={(e) => { dirty.current = true; setAgreedAmountInr(e.target.value) }}
               placeholder="Optional until customer confirms"
               disabled={disabled || saveBusy}
             />
@@ -353,7 +395,7 @@ export default function AdminCustomerRequestAdjustBillPanel({
       <button
         type="button"
         className="admin-touch-button admin-touch-button--secondary"
-        disabled={disabled || saveBusy || !cart.length || previewBusy}
+        disabled={disabled || saveBusy || conflict || !cart.length || previewBusy || !Number.isSafeInteger(draftRevision)}
         onClick={handleSave}
       >
         {saveBusy ? 'Saving…' : 'Save adjusted bill'}

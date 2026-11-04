@@ -4,11 +4,22 @@ import worker from '../src/index.js'
 import { signLocalDevAdminJwt } from '../src/middleware/localAdminDevAuth.js'
 import { filterAdminProductForRole } from '../src/lib/adminProductResponse.js'
 import { mapAdminProductRow } from '../src/services/adminProducts.js'
+import { DEFAULT_ADMIN_SEASON_ID } from '../src/services/adminSeasonContext.js'
 
 const LOCAL_SECRET = 'local-dev-secret-at-least-32-characters-long'
 const OWNER_EMAIL = 'owner@example.com'
 const ADMIN_EMAIL = 'staff@example.com'
 const SUPER_EMAIL = 'super@example.com'
+
+// These legacy role fixtures need explicit season grants: global login roles
+// alone have not authorized catalogue routes since season membership was added.
+function mockSeasonMemberships(users, userId) {
+  const user = [...users.values()].find(user => user.id === userId)
+  return user ? [{
+    season_id: DEFAULT_ADMIN_SEASON_ID, role: user.role, disabled_at: null,
+    created_at: '2026-01-01', code: '2026', label: '2026', status: 'active',
+  }] : []
+}
 
 describe('filterAdminProductForRole', () => {
   const sample = {
@@ -332,6 +343,9 @@ function createRoleAwareMockDb(role) {
               return null
             },
             async all() {
+              if (normalized.includes('FROM season_members')) {
+                return { results: mockSeasonMemberships(users, params[0]) }
+              }
               if (normalized.includes('FROM products p') && normalized.includes('LIMIT')) {
                 return { results: [{ ...row }] }
               }
@@ -424,6 +438,9 @@ function createX4RateApiMockDb(role) {
               return null
             },
             async all() {
+              if (normalized.includes('FROM season_members')) {
+                return { results: mockSeasonMemberships(users, params[0]) }
+              }
               return { results: [] }
             },
             async run() {

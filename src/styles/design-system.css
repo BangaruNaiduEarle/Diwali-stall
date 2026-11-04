@@ -1,0 +1,255 @@
+/* Shared presentation only. Keep existing layout breakpoints and screen behavior. */
+html { scroll-behavior: auto; scroll-padding-top: 8rem; }
+body { font-size: 1rem; line-height: 1.5; }
+button, input, select, textarea { font: inherit; }
+button, a, input, select, textarea, summary { -webkit-tap-highlight-color: transparent; }
+
+/* A single minimum wins over legacy compact sizes, including icon controls.
+   Native checkbox/radio controls use their containing label as the touch target. */
+:where(button, [role='button'], summary, .ui-btn, .hero-btn,
+  .admin-header__link, .admin-table__link, .admin-product-card__edit-icon,
+  .nav-link, .nav-drawer-link, .nav-drawer-category-link, .nav-categories-item, .footer-link,
+  input:not([type='checkbox'], [type='radio'], [type='hidden']), select, textarea) {
+  min-block-size: var(--touch-target) !important;
+  min-inline-size: var(--touch-target) !important;
+}
+:where(button, .ui-btn, .hero-btn, summary) { touch-action: manipulation; }
+:where(input, select, textarea) { max-inline-size: 100%; accent-color: var(--color-navy); }
+:where(label:has(input:is([type='checkbox'], [type='radio'])), .admin-check, .admin-requests-toolbar__check) {
+  min-block-size: var(--touch-target);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible,
+.ui-btn:focus-visible, .focus-ring:focus-visible,
+.admin-input:focus, .admin-header__menu-btn:focus-visible,
+.admin-search__clear:focus-visible, .admin-product-card__edit-icon:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+  box-shadow: none;
+}
+:where(input, textarea)::placeholder { color: var(--color-muted); opacity: 1; }
+
+.skip-link {
+  position: fixed;
+  inset: 0.5rem auto auto 0.5rem;
+  z-index: 1000;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-white);
+  color: var(--color-navy);
+  box-shadow: var(--shadow-raised);
+  transform: translateY(-200%);
+}
+.skip-link:focus { transform: translateY(0); }
+
+/* All Button variants, including the PrimaryButton/SecondaryButton wrappers. */
+.ui-btn {
+  height: auto;
+  padding-block: var(--space-3);
+  line-height: 1.35;
+  white-space: normal;
+  text-align: center;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+.ui-btn__label { min-width: 0; }
+.ui-btn:hover:not(:disabled):not([aria-disabled='true']),
+.hero-btn:hover { transform: none; box-shadow: none; }
+.ui-btn--primary-light, .ui-btn--primary-dark, .hero-btn--primary {
+  background: var(--color-navy);
+  border-color: var(--color-navy);
+  color: var(--color-white);
+  box-shadow: none;
+}
+.ui-btn--primary-light:hover:not(:disabled):not([aria-disabled='true']),
+.ui-btn--primary-dark:hover:not(:disabled):not([aria-disabled='true']),
+.hero-btn--primary:hover {
+  background: var(--color-navy-hover);
+  border-color: var(--color-navy-hover);
+  color: var(--color-white);
+}
+.ui-btn--primary-dark { border-color: var(--color-border-control); }
+.ui-btn--secondary-light, .ui-btn--secondary-dark, .hero-btn--secondary {
+  background: var(--color-white);
+  border-color: var(--color-border-control);
+  color: var(--color-charcoal);
+  backdrop-filter: none;
+}
+.ui-btn--secondary-light:hover:not(:disabled):not([aria-disabled='true']),
+.ui-btn--secondary-dark:hover:not(:disabled):not([aria-disabled='true']),
+.hero-btn--secondary:hover {
+  background: var(--color-surface-muted);
+  border-color: var(--color-slate);
+  color: var(--color-charcoal);
+  box-shadow: none;
+}
+.ui-btn--ghost-light { color: var(--color-navy); }
+.ui-btn--ghost-dark { color: var(--color-white); }
+.ui-btn--ghost-dark:hover:not(:disabled):not([aria-disabled='true']) { background: rgb(255 255 255 / 12%); }
+.ui-btn:disabled, .ui-btn[aria-disabled='true'] { opacity: 0.6; }
+
+/* Shared fields: search, filters, forms, login and the operating-season selector. */
+.admin-input, .admin-season-select__control,
+.admin-search__input, .admin-quick-bill__search-input,
+:where(input:not([type='checkbox'], [type='radio'], [type='hidden'], [type='file']), select, textarea) {
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-white);
+  color: var(--color-charcoal);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.admin-input, .admin-season-select__control { padding-block: var(--space-3); }
+.admin-quick-bill__customer-panel .admin-input { font-size: 1rem; }
+.admin-search__input--clearable, .admin-password-field__input {
+  padding-inline-end: calc(var(--touch-target) + var(--space-3));
+}
+.admin-input:disabled, .admin-input[readonly], .admin-season-select__control:disabled {
+  background: var(--color-surface-muted);
+  color: var(--color-muted-on-page);
+}
+.admin-label, .admin-form__section-title { font-weight: 600; }
+.admin-field { gap: var(--space-2); }
+.admin-form__row { row-gap: var(--space-4); }
+.admin-input[aria-invalid='true'], .admin-quick-bill__input--invalid {
+  border-color: var(--color-error-text);
+  background-color: var(--color-error-soft);
+}
+.admin-quick-bill__input--invalid { box-shadow: none; }
+
+/* Reused surfaces: product/request/pack cards, forms, tables and dialogs. */
+.surface-card, .product-card-surface, .admin-card, .admin-panel,
+.admin-form__section, .admin-table-wrap, .admin-auth-screen,
+.admin-confirm-dialog, .admin-quick-bill__bill, .admin-quick-bill__customer-panel {
+  border-color: var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-white);
+  box-shadow: var(--shadow-card);
+}
+.admin-card, .admin-panel, .admin-form__section { padding: var(--space-4); }
+.admin-card-list { gap: var(--space-4); }
+.admin-table { font-variant-numeric: tabular-nums; }
+.admin-table th { background: var(--color-page); color: var(--color-muted-on-page); }
+.admin-table td { padding-block: var(--space-4); }
+.admin-table tbody tr:hover { background: var(--color-page); }
+.admin-table__link { display: inline-flex; align-items: center; }
+.admin-quick-bill__dock { background: var(--color-white); box-shadow: 0 -1px 8px rgb(32 41 56 / 6%); }
+.admin-quick-bill__line-foot { flex-wrap: wrap; }
+
+/* Navigation remains responsive, with the existing mobile menu and role visibility. */
+.admin-header {
+  background: var(--color-white);
+  color: var(--color-charcoal);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+}
+.admin-header__inner { gap: var(--space-3) var(--space-4); }
+.admin-header__brand { min-width: 0; }
+.admin-header__eyebrow { color: var(--color-muted); letter-spacing: 0.04em; opacity: 1; }
+.admin-header__title { color: var(--color-navy); font-size: 1.25rem; letter-spacing: -0.02em; }
+.admin-header__link, .admin-header__menu-btn {
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  color: var(--color-muted-on-page);
+  background: transparent;
+  border-color: var(--color-border-control);
+  font-weight: 500;
+}
+.admin-header__link { display: inline-flex; }
+.admin-header__link:hover, .admin-header__menu-btn:hover { background: var(--color-page); color: var(--color-navy); }
+.admin-header__link--active, .admin-header__link--active:hover {
+  color: var(--color-navy);
+  background: var(--color-surface-muted);
+  box-shadow: inset 0 -2px var(--color-navy);
+  font-weight: 600;
+}
+.admin-header__nav--panel { background-color: var(--color-white); }
+.admin-header__account--mobile { border-color: var(--color-border); }
+.admin-header__user, .admin-season-select__role, .admin-season-select__label { color: var(--color-muted); opacity: 1; }
+.admin-season-select__badge { background: var(--color-page); border-color: var(--color-border); }
+.admin-season-select__error { color: var(--color-error-text); }
+.admin-season-select__active { margin: 0; color: var(--color-navy); font-size: 0.875rem; font-weight: 600; overflow-wrap: anywhere; }
+.admin-season-select > .admin-season-select__control { flex: 0 0 auto; inline-size: 100%; }
+.admin-main { width: 100%; min-width: 0; padding-top: var(--space-6); }
+.admin-page__title { color: var(--color-charcoal); letter-spacing: -0.025em; line-height: 1.25; }
+.admin-page__subtitle, .admin-quick-bill__lede { color: var(--color-muted-on-page); line-height: 1.6; }
+.admin-page__head { row-gap: var(--space-4); }
+.admin-quick-bill__bill-stat--box, .admin-quick-bill__bill-stat--piece,
+.admin-quick-bill__lines-heading--box, .admin-quick-bill__lines-heading--piece,
+.admin-quick-bill__result-qty-badge, .admin-quick-bill__chip {
+  color: var(--color-charcoal);
+  background: var(--color-surface-muted);
+  border-color: var(--color-border);
+}
+.admin-quick-bill__bill-stat--box dd, .admin-quick-bill__bill-stat--piece dd { color: var(--color-navy); }
+.admin-quick-bill__chip--active { background: var(--color-navy); border-color: var(--color-navy); color: var(--color-white); }
+
+/* Status surfaces always retain the existing English status/error text. */
+.admin-badge, .admin-badge--muted, .admin-badge--status-received, .admin-product-card__status--muted {
+  background: var(--color-surface-muted);
+  color: var(--color-muted-on-page);
+  border-color: var(--color-border);
+}
+.admin-alert--success, .admin-badge--stall-finalized, .admin-product-card__status:not(.admin-product-card__status--muted) {
+  background: var(--color-success-soft);
+  color: var(--color-success-text);
+  border-color: var(--color-success-text);
+}
+.admin-archived-season-banner, .admin-badge--status-reviewing,
+.admin-badge--stall-pending, .admin-quick-bill__badge--warn {
+  background: var(--color-warning-soft);
+  color: var(--color-warning-text);
+  border-color: var(--color-warning-text);
+}
+.admin-alert--error { background: var(--color-error-soft); color: var(--color-error-text); border-color: var(--color-error-text); }
+.admin-field-error, .admin-field__error, .admin-quick-bill__bill-error, .admin-quick-bill__checkout-warn { color: var(--color-error-text); }
+.admin-hint--warn, .admin-table__meta--warn { color: var(--color-warning-text); }
+.admin-hint--success { color: var(--color-success-text); }
+.admin-quick-bill__remove-btn { background: var(--color-white); border-color: var(--color-border-control); color: var(--color-navy); }
+.icon-primary, .header-estimate-btn .ui-btn__icon,
+.nav-drawer-link[aria-current='page'] .nav-drawer-icon,
+.nav-drawer-link.nav-drawer-link--current .nav-drawer-icon { color: var(--color-navy); }
+.discount-pill { color: var(--color-muted-on-page); background: var(--color-surface-muted); }
+.footer-heading, .footer-link:hover, .footer-link--active, .footer-link[aria-current='page'] { color: var(--color-white); }
+
+/* Retire decorative gradients and motion without replacing existing screen content. */
+.festive-hero-bg, .hero-visual-column,
+.gift-promo-aside, .gift-promo-inline, .gift-promo-strip { background-image: none; background-color: var(--color-navy); }
+.diwali-hero-overlay { background: rgb(29 47 68 / 78%); }
+.hero-mobile-body::before { background: transparent; }
+.hero-glow, .diwali-hero-glow { background: none; }
+.hero-main-lamp, .hero-main-lamp--mobile { color: var(--color-surface-muted); filter: none; }
+.hero-visual-column { box-shadow: var(--shadow-card); }
+.hero-visual-column::after { background: transparent; }
+.product-image-skeleton { background: var(--color-surface-muted); }
+.hero-float, .hero-float-slow, .hero-float-delay, .hero-float-delay-2, .hero-sparkle,
+.hero-particle, .gift-promo-aside, .gift-promo-strip, .gift-promo-strip--enter,
+.gift-promo-marquee__track, .preorder-marquee__track, .floating-whatsapp__icon,
+.pack-carousel--animated .pack-carousel__track, .product-image-skeleton,
+.admin-toast { animation: none; }
+.preorder-marquee { background: var(--color-surface-muted); color: var(--color-navy); font-family: var(--font-sans); }
+.preorder-marquee__viewport { height: auto; min-height: 2.5rem; padding: var(--space-2) var(--space-4); }
+.preorder-marquee__track, .gift-promo-marquee__track { display: none; }
+.preorder-marquee__static, .gift-promo-marquee__static { display: flex; }
+.floating-whatsapp:hover { transform: none; }
+.floating-whatsapp__icon, .floating-whatsapp:hover .floating-whatsapp__icon { filter: none; }
+
+@media (min-width: 640px) {
+  .admin-card, .admin-panel, .admin-form__section { padding: var(--space-5); }
+  .admin-main { padding-top: var(--space-8); }
+}
+@media (max-width: 639px) {
+  .admin-form__actions, .admin-table__actions { flex-wrap: wrap; gap: var(--space-2); }
+  .admin-request-detail__adjust-line { grid-template-columns: minmax(0, 1fr) auto; }
+}
+@media (max-width: 767px) {
+  .admin-header__brand { flex-basis: auto; order: 0; }
+  .admin-header__menu-btn { margin-left: auto; order: 1; }
+  .admin-header__season { flex-basis: 100%; max-width: none; order: 2; }
+  .admin-header__nav--panel { order: 3; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

@@ -6,8 +6,8 @@ import { useEstimate } from '../context/EstimateContext'
  * Fixed WhatsApp chat FAB — stall number from siteConfig via wa.me helper.
  * @param {{ aboveMobileStickyBar?: boolean }} props
  */
-export default function FloatingWhatsAppButton({ aboveMobileStickyBar = false }) {
-  const url = getWhatsAppEnquiryUrl()
+export default function FloatingWhatsAppButton({ aboveMobileStickyBar = false, hrefOverride }) {
+  const url = hrefOverride === undefined ? getWhatsAppEnquiryUrl() : hrefOverride
   const { pathname } = useLocation()
   const { estimateCount } = useEstimate()
 

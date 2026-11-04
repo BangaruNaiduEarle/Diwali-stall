@@ -1,3 +1,4 @@
+import { bindAdminServiceMode } from '../src/lib/adminServiceMode.js'
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import worker from '../src/index.js'
@@ -8,9 +9,16 @@ import {
   resolveRequestLines,
 } from '../src/services/publicCustomerRequests.js'
 import { createMockCustomerRequestDb } from './helpers/mockCustomerRequestDb.js'
+import { DEFAULT_ADMIN_SEASON_ID } from '../src/services/adminSeasonContext.js'
 
 const baseProducts = [
-  { id: 'P001', name: 'Gift Box', active: 1, stock_status: 'available' },
+  {
+    id: 'P001',
+    name: 'Gift Box',
+    active: 1,
+    stock_status: 'available',
+    selling_price_paise: 169_400,
+  },
   { id: 'P002', name: 'Inactive', active: 0, stock_status: 'available' },
 ]
 const baseFamilyPacks = [
@@ -19,12 +27,12 @@ const baseFamilyPacks = [
 ]
 
 function workflowDb(overrides = {}) {
-  return createMockCustomerRequestDb({
+  return bindAdminServiceMode(createMockCustomerRequestDb({
     products: baseProducts,
     familyPacks: baseFamilyPacks,
     privateRates: new Map([['P001', 169_400]]),
     ...overrides,
-  })
+  }), { ADMIN_LOCATION_MODE: '0' })
 }
 
 describe('mixed estimate → D1 → admin', () => {
@@ -83,9 +91,17 @@ describe('mixed estimate → D1 → admin', () => {
 
   it('rejects deactivated family pack and inactive product on forged API payload', async () => {
     const db = workflowDb()
-    const badProduct = await resolveRequestLines(db, [{ productId: 'P002', quantity: 1 }])
+    const badProduct = await resolveRequestLines(
+      db,
+      [{ productId: 'P002', quantity: 1 }],
+      DEFAULT_ADMIN_SEASON_ID,
+    )
     assert.equal(badProduct.ok, false)
-    const badPack = await resolveRequestLines(db, [{ familyPackId: 'FP002', quantity: 1 }])
+    const badPack = await resolveRequestLines(
+      db,
+      [{ familyPackId: 'FP002', quantity: 1 }],
+      DEFAULT_ADMIN_SEASON_ID,
+    )
     assert.equal(badPack.ok, false)
   })
 
@@ -112,7 +128,11 @@ describe('mixed estimate → D1 → admin', () => {
       .all()
 
     assert.equal(itemsResult.results?.length, 2)
-    const built = await buildQuoteLinesForRequestItems(db, itemsResult.results ?? [])
+    const built = await buildQuoteLinesForRequestItems(
+      db,
+      itemsResult.results ?? [],
+      DEFAULT_ADMIN_SEASON_ID,
+    )
     assert.equal(built.ok, true)
     if (!built.ok) return
     assert.equal(built.quoteLines.length, 2)
@@ -143,7 +163,11 @@ describe('mixed estimate → D1 → admin', () => {
       )
       .bind('req-snapshot')
       .all()
-    const built = await buildQuoteLinesForRequestItems(db, itemsResult.results ?? [])
+    const built = await buildQuoteLinesForRequestItems(
+      db,
+      itemsResult.results ?? [],
+      DEFAULT_ADMIN_SEASON_ID,
+    )
     assert.equal(built.ok, true)
     if (built.ok) assert.equal(built.quoteLines[0].unit_rate_paise, 50_000)
   })

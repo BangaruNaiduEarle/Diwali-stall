@@ -1,9 +1,11 @@
+import { customerRequestDb, customerRequestScope, validateScopedRequest, validateTransactionCatalogueReferences } from './adminCustomerRequestScope.js'
 import {
   buildManualRequestInternalPricingPreview,
   buildRequestInternalPricingView,
   manualRequestEligibleForInternalPricingPreview,
 } from './adminInternalPricingPreview.js'
 import { canViewSensitiveProductPricing } from './adminRoles.js'
+import { billPurchaseSummary } from './billPurchaseSummary.js'
 import {
   catalogueSellingUnitRates,
   presentCustomerFacingQuotation,
@@ -19,6 +21,7 @@ const RESTRICTED_QUOTATION_AUDIT_KEYS = [
   'bargainFloorPaise',
   'acceptedAmountPaise',
   'internalPricingPreview',
+  'internalFinancialSummary',
 ]
 
 /**
@@ -40,11 +43,15 @@ export function stripQuotationAuditFieldsForRestrictedRole(quotation) {
  * @param {string} productId
  * @param {unknown} unitPaise
  */
-export async function shouldRedactNonSellingUnitRateForAdmin(db, productId, unitPaise) {
+export async function shouldRedactNonSellingUnitRateForAdmin(db, productId, unitPaise, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context)
+  await validateTransactionCatalogueReferences(db, [{ productId }])
   const u = unitPaise == null ? null : Number(unitPaise)
+  const restricted = Boolean(customerRequestScope(db))
+  if (restricted && (!Number.isSafeInteger(unitPaise) || unitPaise <= 0)) return true
   if (!Number.isInteger(u) || u <= 0) return false
   const rates = await catalogueSellingUnitRates(db, String(productId))
-  if (!rates) return false
+  if (!rates) return restricted
   if (u === rates.boxPaise) return false
   if (rates.loosePaise != null && u === rates.loosePaise) return false
   return true
@@ -57,13 +64,15 @@ export async function shouldRedactNonSellingUnitRateForAdmin(db, productId, unit
  * @param {Record<string, unknown> | null | undefined} quotation
  * @param {unknown} role
  */
-export async function filterQuotationForRole(db, quotation, role) {
+export async function filterQuotationForRole(db, quotation, role, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context)
   if (!quotation) return quotation
 
   const presented = await presentCustomerFacingQuotation(
     db,
     quotation,
     quotation.customerRequestId ?? null,
+    seasonId,
   )
 
   if (canViewSensitiveProductPricing(role)) {
@@ -79,8 +88,13 @@ export async function filterQuotationForRole(db, quotation, role) {
  * @param {D1Database} db
  * @param {unknown} items
  */
-export async function attachProductCompanyToQuotationItems(db, items) {
+export async function attachProductCompanyToQuotationItems(db, items, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context)
   if (!Array.isArray(items) || items.length === 0) return items
+
+  await validateTransactionCatalogueReferences(db, items)
+  const season = String(seasonId ?? '').trim()
+  if (!season) return items
 
   /** @type {string[]} */
   const productIds = []
@@ -94,8 +108,8 @@ export async function attachProductCompanyToQuotationItems(db, items) {
 
   const placeholders = uniqueIds.map(() => '?').join(', ')
   const result = await db
-    .prepare(`SELECT id, company FROM products WHERE id IN (${placeholders})`)
-    .bind(...uniqueIds)
+    .prepare(`SELECT id, company FROM products WHERE season_id = ? AND id IN (${placeholders})`)
+    .bind(season, ...uniqueIds)
     .all()
 
   /** @type {Map<string, string | null>} */
@@ -128,15 +142,23 @@ export async function attachProductCompanyToQuotationItems(db, items) {
  * @param {Record<string, unknown> | null | undefined} quotation
  * @param {unknown} role
  * @param {Record<string, unknown> | null | undefined} [request]
+ * @param {string} seasonId
  */
-export async function filterQuotationForCustomerRequestDetail(db, quotation, role, request) {
-  const filtered = await filterQuotationForRole(db, quotation, role)
+export async function filterQuotationForCustomerRequestDetail(db, quotation, role, request, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context)
+  await validateScopedRequest(db, request)
+  if (customerRequestScope(db) && request && quotation && request.id !== quotation.customerRequestId) {
+    throw Object.assign(new Error('Quotation and request ownership do not match.'), { status: 409, code: 'request_ownership_mismatch' })
+  }
+  const filtered = await filterQuotationForRole(db, quotation, role, customerRequestScope(db)?.seasonId)
   if (!filtered) return filtered
 
   const withCompany = {
     ...filtered,
-    items: await attachProductCompanyToQuotationItems(db, filtered.items),
+    items: await attachProductCompanyToQuotationItems(db, filtered.items, seasonId),
   }
+
+  if (canViewSensitiveProductPricing(role)) withCompany.internalFinancialSummary = await billPurchaseSummary(db, request, withCompany, role, seasonId)
 
   if (!canViewSensitiveProductPricing(role)) {
     return withCompany
@@ -147,7 +169,7 @@ export async function filterQuotationForCustomerRequestDetail(db, quotation, rol
   if (!manualRequestEligibleForInternalPricingPreview(request)) {
     return withCompany
   }
-  const preview = await buildManualRequestInternalPricingPreview(db, request?.items)
+  const preview = await buildManualRequestInternalPricingPreview(db, request?.items, seasonId)
   if (!preview) return withCompany
   return { ...withCompany, internalPricingPreview: preview }
 }
@@ -170,11 +192,13 @@ function stripInternalFieldsFromRequestForAdmin(request) {
   return next
 }
 
-export async function filterCustomerRequestDetailForRole(db, request, role) {
+export async function filterCustomerRequestDetailForRole(db, request, role, seasonId, context) {
+  db = customerRequestDb(db, seasonId, context)
+  await validateScopedRequest(db, request)
   if (!request) return request
 
   if (canViewSensitiveProductPricing(role)) {
-    const internalPricingView = await buildRequestInternalPricingView(db, request.items)
+    const internalPricingView = await buildRequestInternalPricingView(db, request.items, seasonId)
     return {
       ...request,
       ...(internalPricingView ? { internalPricingView } : {}),
@@ -185,6 +209,12 @@ export async function filterCustomerRequestDetailForRole(db, request, role) {
     (request.items ?? []).map(async (item) => {
       if (!item || typeof item !== 'object') return item
       const productId = item.productId
+      if (customerRequestScope(db) && !productId && item.unitPricePaise != null) {
+        const pack = item.familyPackId
+          ? await db.prepare('SELECT selling_price_paise FROM family_packs WHERE id = ?').bind(item.familyPackId).first() : null
+        const price = pack?.selling_price_paise
+        if (!Number.isSafeInteger(price) || price <= 0 || item.unitPricePaise !== price) return { ...item, unitPricePaise: null }
+      }
       if (!productId || item.unitPricePaise == null) return item
       const redact = await shouldRedactNonSellingUnitRateForAdmin(db, String(productId), item.unitPricePaise)
       if (!redact) return item

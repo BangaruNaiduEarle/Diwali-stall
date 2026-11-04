@@ -8,6 +8,7 @@ import {
   restoreAdminProduct,
   updateAdminProduct,
 } from '../src/services/adminProducts.js'
+import { DEFAULT_ADMIN_SEASON_ID } from '../src/services/adminSeasonContext.js'
 import { listPublicProducts } from '../src/services/publicProducts.js'
 import { createLocalD1Database } from './helpers/localD1Database.js'
 import { d1QueryLocal } from './helpers/d1Local.js'
@@ -29,7 +30,7 @@ after(() => {
 describe('admin product service', { concurrency: 1 }, () => {
   it('rejects invalid validation on create', async () => {
     const db = createLocalD1Database()
-    const result = await createAdminProduct(db, {
+    const result = await createAdminProduct(db, DEFAULT_ADMIN_SEASON_ID, {
       id: 'bad',
       name: 'X',
       categorySlug: 'others',
@@ -42,7 +43,7 @@ describe('admin product service', { concurrency: 1 }, () => {
   it('creates, deactivates, and reactivates product', async () => {
     deleteTestProductsById([ADMIN_ARCHIVE_PRODUCT_ID])
     const db = createLocalD1Database()
-    const created = await createAdminProduct(db, {
+    const created = await createAdminProduct(db, DEFAULT_ADMIN_SEASON_ID, {
       id: ADMIN_ARCHIVE_PRODUCT_ID,
       name: 'Admin Archive Product',
       categorySlug: 'others',
@@ -59,7 +60,7 @@ describe('admin product service', { concurrency: 1 }, () => {
     }
     assert.equal(created.ok, true)
 
-    const archived = await archiveAdminProduct(db, ADMIN_ARCHIVE_PRODUCT_ID)
+    const archived = await archiveAdminProduct(db, DEFAULT_ADMIN_SEASON_ID, ADMIN_ARCHIVE_PRODUCT_ID)
     if (!archived.ok) {
       assert.fail(`archive failed: ${JSON.stringify(archived)}`)
     }
@@ -67,10 +68,10 @@ describe('admin product service', { concurrency: 1 }, () => {
       `SELECT active FROM products WHERE id = '${ADMIN_ARCHIVE_PRODUCT_ID}'`,
     )[0]
     assert.equal(Number(activeRow?.active), 0)
-    const listed = await listAdminProducts(db, { includeArchived: false })
+    const listed = await listAdminProducts(db, { seasonId: DEFAULT_ADMIN_SEASON_ID, includeArchived: false })
     assert.ok(!listed.some((p) => p.id === ADMIN_ARCHIVE_PRODUCT_ID))
 
-    const restored = await restoreAdminProduct(db, ADMIN_ARCHIVE_PRODUCT_ID)
+    const restored = await restoreAdminProduct(db, DEFAULT_ADMIN_SEASON_ID, ADMIN_ARCHIVE_PRODUCT_ID)
     assert.equal(restored.ok, true)
     if (restored.ok) assert.equal(restored.product.active, true)
   })
@@ -78,7 +79,7 @@ describe('admin product service', { concurrency: 1 }, () => {
   it('persists sellingPriceInr on the product row for admin list display', async () => {
     deleteTestProductsById([ADMIN_UPDATE_PRODUCT_ID])
     const db = createLocalD1Database()
-    const created = await createAdminProduct(db, {
+    const created = await createAdminProduct(db, DEFAULT_ADMIN_SEASON_ID, {
       id: ADMIN_UPDATE_PRODUCT_ID,
       name: 'Priced product',
       categorySlug: 'others',
@@ -90,7 +91,7 @@ describe('admin product service', { concurrency: 1 }, () => {
     if (created.ok) {
       assert.equal(created.product?.sellingPriceInr, 163)
     }
-    const listed = await listAdminProducts(db, { includeArchived: true })
+    const listed = await listAdminProducts(db, { seasonId: DEFAULT_ADMIN_SEASON_ID, includeArchived: true })
     const row = listed.find((p) => p.id === ADMIN_UPDATE_PRODUCT_ID)
     assert.equal(row?.sellingPriceInr, 163)
   })
@@ -98,7 +99,7 @@ describe('admin product service', { concurrency: 1 }, () => {
   it('updates fields', async () => {
     deleteTestProductsById([ADMIN_UPDATE_PRODUCT_ID])
     const db = createLocalD1Database()
-    const created = await createAdminProduct(db, {
+    const created = await createAdminProduct(db, DEFAULT_ADMIN_SEASON_ID, {
       id: ADMIN_UPDATE_PRODUCT_ID,
       name: 'Before',
       categorySlug: 'others',
@@ -106,10 +107,12 @@ describe('admin product service', { concurrency: 1 }, () => {
       stockStatus: 'available',
     })
     assert.equal(created.ok, true, JSON.stringify(created))
-    const updated = await updateAdminProduct(db, ADMIN_UPDATE_PRODUCT_ID, { name: 'After' })
+    const updated = await updateAdminProduct(db, DEFAULT_ADMIN_SEASON_ID, ADMIN_UPDATE_PRODUCT_ID, {
+      name: 'After',
+    })
     assert.equal(updated.ok, true)
     if (updated.ok) assert.equal(updated.product?.name, 'After')
-    const row = await getAdminProductById(db, ADMIN_UPDATE_PRODUCT_ID)
+    const row = await getAdminProductById(db, DEFAULT_ADMIN_SEASON_ID, ADMIN_UPDATE_PRODUCT_ID)
     assert.equal(row?.name, 'After')
   })
 
@@ -120,7 +123,7 @@ describe('admin product service', { concurrency: 1 }, () => {
       'https://res.cloudinary.com/demo/image/upload/v1/diwali/products/P903/1.webp',
       'https://res.cloudinary.com/demo/image/upload/v1/diwali/products/P903/2.webp',
     ]
-    const created = await createAdminProduct(db, {
+    const created = await createAdminProduct(db, DEFAULT_ADMIN_SEASON_ID, {
       id: ADMIN_IMAGE_ORDER_PRODUCT_ID,
       name: 'Image order',
       categorySlug: 'others',
@@ -130,12 +133,14 @@ describe('admin product service', { concurrency: 1 }, () => {
     })
     assert.equal(created.ok, true, JSON.stringify(created))
 
-    const updated = await updateAdminProduct(db, ADMIN_IMAGE_ORDER_PRODUCT_ID, { images: urls })
+    const updated = await updateAdminProduct(db, DEFAULT_ADMIN_SEASON_ID, ADMIN_IMAGE_ORDER_PRODUCT_ID, {
+      images: urls,
+    })
     assert.equal(updated.ok, true)
     if (updated.ok) {
       assert.deepEqual(updated.product.images, urls)
     }
-    const row = await getAdminProductById(db, ADMIN_IMAGE_ORDER_PRODUCT_ID)
+    const row = await getAdminProductById(db, DEFAULT_ADMIN_SEASON_ID, ADMIN_IMAGE_ORDER_PRODUCT_ID)
     assert.deepEqual(row?.images, urls)
 
     const publicRows = await listPublicProducts(db, { limit: 100, offset: 0 })

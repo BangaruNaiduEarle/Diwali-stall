@@ -20,8 +20,9 @@ import {
 } from '../lib/customerRequestStatus.js'
 
 export default function AdminCustomerRequestsPage() {
-  const { role, email: sessionEmail } = useAdminSession()
-  const canFilterAssignedToMe = canViewSensitiveProductPricing(role)
+  const { role, permissionRole: seasonRole, activeSeasonId, email: sessionEmail } = useAdminSession()
+  const pricingPermissionRole = activeSeasonId != null ? seasonRole : role
+  const canFilterAssignedToMe = canViewSensitiveProductPricing(pricingPermissionRole)
   const [requests, setRequests] = useState(/** @type {Record<string, unknown>[]} */ ([]))
   const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, totalPages: 0 })
   const [loading, setLoading] = useState(true)
@@ -35,17 +36,21 @@ export default function AdminCustomerRequestsPage() {
   const requestSeq = useRef(0)
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQ(searchInput.trim()), 300)
+    const timer = setTimeout(() => {
+      setPage(1)
+      setDebouncedQ(searchInput.trim())
+    }, 300)
     return () => clearTimeout(timer)
   }, [searchInput])
 
   useEffect(() => {
     setPage(1)
-  }, [statusFilter, debouncedQ, stallFinalizationFilter, assignedToMeOnly])
+  }, [statusFilter, stallFinalizationFilter, assignedToMeOnly])
 
   const clearSearch = useCallback(() => {
     setSearchInput('')
     setDebouncedQ('')
+    setPage(1)
   }, [])
 
   const load = useCallback(async () => {
@@ -79,6 +84,7 @@ export default function AdminCustomerRequestsPage() {
 
   useEffect(() => {
     load()
+    return () => { requestSeq.current += 1 }
   }, [load])
 
   const resultsSummary = useMemo(() => {
@@ -104,11 +110,11 @@ export default function AdminCustomerRequestsPage() {
           <input
             type="search"
             className={`admin-input admin-search__input${searchInput ? ' admin-search__input--clearable' : ''}`}
-            placeholder="Search by customer name or phone number..."
+            placeholder="Search by reference ID, customer name or phone..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             autoComplete="off"
-            aria-label="Search by customer name or phone number"
+            aria-label="Search by reference ID, customer name or phone number"
           />
           {searchInput ? (
             <button type="button" className="admin-search__clear" onClick={clearSearch} aria-label="Clear search">
@@ -188,7 +194,7 @@ export default function AdminCustomerRequestsPage() {
         <div className="admin-state">
           {debouncedQ ? (
             <>
-              <p>No customer requests found. Try another name or phone number.</p>
+              <p>No customer requests found. Try another reference ID, name or phone number.</p>
               <button type="button" className="admin-link-button" onClick={clearSearch}>
                 Clear search
               </button>

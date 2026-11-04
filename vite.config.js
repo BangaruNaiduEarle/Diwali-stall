@@ -1,6 +1,7 @@
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig, loadEnv } from 'vite'
+import { pwaShellPlugin } from './scripts/pwaShellPlugin.js'
 
 /**
  * Dev-only: remind when proxied admin auth JWT is missing (never log the token).
@@ -27,7 +28,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
   return {
-    plugins: [react(), tailwindcss(), localAdminProxyHintPlugin(env)],
+    plugins: [react(), tailwindcss(), localAdminProxyHintPlugin(env), pwaShellPlugin()],
     server: {
       // Local dev: proxy admin API to wrangler dev (default http://127.0.0.1:8787).
       // Production: Vercel rewrites /api/* to the Worker; leave VITE_API_BASE_URL empty in Vercel builds.

@@ -2,7 +2,7 @@
  * Business configuration — import siteConfig in components; do not duplicate fields.
  */
 export const siteConfig = {
-  brandName: '',
+  brandName: 'VRK Crackers Catalogue',
 
   /** Local WhatsApp/mobile number (10 digits, no country code in UI) */
   whatsappNumber: '9392748665',

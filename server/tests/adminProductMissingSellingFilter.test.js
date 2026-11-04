@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { listAdminProductsPage } from '../src/services/adminProducts.js'
+import { DEFAULT_ADMIN_SEASON_ID } from '../src/services/adminSeasonContext.js'
 
 function createDb(products) {
   return {
@@ -98,7 +99,12 @@ describe('listAdminProductsPage missingRateOnly', () => {
 
   it('filters on products.selling_price_paise, not private_rates', async () => {
     const db = createDb(seed)
-    const page = await listAdminProductsPage(db, { limit: 10, offset: 0, missingRateOnly: true })
+    const page = await listAdminProductsPage(db, {
+      seasonId: DEFAULT_ADMIN_SEASON_ID,
+      limit: 10,
+      offset: 0,
+      missingRateOnly: true,
+    })
     assert.equal(page.total, 2)
     const ids = page.products.map((p) => p.id).sort()
     assert.deepEqual(ids, ['P002', 'P003'])

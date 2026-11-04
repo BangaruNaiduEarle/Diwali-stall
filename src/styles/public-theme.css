@@ -1,0 +1,131 @@
+/* Public layout only. Shared root/admin tokens remain unchanged. */
+body.public-theme {
+  --color-page: #FBF5F5;
+  --color-navy: #5A1720;
+  --color-navy-hover: #421018;
+  --color-charcoal: #351018;
+  --color-muted: #78313A;
+  --color-muted-on-page: #78313A;
+  --color-slate: #78313A;
+  --color-border: #E5CDD0;
+  --color-border-control: #78313A;
+  --color-surface-muted: #F6ECEE;
+  --color-surface-hover: #F6ECEE;
+  --color-focus: #5A1720;
+  --color-brand: #5A1720;
+  --color-brand-dark: #421018;
+  --color-brand-deep: #351018;
+  --color-brand-text: #5A1720;
+  --color-maroon: #5A1720;
+  --color-maroon-deep: #351018;
+  --color-maroon-soft: #F6ECEE;
+  --color-gold: #966112;
+  --color-gold-light: #FFE0A3;
+  --color-red: #5A1720;
+  --color-saffron: #A75516;
+  --color-ivory: #FBF5F5;
+  --color-ink: #351018;
+  --color-ref-price: #78313A;
+  --color-border-warm: #78313A;
+  --color-border-faint: #E5CDD0;
+  --color-image-well: #FBF5F5;
+  --color-error-text: #78313A;
+  --color-error-soft: #F6ECEE;
+  --hero-maroon-bg: #351018;
+  --color-diwali-navy: var(--color-brand);
+  --color-diwali-navy-muted: var(--color-surface-muted);
+  --color-diwali-gold: var(--color-gold);
+  --color-diwali-gold-dark: var(--color-gold);
+  --color-diwali-gold-light: var(--color-surface-muted);
+  --color-diwali-cream: var(--color-ivory);
+  --color-diwali-ink: var(--color-charcoal);
+  --color-diwali-muted: var(--color-muted);
+  --color-diwali-border: var(--color-border);
+  --color-diwali-orange: var(--color-saffron);
+  --color-diwali-red: var(--color-brand);
+  --shadow-card: 0 1px 4px rgb(90 23 32 / 6%);
+  --shadow-raised: 0 4px 16px rgb(90 23 32 / 9%);
+  --shadow-hover: 0 4px 16px rgb(90 23 32 / 9%);
+  --btn-shadow-hover: var(--shadow-hover);
+  background: var(--color-page);
+  color: var(--color-charcoal);
+}
+
+.public-theme .nav-link[aria-current='page']::after,
+.public-theme .nav-link.nav-link--active::after {
+  background: var(--color-brand);
+}
+.public-theme .nav-drawer-link[aria-current='page'],
+.public-theme .nav-drawer-link.nav-drawer-link--current {
+  box-shadow: inset 3px 0 0 var(--color-brand);
+  background: var(--color-surface-muted);
+}
+.public-theme .nav-categories-item--active {
+  background: var(--color-surface-muted);
+}
+.public-theme .header-brand:hover { color: var(--color-brand-dark); }
+.public-theme .header-estimate-btn,
+.public-theme .ui-btn--secondary-light,
+.public-theme .hero-btn--secondary {
+  color: var(--color-brand);
+  border-color: var(--color-brand);
+}
+.public-theme .ui-btn--secondary-light:hover:not(:disabled):not([aria-disabled='true']),
+.public-theme .hero-btn--secondary:hover {
+  color: var(--color-brand-dark);
+  background: var(--color-surface-muted);
+  border-color: var(--color-brand-dark);
+}
+.public-theme .discount-pill {
+  background: var(--color-surface-muted);
+  color: var(--color-brand);
+}
+.public-theme .preorder-marquee {
+  background: var(--color-surface-muted);
+  color: var(--color-brand-dark);
+  border-color: var(--color-border);
+}
+.public-theme .gift-promo-aside,
+.public-theme .gift-promo-inline,
+.public-theme .gift-promo-marquee,
+.public-theme .gift-promo-strip {
+  background: #FFF5DF;
+  color: #77450E;
+  border-color: #D8B571;
+  animation: none;
+}
+.public-theme .gift-promo-aside *,
+.public-theme .gift-promo-inline *,
+.public-theme .gift-promo-marquee *,
+.public-theme .gift-promo-strip * { color: inherit; }
+.public-theme .gift-promo-marquee__static {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem 0.5rem;
+}
+
+/* Burgundy icons on light surfaces; contrasting icons inside filled controls/dark surfaces. */
+.public-theme .lucide { color: var(--color-brand); }
+.public-theme .ui-btn--primary-light .lucide,
+.public-theme .ui-btn--primary-dark .lucide,
+.public-theme .hero-btn--primary .lucide,
+.public-theme .ui-btn--ghost-dark .lucide,
+.public-theme .site-footer .lucide { color: #FFFFFF; }
+.public-theme .diwali-hero .hero-benefit-icon { color: var(--color-gold-light); }
+.public-theme .diwali-hero-overlay { background: rgb(53 16 24 / 74%); }
+.public-theme .site-footer { background: var(--color-brand-deep); }
+.public-theme .site-footer .footer-heading { color: var(--color-gold-light); }
+.public-theme .site-footer .footer-link { color: var(--color-ivory); }
+.public-theme .site-footer .footer-link:hover,
+.public-theme .site-footer .footer-link--active { color: var(--color-gold-light); }
+.public-theme .section-maroon { --color-gold: #FFF0C9; }
+.public-theme .section-maroon .editorial-label .lucide { color: inherit; }
+
+.public-theme :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+.public-theme .nav-categories-item:focus-visible { outline-offset: -3px; }
+.public-theme .diwali-hero :focus-visible,
+.public-theme .section-maroon :focus-visible,
+.public-theme .site-footer :focus-visible { outline-color: #FFFFFF; }

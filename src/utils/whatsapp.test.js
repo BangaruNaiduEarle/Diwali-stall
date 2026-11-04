@@ -20,7 +20,6 @@ describe('buildWhatsAppEstimateMessage', () => {
     )
     assert.match(message, /Estimate Reference: DWL-ABCDEFGH/)
     assert.match(message, /1\. Demo — Qty: 2/)
-    assert.match(message, /Please confirm availability and share your quotation\.$/)
   })
 
   it('omits reference line when not provided', () => {

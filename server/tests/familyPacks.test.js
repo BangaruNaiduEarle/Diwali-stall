@@ -17,7 +17,9 @@ import {
 import { getPublicFamilyPackBySlug, listPublicFamilyPacks } from '../src/services/publicFamilyPacks.js'
 import { validateCustomerRequestBody } from '../src/lib/customerRequestValidation.js'
 import { resolveRequestLines } from '../src/services/publicCustomerRequests.js'
+import { DEFAULT_ADMIN_SEASON_ID } from '../src/services/adminSeasonContext.js'
 
+const SEASON = DEFAULT_ADMIN_SEASON_ID
 const LOCAL_SECRET = 'local-dev-secret-at-least-32-characters-long'
 const ALLOWED_EMAIL = 'owner@example.com'
 
@@ -39,6 +41,7 @@ async function adminFetch(path, { method = 'GET', body, db } = {}) {
     method,
     headers: {
       'Cf-Access-Jwt-Assertion': token,
+      'X-Admin-Season-Id': SEASON,
       ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
@@ -80,7 +83,7 @@ describe('family pack validation', () => {
 describe('family pack service (mock D1)', () => {
   it('creates draft pack with no items then persists images via update', async () => {
     const db = createFamilyPackMockDb()
-    const created = await createAdminFamilyPack(db, {
+    const created = await createAdminFamilyPack(db, SEASON, {
       name: 'Photos First',
       slug: 'photos-first',
       sellingPriceInr: 250,
@@ -92,7 +95,7 @@ describe('family pack service (mock D1)', () => {
     assert.equal(created.pack.items.length, 0)
 
     const imageA = 'https://res.cloudinary.com/demo/image/upload/v1/a.jpg'
-    const updated = await updateAdminFamilyPack(db, created.pack.id, {
+    const updated = await updateAdminFamilyPack(db, created.pack.id, SEASON, {
       name: 'Photos First',
       slug: 'photos-first',
       sellingPriceInr: 250,
@@ -107,7 +110,7 @@ describe('family pack service (mock D1)', () => {
 
   it('creates pack, lists public active only, and hides inactive', async () => {
     const db = createFamilyPackMockDb()
-    const created = await createAdminFamilyPack(db, {
+    const created = await createAdminFamilyPack(db, SEASON, {
       name: 'Happy Family',
       slug: 'happy-family',
       sellingPriceInr: 999,
@@ -127,20 +130,20 @@ describe('family pack service (mock D1)', () => {
     assert.ok(detail)
     assert.equal(detail.items.length, 1)
 
-    await setAdminFamilyPackActive(db, created.pack.id, false)
+    await setAdminFamilyPackActive(db, created.pack.id, false, SEASON)
     const hidden = await listPublicFamilyPacks(db)
     assert.equal(hidden.length, 0)
     const missing = await getPublicFamilyPackBySlug(db, 'happy-family')
     assert.equal(missing, null)
 
-    const adminView = await getAdminFamilyPackById(db, created.pack.id)
+    const adminView = await getAdminFamilyPackById(db, created.pack.id, SEASON)
     assert.ok(adminView)
     assert.equal(adminView.active, false)
   })
 
   it('persists multiple images on update and exposes cover plus order on public API', async () => {
     const db = createFamilyPackMockDb()
-    const created = await createAdminFamilyPack(db, {
+    const created = await createAdminFamilyPack(db, SEASON, {
       name: 'Budget Mix Pack',
       slug: 'budget-mix-pack',
       sellingPriceInr: 499,
@@ -153,7 +156,7 @@ describe('family pack service (mock D1)', () => {
 
     const imageA = 'https://res.cloudinary.com/demo/image/upload/v1/family-packs/fp-a.jpg'
     const imageB = 'https://res.cloudinary.com/demo/image/upload/v1/family-packs/fp-b.jpg'
-    const updated = await updateAdminFamilyPack(db, id, {
+    const updated = await updateAdminFamilyPack(db, id, SEASON, {
       name: 'Budget Mix Pack',
       slug: 'budget-mix-pack',
       sellingPriceInr: 499,
@@ -167,7 +170,7 @@ describe('family pack service (mock D1)', () => {
     assert.equal(updated.ok, true)
     if (!updated.ok) return
 
-    const adminView = await getAdminFamilyPackById(db, id)
+    const adminView = await getAdminFamilyPackById(db, id, SEASON)
     assert.ok(adminView)
     assert.equal(adminView.images.length, 2)
     assert.equal(adminView.images[0].url, imageA)
@@ -187,7 +190,7 @@ describe('family pack service (mock D1)', () => {
 
   it('deactivated pack rejects customer request lines', async () => {
     const db = createFamilyPackMockDb()
-    const created = await createAdminFamilyPack(db, {
+    const created = await createAdminFamilyPack(db, SEASON, {
       name: 'Inactive Me',
       slug: 'inactive-me',
       sellingPriceInr: 500,
@@ -197,7 +200,7 @@ describe('family pack service (mock D1)', () => {
     assert.equal(created.ok, true)
     if (!created.ok) return
 
-    await setAdminFamilyPackActive(db, created.pack.id, false)
+    await setAdminFamilyPackActive(db, created.pack.id, false, SEASON)
     const lines = await resolveRequestLines(db, [{ familyPackId: created.pack.id, quantity: 1 }])
     assert.equal(lines.ok, false)
   })
@@ -212,7 +215,7 @@ describe('family pack service (mock D1)', () => {
 
   it('updates name, price, images, and items without duplicating children', async () => {
     const db = createFamilyPackMockDb()
-    const created = await createAdminFamilyPack(db, {
+    const created = await createAdminFamilyPack(db, SEASON, {
       name: 'Original',
       slug: 'original',
       sellingPriceInr: 100,
@@ -224,7 +227,7 @@ describe('family pack service (mock D1)', () => {
     if (!created.ok) return
     const id = created.pack.id
 
-    const updated = await updateAdminFamilyPack(db, id, {
+    const updated = await updateAdminFamilyPack(db, id, SEASON, {
       name: 'Renamed Pack',
       slug: 'renamed-pack',
       sellingPriceInr: 250,
@@ -246,14 +249,14 @@ describe('family pack service (mock D1)', () => {
     assert.equal(updated.pack.items.length, 1)
     assert.equal(updated.pack.items[0].quantity, 3)
 
-    const again = await getAdminFamilyPackById(db, id)
+    const again = await getAdminFamilyPackById(db, id, SEASON)
     assert.equal(again?.items.length, 1)
     assert.equal(again?.images.length, 2)
   })
 
   it('reactivates a deactivated pack', async () => {
     const db = createFamilyPackMockDb()
-    const created = await createAdminFamilyPack(db, {
+    const created = await createAdminFamilyPack(db, SEASON, {
       name: 'Toggle Me',
       slug: 'toggle-me',
       sellingPriceInr: 400,
@@ -262,15 +265,15 @@ describe('family pack service (mock D1)', () => {
     })
     assert.equal(created.ok, true)
     if (!created.ok) return
-    await setAdminFamilyPackActive(db, created.pack.id, false)
-    await setAdminFamilyPackActive(db, created.pack.id, true)
-    const pack = await getAdminFamilyPackById(db, created.pack.id)
+    await setAdminFamilyPackActive(db, created.pack.id, false, SEASON)
+    await setAdminFamilyPackActive(db, created.pack.id, true, SEASON)
+    const pack = await getAdminFamilyPackById(db, created.pack.id, SEASON)
     assert.equal(pack?.active, true)
   })
 
   it('deletes unreferenced pack and removes child rows', async () => {
     const db = createFamilyPackMockDb()
-    const created = await createAdminFamilyPack(db, {
+    const created = await createAdminFamilyPack(db, SEASON, {
       name: 'Disposable',
       slug: 'disposable',
       sellingPriceInr: 50,
@@ -281,14 +284,14 @@ describe('family pack service (mock D1)', () => {
     assert.equal(created.ok, true)
     if (!created.ok) return
     const id = created.pack.id
-    const deleted = await deleteAdminFamilyPack(db, id)
+    const deleted = await deleteAdminFamilyPack(db, id, SEASON)
     assert.equal(deleted.ok, true)
-    assert.equal(await getAdminFamilyPackById(db, id), null)
+    assert.equal(await getAdminFamilyPackById(db, id, SEASON), null)
   })
 
   it('blocks delete when customer request lines reference the pack', async () => {
     const db = createFamilyPackMockDb()
-    const created = await createAdminFamilyPack(db, {
+    const created = await createAdminFamilyPack(db, SEASON, {
       name: 'Referenced',
       slug: 'referenced',
       sellingPriceInr: 50,
@@ -298,11 +301,11 @@ describe('family pack service (mock D1)', () => {
     assert.equal(created.ok, true)
     if (!created.ok) return
     db.addCustomerRequestReference(created.pack.id)
-    const blocked = await deleteAdminFamilyPack(db, created.pack.id)
+    const blocked = await deleteAdminFamilyPack(db, created.pack.id, SEASON)
     assert.equal(blocked.ok, false)
     if (blocked.ok) return
     assert.equal(blocked.status, 409)
-    assert.ok(await getAdminFamilyPackById(db, created.pack.id))
+    assert.ok(await getAdminFamilyPackById(db, created.pack.id, SEASON))
   })
 })
 
@@ -400,7 +403,7 @@ describe('family pack admin HTTP (mock D1)', () => {
     assert.equal(getBody.familyPack.images[2].url, imageC)
     assert.equal(getBody.familyPack.images[2].isCover, true)
 
-    await setAdminFamilyPackActive(db, id, true)
+    await setAdminFamilyPackActive(db, id, true, SEASON)
     const publicDetail = await getPublicFamilyPackBySlug(db, 'new-pack-draft')
     assert.ok(publicDetail)
     assert.equal(publicDetail.coverImageUrl, imageC)
@@ -409,7 +412,7 @@ describe('family pack admin HTTP (mock D1)', () => {
 
   it('returns 409 when delete is blocked by customer request references', async () => {
     const db = createFamilyPackMockDb()
-    const created = await createAdminFamilyPack(db, {
+    const created = await createAdminFamilyPack(db, SEASON, {
       name: 'Blocked',
       slug: 'blocked',
       sellingPriceInr: 100,
@@ -455,7 +458,19 @@ describe('family pack HTTP auth', () => {
 
 function createFamilyPackMockDb() {
   /** @type {Map<string, Record<string, unknown>>} */
-  const products = new Map([['P001', { id: 'P001', name: 'Demo', active: 1, stock_status: 'available' }]])
+  const products = new Map([
+    [
+      'P001',
+      {
+        id: 'P001',
+        name: 'Demo',
+        active: 1,
+        stock_status: 'available',
+        season_id: SEASON,
+        pack: 'Box',
+      },
+    ],
+  ])
   /** @type {Map<string, Record<string, unknown>>} */
   const packs = new Map()
   /** @type {Map<string, Record<string, unknown>[]>} */
@@ -467,6 +482,13 @@ function createFamilyPackMockDb() {
   let nextFpNum = 1
   /** @type {Map<string, number>} */
   const requestRefsByPack = new Map()
+
+  /** @param {string} packId @param {string} seasonId */
+  function packInSeason(packId, seasonId) {
+    const pack = packs.get(String(packId))
+    if (!pack || String(pack.season_id ?? SEASON) !== String(seasonId)) return null
+    return pack
+  }
 
   const db = {
     addCustomerRequestReference(packId) {
@@ -482,6 +504,29 @@ function createFamilyPackMockDb() {
               if (normalized.includes('FROM admin_users')) {
                 const email = String(params[0]).toLowerCase()
                 if (email === ALLOWED_EMAIL.toLowerCase()) return { ok: 1 }
+                return null
+              }
+              if (normalized.includes('FROM platform_settings') && normalized.includes('public_catalogue_season_id')) {
+                return { public_catalogue_season_id: SEASON }
+              }
+              if (normalized.includes('FROM season_members sm')) {
+                return null
+              }
+              if (
+                normalized.includes('FROM family_packs') &&
+                normalized.includes('WHERE id = ? AND season_id = ?') &&
+                normalized.includes('active, archived')
+              ) {
+                const pack = packInSeason(String(params[0]), String(params[1]))
+                return pack ?? null
+              }
+              if (normalized.includes('SELECT selling_price_paise FROM family_packs WHERE id = ? AND season_id = ?')) {
+                const pack = packInSeason(String(params[0]), String(params[1]))
+                return pack ? { selling_price_paise: pack.selling_price_paise } : null
+              }
+              if (normalized.includes('FROM products') && normalized.includes('season_id = ?')) {
+                const product = products.get(String(params[0]))
+                if (product && product.season_id === params[1]) return { ok: 1 }
                 return null
               }
               if (normalized.includes('FROM products WHERE id')) {
@@ -507,8 +552,25 @@ function createFamilyPackMockDb() {
                 }
                 return max ? { id: `FP${String(max).padStart(3, '0')}` } : null
               }
+              if (normalized.includes('FROM family_packs fp WHERE fp.id = ? AND fp.season_id = ?')) {
+                return packInSeason(String(params[0]), String(params[1]))
+              }
               if (normalized.includes('FROM family_packs fp WHERE fp.id = ?')) {
                 return packs.get(String(params[0])) ?? null
+              }
+              if (normalized.includes('FROM family_packs fp WHERE fp.slug = ? AND fp.active = 1 AND fp.season_id = ?')) {
+                const slug = String(params[0])
+                const seasonId = String(params[1])
+                for (const pack of packs.values()) {
+                  if (
+                    pack.slug === slug &&
+                    pack.active === 1 &&
+                    String(pack.season_id ?? SEASON) === seasonId
+                  ) {
+                    return pack
+                  }
+                }
+                return null
               }
               if (normalized.includes('FROM family_packs fp WHERE fp.slug = ?')) {
                 for (const pack of packs.values()) {
@@ -519,6 +581,9 @@ function createFamilyPackMockDb() {
                 return null
               }
               if (normalized.includes('SELECT id, name, active, archived, selling_price_paise FROM family_packs')) {
+                if (params.length >= 2) {
+                  return packInSeason(String(params[0]), String(params[1]))
+                }
                 return packs.get(String(params[0])) ?? null
               }
               if (normalized.includes('SELECT 1 FROM family_packs WHERE slug = ?')) {
@@ -526,6 +591,10 @@ function createFamilyPackMockDb() {
                   if (pack.slug === params[0]) return { ok: 1 }
                 }
                 return null
+              }
+              if (normalized.includes('SELECT id, slug FROM family_packs WHERE id = ? AND season_id = ?')) {
+                const pack = packInSeason(String(params[0]), String(params[1]))
+                return pack ? { id: pack.id, slug: pack.slug } : null
               }
               if (normalized.includes('SELECT id, slug FROM family_packs WHERE id = ?')) {
                 const pack = packs.get(String(params[0]))
@@ -535,9 +604,22 @@ function createFamilyPackMockDb() {
                 const pack = packs.get(String(params[0]))
                 return pack ? { archived: pack.archived } : null
               }
+              if (normalized.includes('SELECT id, name FROM family_packs WHERE id = ? AND season_id = ?')) {
+                const pack = packInSeason(String(params[0]), String(params[1]))
+                return pack ? { id: pack.id, name: pack.name } : null
+              }
               if (normalized.includes('SELECT id, name FROM family_packs WHERE id = ?')) {
                 const pack = packs.get(String(params[0]))
                 return pack ? { id: pack.id, name: pack.name } : null
+              }
+              if (normalized.includes('SELECT id FROM family_packs WHERE id = ? AND season_id = ?')) {
+                return packInSeason(String(params[0]), String(params[1])) ? { id: params[0] } : null
+              }
+              if (normalized.includes('COUNT(*) AS total') && normalized.includes('customer_request_items cri')) {
+                const seasonId = String(params[0])
+                const packId = String(params[1])
+                if (!packInSeason(packId, seasonId)) return { total: 0 }
+                return { total: requestRefsByPack.get(packId) ?? 0 }
               }
               if (normalized.includes('COUNT(*) AS total FROM customer_request_items WHERE family_pack_id = ?')) {
                 return { total: requestRefsByPack.get(String(params[0])) ?? 0 }
@@ -545,6 +627,42 @@ function createFamilyPackMockDb() {
               return null
             },
             async all() {
+              if (normalized.includes('FROM season_members sm')) {
+                return {
+                  results: [
+                    {
+                      season_id: SEASON,
+                      role: 'owner',
+                      disabled_at: null,
+                      created_at: '',
+                      code: '2026',
+                      label: 'Diwali 2026',
+                      status: 'active',
+                    },
+                  ],
+                }
+              }
+              if (
+                normalized.includes('FROM family_packs fp') &&
+                normalized.includes('fp.active = 1 AND fp.season_id = ?')
+              ) {
+                const seasonId = String(params[0])
+                return {
+                  results: [...packs.values()]
+                    .filter(
+                      (p) => p.active === 1 && String(p.season_id ?? SEASON) === seasonId,
+                    )
+                    .map((p) => ({ ...p })),
+                }
+              }
+              if (normalized.includes('FROM family_packs fp') && normalized.includes('fp.season_id = ?')) {
+                const seasonId = String(params[0])
+                let rows = [...packs.values()].filter((p) => String(p.season_id ?? SEASON) === seasonId)
+                if (normalized.includes('fp.active = 1')) {
+                  rows = rows.filter((p) => p.active === 1)
+                }
+                return { results: rows.map((p) => ({ ...p })) }
+              }
               if (normalized.includes('FROM family_packs fp') && normalized.includes('active = 1') && !normalized.includes('WHERE fp.slug')) {
                 return {
                   results: [...packs.values()]
@@ -556,6 +674,12 @@ function createFamilyPackMockDb() {
                 return { results: [...packs.values()].map((p) => ({ ...p })) }
               }
               if (normalized.includes('FROM family_pack_images')) {
+                if (params.length >= 3) {
+                  const packId = String(params[0])
+                  const seasonId = String(params[2])
+                  if (!packInSeason(packId, seasonId)) return { results: [] }
+                  return { results: [...(images.get(packId) ?? [])] }
+                }
                 const packId = params.length === 1 ? String(params[0]) : null
                 if (packId) return { results: [...(images.get(packId) ?? [])] }
                 const ids = params
@@ -566,11 +690,34 @@ function createFamilyPackMockDb() {
                 return { results: out }
               }
               if (normalized.includes('FROM family_pack_items fpi')) {
+                if (params.length >= 4) {
+                  const seasonId = String(params[0])
+                  const packId = String(params[1])
+                  if (!packInSeason(packId, seasonId)) return { results: [] }
+                  const product = products.get('P001')
+                  if (product && product.season_id !== seasonId) return { results: [] }
+                  return { results: [...(items.get(packId) ?? [])] }
+                }
+                if (params.length >= 2 && normalized.includes('p.season_id = ?')) {
+                  const seasonId = String(params[0])
+                  const packId = String(params[1])
+                  if (!packInSeason(packId, seasonId)) return { results: [] }
+                  const product = products.get('P001')
+                  if (product && product.season_id !== seasonId) return { results: [] }
+                  return { results: [...(items.get(packId) ?? [])] }
+                }
                 return { results: [...(items.get(String(params[0])) ?? [])] }
               }
               return { results: [] }
             },
             async run() {
+              if (normalized.startsWith('UPDATE family_packs SET active') && normalized.includes('season_id = ?')) {
+                const pack = packInSeason(String(params[1]), String(params[2]))
+                if (!pack) return { meta: { changes: 0 } }
+                pack.active = params[0]
+                pack.updated_at = 'now'
+                return { meta: { changes: 1 } }
+              }
               if (normalized.startsWith('UPDATE family_packs SET active')) {
                 const pack = packs.get(String(params[1]))
                 if (!pack) return { meta: { changes: 0 } }
@@ -579,10 +726,27 @@ function createFamilyPackMockDb() {
                 return { meta: { changes: 1 } }
               }
               if (normalized.startsWith('UPDATE family_packs SET') && normalized.includes('archived')) {
-                const pack = packs.get(String(params[2]))
+                const pack = packInSeason(String(params[2]), String(params[3]))
                 if (!pack) return { meta: { changes: 0 } }
                 pack.archived = params[0]
                 if (params[1] === 1) pack.active = 0
+                return { meta: { changes: 1 } }
+              }
+              if (normalized.startsWith('UPDATE family_packs SET') && normalized.includes('season_id = ?')) {
+                const id = String(params[7])
+                const seasonId = String(params[8])
+                const pack = packInSeason(id, seasonId)
+                if (!pack) return { meta: { changes: 0 } }
+                Object.assign(pack, {
+                  slug: params[0],
+                  name: params[1],
+                  short_description: params[2],
+                  selling_price_paise: params[3],
+                  pack_label: params[4],
+                  sort_order: params[5],
+                  active: params[6],
+                  updated_at: 'now',
+                })
                 return { meta: { changes: 1 } }
               }
               if (normalized.startsWith('UPDATE family_packs SET')) {
@@ -602,11 +766,26 @@ function createFamilyPackMockDb() {
                 return { meta: { changes: 1 } }
               }
               if (normalized.startsWith('DELETE FROM family_pack_images')) {
-                images.set(String(params[0]), [])
+                const packId = String(params[0])
+                const seasonId = params.length >= 3 ? String(params[2]) : SEASON
+                if (!packInSeason(packId, seasonId)) return { meta: { changes: 0 } }
+                images.set(packId, [])
                 return { meta: { changes: 1 } }
               }
               if (normalized.startsWith('DELETE FROM family_pack_items')) {
-                items.set(String(params[0]), [])
+                const packId = String(params[0])
+                const seasonId = params.length >= 3 ? String(params[2]) : SEASON
+                if (!packInSeason(packId, seasonId)) return { meta: { changes: 0 } }
+                items.set(packId, [])
+                return { meta: { changes: 1 } }
+              }
+              if (normalized.startsWith('DELETE FROM family_packs WHERE id = ? AND season_id = ?')) {
+                const id = String(params[0])
+                const seasonId = String(params[1])
+                if (!packInSeason(id, seasonId)) return { meta: { changes: 0 } }
+                packs.delete(id)
+                images.delete(id)
+                items.delete(id)
                 return { meta: { changes: 1 } }
               }
               if (normalized.startsWith('DELETE FROM family_packs WHERE id = ?')) {
@@ -631,6 +810,7 @@ function createFamilyPackMockDb() {
         const normalized = sql.replace(/\s+/g, ' ').trim()
         if (normalized.startsWith('INSERT INTO family_packs')) {
           const id = params[0] ?? `FP${String(nextFpNum++).padStart(3, '0')}`
+          const seasonId = normalized.includes('season_id') ? params[8] : SEASON
           packs.set(id, {
             id,
             slug: params[1],
@@ -640,7 +820,8 @@ function createFamilyPackMockDb() {
             pack_label: params[5],
             sort_order: params[6],
             active: params[7],
-            archived: params[8] ?? 0,
+            archived: 0,
+            season_id: seasonId,
             created_at: 'now',
             updated_at: 'now',
           })

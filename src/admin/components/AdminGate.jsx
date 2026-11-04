@@ -2,9 +2,11 @@ import { Loader2, ShieldAlert, ShieldOff } from 'lucide-react'
 import Button from '../../components/ui/Button.jsx'
 import { adminAuthHint } from '../lib/adminAuthHints.js'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
+import { useLocation } from 'react-router-dom'
 
 export default function AdminGate({ children }) {
   const { status, error, errorCode, httpStatus, retry } = useAdminSession()
+  const location = useLocation()
 
   if (status === 'loading') {
     return (
@@ -24,7 +26,7 @@ export default function AdminGate({ children }) {
         <p className="admin-auth-screen__message">{error ?? 'Authentication failed.'}</p>
         <p className="admin-auth-screen__hint">{adminAuthHint({ errorCode, httpStatus })}</p>
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Button to="/admin/login" variant="primary">
+          <Button to="/admin/login" state={{ from: location }} variant="primary">
             Sign in
           </Button>
           <Button type="button" variant="secondary" surface="light" onClick={retry}>
