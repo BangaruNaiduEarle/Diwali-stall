@@ -165,7 +165,7 @@ async function handleScopedAdminCustomerRequestRoutes(request, env, url, identit
       context,
     })
     const enriched = await enrichAdminCustomerRequestListForRole(db, requests, seasonRole, seasonId, context)
-    const requestsOut = await attachPaymentSummaries(env.DB, enriched, { seasonId, context })
+    const requestsOut = await attachPaymentSummaries(env.DB, enriched, { seasonId, context, listView: true })
     const totalPages = total === 0 ? 0 : Math.ceil(total / limit)
 
     return Response.json(

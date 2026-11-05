@@ -8,6 +8,7 @@ import {
   ADMIN_LIST_CUSTOMER_REQUESTS_SQL,
   ADMIN_LIST_CUSTOMER_REQUEST_ITEMS_SQL,
   buildAdminCustomerRequestListFilter,
+  enrichAdminCustomerRequestListForRole,
   listAdminCustomerRequests,
   normalizeCustomerRequestPhoneSearch,
   updateAdminCustomerRequestStatus,
@@ -18,6 +19,76 @@ import {
   validateCustomerRequestStatusPatchBody,
 } from '../src/lib/adminCustomerRequestValidation.js'
 import { DEFAULT_ADMIN_SEASON_ID } from '../src/services/adminSeasonContext.js'
+import { attachPaymentSummaries } from '../src/services/adminPayments.js'
+import { fixture as scopeFixture, attach as attachScope, season as scopedSeason } from './helpers/mockAdminTransactionDb.js'
+
+describe('customer request pagination', () => {
+  it('defaults to 20, validates page/limit, and caps limit at 100', () => {
+    assert.equal(parseAdminCustomerRequestListQuery(new URLSearchParams()).data.limit, 20)
+    assert.equal(parseAdminCustomerRequestListQuery(new URLSearchParams('page=3&limit=100')).data.offset, 200)
+    for (const query of ['page=0','page=-1','page=1.5','page=10001','limit=0','limit=-1','limit=1.5','limit=101','limit=NaN']) {
+      assert.equal(parseAdminCustomerRequestListQuery(new URLSearchParams(query)).ok, false, query)
+    }
+  })
+
+  it('returns bounded pages and filtered totals in the original stable order', async () => {
+    const requests=Array.from({length:45},(_,i)=>({id:'cr-'+i.toString(16).padStart(32,'0'),season_id:DEFAULT_ADMIN_SEASON_ID,
+      status:i%2?'quoted':'received',source:'web',customer_name:i%3?'Other':'Matching',created_at:'2026-11-05 10:00:00'}))
+    const db=createAdminMockDb({requests,items:[]})
+    const first=await (await adminFetch('/api/admin/customer-requests',{db})).json()
+    assert.equal(first.requests.length,20)
+    assert.deepEqual(first.pagination,{page:1,limit:20,total:45,totalPages:3})
+    const second=await (await adminFetch('/api/admin/customer-requests?page=2',{db})).json()
+    assert.equal(second.requests.length,20)
+    assert.equal(new Set([...first.requests,...second.requests].map(row=>row.id)).size,40)
+    assert.ok(first.requests[19].id>second.requests[0].id)
+    const filtered=await (await adminFetch('/api/admin/customer-requests?page=2&limit=3&status=received&q=Matching',{db})).json()
+    assert.deepEqual(filtered.pagination,{page:2,limit:3,total:8,totalPages:3})
+    assert.equal(filtered.requests.length,3)
+    assert.ok(filtered.requests.every(row=>row.status==='received'&&row.customerName==='Matching'))
+    assert.deepEqual(db.lastListBind.slice(-2),[3,3])
+    const empty=await (await adminFetch('/api/admin/customer-requests?q=no-such-customer',{db})).json()
+    assert.deepEqual(empty.pagination,{page:1,limit:20,total:0,totalPages:0})
+    const beyond=await (await adminFetch('/api/admin/customer-requests?page=4',{db})).json()
+    assert.equal(beyond.requests.length,0)
+    assert.equal(beyond.pagination.total,45)
+  })
+
+  it('loads saved list totals in bounded queries without item or history hydration', async () => {
+    const queries=[]
+    const db=bindAdminServiceMode({prepare(sql){queries.push(sql);return {bind(){return {async all(){
+      if(sql.includes('FROM quotations'))return {results:[{customer_request_id:'request-1',selling_subtotal_paise:10000,final_subtotal_paise:null,accepted_amount_paise:8000,total_paise:10000}]}
+      if(sql.includes('FROM request_payment_summaries'))return {results:[{request_id:'request-1',amount_due_paise:8000,received_paise:3000,outstanding_paise:5000,payment_status:'PARTIAL'}]}
+      throw Error('Unexpected list query: '+sql)
+    }}}}}}, {})
+    const rows=await enrichAdminCustomerRequestListForRole(db,[{id:'request-1',seasonId:DEFAULT_ADMIN_SEASON_ID}],'owner',DEFAULT_ADMIN_SEASON_ID)
+    assert.equal(rows[0].auditSummary.sellingSubtotalPaise,10000)
+    assert.equal(rows[0].auditSummary.acceptedAmountPaise,8000)
+    assert.equal(rows[0].auditSummary.belowFinalWarning,undefined)
+    assert.equal(queries.length,1)
+    assert.match(queries[0],/season_id = \?/)
+    assert.doesNotMatch(queries.join(' '),/SELECT\s+\*|quotation_items|request_workflow_events|request_payment_ledger|FROM customer_request_items/i)
+    await enrichAdminCustomerRequestListForRole(db,[{id:'request-1',seasonId:DEFAULT_ADMIN_SEASON_ID}],'admin',DEFAULT_ADMIN_SEASON_ID)
+    assert.equal(queries.length,1)
+  })
+
+  it('keeps stall/season boundaries on quotation and payment summary queries', async () => {
+    const fixture=scopeFixture(),{context}=await attachScope(fixture)
+    const seen=[]
+    const db=bindAdminServiceMode({prepare(sql){return {bind(...params){seen.push({sql,params});return {async all(){return {results:sql.includes('request_payment_summaries')?[{request_id:'request-1',amount_due_paise:8000,received_paise:3000,outstanding_paise:5000,payment_status:'PARTIAL'}]:[]}}}}}}},{ADMIN_LOCATION_MODE:'true'})
+    await enrichAdminCustomerRequestListForRole(db,[{id:'request-1',seasonId:scopedSeason}],'owner',scopedSeason,context)
+    const summaries=await attachPaymentSummaries(db,[{id:'request-1'}],{seasonId:scopedSeason,context,listView:true})
+    assert.deepEqual(summaries[0].paymentSummary,{amountDuePaise:8000,receivedPaise:3000,outstandingPaise:5000,paymentStatus:'PARTIAL'})
+    assert.equal(seen.length,2)
+    assert.ok(seen[0].sql.includes('quotations.location_id = ?'))
+    assert.ok(seen[0].params.includes('loc-a'))
+    assert.ok(seen[0].params.includes(scopedSeason))
+    assert.match(seen[1].sql,/business_id = \? AND location_id = \? AND season_id = \?/)
+    assert.equal(seen[1].params[1],'loc-a')
+    assert.equal(seen[1].params[2],scopedSeason)
+    assert.doesNotMatch(seen.map(row=>row.sql).join(' '),/SELECT\s+\*|quotation_items|request_workflow_events|request_payment_ledger/i)
+  })
+})
 
 const LOCAL_SECRET = 'local-dev-secret-at-least-32-characters-long'
 const ALLOWED_EMAIL = 'owner@example.com'

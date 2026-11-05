@@ -45,11 +45,15 @@ export async function attachPaymentSummaries(db, requests, options) {
   const scope = adminOperationScope(db, options.seasonId, options.context)
   if (!scope.locationId || !requests.length) return requests
   const rows = new Map()
+  const listSummarySql = 'SELECT request_id, amount_due_paise, received_paise, outstanding_paise, payment_status FROM request_payment_summaries WHERE business_id = ? AND location_id = ? AND season_id = ?'
   // Keep D1 statements below 100 bound parameters even at maximum list size.
   for (let start = 0; start < requests.length; start += 90) {
     const ids = requests.slice(start, start + 90).map(request => request.id)
-    const result = await db.prepare(summarySql + ` AND request_id IN (${ids.map(() => '?').join(',')})`).bind(...scopeValues(scope), ...ids).all()
-    for (const row of result.results ?? []) rows.set(row.request_id, mapPaymentSummary(row))
+    const result = await db.prepare((options.listView ? listSummarySql : summarySql) + ` AND request_id IN (${ids.map(() => '?').join(',')})`).bind(...scopeValues(scope), ...ids).all()
+    for (const row of result.results ?? []) rows.set(row.request_id, options.listView ? {
+      amountDuePaise: row.amount_due_paise ?? null, receivedPaise: row.received_paise,
+      outstandingPaise: row.outstanding_paise ?? null, paymentStatus: row.payment_status,
+    } : mapPaymentSummary(row))
   }
   return requests.map(request => ({ ...request, paymentSummary: rows.get(request.id) ?? null }))
 }

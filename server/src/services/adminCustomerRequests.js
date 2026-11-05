@@ -2,7 +2,6 @@ import {
   buildOwnerCustomerRequestListAuditSummary,
   resolveOwnerListRequestAuditAmounts,
 } from '../lib/adminCustomerRequestListAudit.js'
-import { buildRequestInternalPricingView } from '../lib/adminInternalPricingPreview.js'
 import { hasOfflineFinalization } from '../lib/offlineFinalizationAuthority.js'
 import {
   canFinalizeQuickBillCustomerRequests,
@@ -39,16 +38,12 @@ export const ADMIN_LIST_CUSTOMER_REQUESTS_SQL = `
     r.source,
     r.customer_name,
     r.customer_phone,
-    r.customer_area,
     r.finalization_status,
     r.assigned_to_email,
     r.assigned_by_email,
     r.assigned_at,
     r.closed_by_email,
     r.closed_at,
-    r.revision, r.creator_user_id, r.creator_name, r.creator_role,
-    r.assigned_to_user_id, r.assigned_to_name, r.assigned_to_role,
-    r.assigned_by_user_id, r.assigned_by_name, r.assigned_by_role,
     r.created_at,
     r.season_id,
     (
@@ -330,38 +325,33 @@ export async function enrichAdminCustomerRequestListForRole(db, requests, role, 
 
   const season = String(seasonId ?? '').trim()
 
-  return Promise.all(
-    requests.map(async (req) => {
-      const requestId = String(req.id ?? '')
-      if (!requestId) return req
-      if (season && String(req.seasonId ?? '') !== season) return req
-
-      const quotation = await getActiveQuotationForRequest(db, requestId, context?.locationModeEnabled ? season : undefined)
-      if (!quotation) return req
-
-      let internalPricingView = null
-      if (quotation.sellingSubtotalPaise == null || quotation.finalSubtotalPaise == null) {
-        const itemsResult = await db
-          .prepare(ADMIN_LIST_CUSTOMER_REQUEST_ITEMS_SQL)
-          .bind(requestId)
-          .all()
-        const items = (itemsResult.results ?? []).map(mapAdminCustomerRequestItemRow)
-        internalPricingView = await buildRequestInternalPricingView(db, items, season)
-      }
-
-      const amounts = resolveOwnerListRequestAuditAmounts(quotation, internalPricingView)
-
-      const auditSummary = buildOwnerCustomerRequestListAuditSummary({
-        sellingSubtotalPaise: amounts.sellingSubtotalPaise,
-        acceptedAmountPaise: amounts.acceptedAmountPaise,
-        finalSubtotalPaise: amounts.finalSubtotalPaise,
-        finalSubtotalIsSaved: amounts.finalSubtotalIsSaved,
-      })
-
-      if (!auditSummary) return req
-      return { ...req, auditSummary }
-    }),
-  )
+  const eligible = requests.filter(req => req.id && (!season || String(req.seasonId ?? '') === season))
+  const quotations = new Map()
+  // Only saved list totals. Never hydrate quotation items or reconstruct pricing.
+  // Leave room for the operating-season and stall predicates added by the DB boundary.
+  for (let start = 0; start < eligible.length; start += 90) {
+    const ids = eligible.slice(start, start + 90).map(req => String(req.id))
+    const result = await db.prepare(`SELECT customer_request_id, selling_subtotal_paise,
+      final_subtotal_paise, accepted_amount_paise, total_paise
+      FROM quotations WHERE customer_request_id IN (${ids.map(() => '?').join(',')})
+      AND status != 'void'${season ? ' AND season_id = ?' : ''}
+      ORDER BY created_at DESC`).bind(...ids, ...(season ? [season] : [])).all()
+    for (const row of result.results ?? []) {
+      if (!quotations.has(String(row.customer_request_id))) quotations.set(String(row.customer_request_id), row)
+    }
+  }
+  return requests.map(req => {
+    const row = quotations.get(String(req.id))
+    if (!row) return req
+    const amounts = resolveOwnerListRequestAuditAmounts({
+      sellingSubtotalPaise: row.selling_subtotal_paise,
+      finalSubtotalPaise: row.final_subtotal_paise,
+      acceptedAmountPaise: row.accepted_amount_paise,
+      totalPaise: row.total_paise,
+    }, null)
+    const auditSummary = buildOwnerCustomerRequestListAuditSummary(amounts)
+    return auditSummary ? { ...req, auditSummary } : req
+  })
 }
 
 /**

@@ -21,7 +21,7 @@ const UUID_RE =
 const IDEMPOTENCY_ID_RE = /^cr-[0-9a-f]{32}$/
 
 export const ADMIN_CUSTOMER_REQUEST_LIST_LIMITS = {
-  defaultLimit: 25,
+  defaultLimit: 20,
   maxLimit: 100,
   maxPage: 10_000,
   maxSearchLength: 80,

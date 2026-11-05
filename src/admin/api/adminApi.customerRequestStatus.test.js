@@ -1,6 +1,26 @@
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 
+describe('fetchAdminCustomerRequests pagination', () => {
+  it('forwards default/explicit page sizes and all filters without changing scoped request behavior', async () => {
+    const original=globalThis.fetch,urls=[]
+    globalThis.fetch=async(url,init)=>{
+      urls.push(new URL(String(url),'http://localhost'))
+      assert.equal(init.credentials,'include')
+      return Response.json({requests:[],pagination:{page:2,limit:40,total:45,totalPages:2}})
+    }
+    try{
+      const {fetchAdminCustomerRequests}=await import('./adminApi.js')
+      await fetchAdminCustomerRequests()
+      assert.equal(urls[0].searchParams.get('page'),'1')
+      assert.equal(urls[0].searchParams.get('limit'),'20')
+      const result=await fetchAdminCustomerRequests({page:2,limit:40,status:'quoted',q:' test ',finalizationStatus:'pending',assignedToMe:true})
+      assert.deepEqual(Object.fromEntries(urls[1].searchParams),{page:'2',limit:'40',status:'quoted',q:'test',finalizationStatus:'pending',assignedToMe:'1'})
+      assert.deepEqual(result.pagination,{page:2,limit:40,total:45,totalPages:2})
+    }finally{globalThis.fetch=original}
+  })
+})
+
 /** @type {typeof fetch | undefined} */
 let originalFetch
 

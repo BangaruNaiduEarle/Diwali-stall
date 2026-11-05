@@ -24,7 +24,7 @@ export default function AdminCustomerRequestsPage() {
   const pricingPermissionRole = activeSeasonId != null ? seasonRole : role
   const canFilterAssignedToMe = canViewSensitiveProductPricing(pricingPermissionRole)
   const [requests, setRequests] = useState(/** @type {Record<string, unknown>[]} */ ([]))
-  const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, totalPages: 0 })
+  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(/** @type {string | null} */ (null))
   const [statusFilter, setStatusFilter] = useState('')
@@ -59,6 +59,7 @@ export default function AdminCustomerRequestsPage() {
     setError(null)
     const result = await fetchAdminCustomerRequests({
       page,
+      limit: 20,
       status: statusFilter || undefined,
       q: debouncedQ || undefined,
       finalizationStatus: stallFinalizationFilter || undefined,
@@ -75,7 +76,7 @@ export default function AdminCustomerRequestsPage() {
     const p = result.pagination ?? {}
     setPagination({
       page: Number(p.page ?? page),
-      limit: Number(p.limit ?? 25),
+      limit: Number(p.limit ?? 20),
       total: Number(p.total ?? 0),
       totalPages: Number(p.totalPages ?? 0),
     })

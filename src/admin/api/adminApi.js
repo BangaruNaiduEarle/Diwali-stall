@@ -298,6 +298,7 @@ export async function updateAdminPurchaseRate(id, purchaseRateInr) {
 export async function fetchAdminCustomerRequests(opts = {}) {
   const params = new URLSearchParams()
   params.set('page', String(opts.page ?? 1))
+  params.set('limit', String(opts.limit ?? 20))
   if (opts.status) params.set('status', opts.status)
   if (opts.finalizationStatus) params.set('finalizationStatus', opts.finalizationStatus)
   if (opts.assignedToMe) params.set('assignedToMe', '1')
