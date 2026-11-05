@@ -20,7 +20,8 @@ test('Request Detail independent loading and deferred work', async t => {
     status: 'received', source: 'web', finalizationStatus: 'pending', createdAt: '2026-11-05', paymentSummary: summary,
     items: [{ lineId: 'line-a', lineNumber: 1, productId: 'P001', productName: 'Test product', quantity: 1, unitPricePaise: 10000 }] }
   const quotation = { id: 'quote-a', requestRevision: 7, totalPaise: 10000, subtotalPaise: 10000,
-    acceptedAmountPaise: 10000, items: [{ lineNumber: 1, productId: 'P001', productName: 'Test product', quantity: 1, unitRatePaise: 10000, lineTotalPaise: 10000 }] }
+    acceptedAmountPaise: 10000, internalFinancialSummary: { basis: 'current_purchase_estimate', purchaseSubtotalPaise: 5000 },
+    items: [{ lineNumber: 1, productId: 'P001', productName: 'Test product', quantity: 1, unitRatePaise: 10000, lineTotalPaise: 10000 }] }
   const bundle = await build({ stdin: { resolveDir: process.cwd(), loader: 'jsx', contents: `
     import React from 'react'; import {createRoot} from 'react-dom/client';
     import Page from './src/admin/pages/AdminCustomerRequestDetailPage.jsx';
@@ -77,6 +78,8 @@ test('Request Detail independent loading and deferred work', async t => {
       await resolve(await indexOf('fetchQuotationForRequest'), { ok: true, data: { quotation } })
       await browser.wait('Boolean(document.querySelector(".admin-request-detail__adjust-bill"))')
       assert.equal(await browser.eval('document.querySelector("select").disabled'), false)
+      assert.equal(await browser.eval(`document.querySelector('[aria-label$="purchase price"]').closest('section').querySelectorAll('dd').length`), 1)
+      assert.equal(await browser.eval('document.body.textContent.includes("Profit estimate after discount")'), false)
     })
 
     await t.test('does not preview until editing opens, then previews changed quantities', async () => {
@@ -104,10 +107,16 @@ test('Request Detail independent loading and deferred work', async t => {
       assert.equal(recorded.args[1].amountPaise, 1000)
       await resolve(await indexOf('recordRequestPayment'), { ok: true, summary: { ...summary, revision: 8, receivedPaise: 1000, outstandingPaise: 9000 },
         entry: { paymentId: 'new-payment', sequence: 51 } })
-      await browser.wait('window.calls.filter(c=>c.name==="fetchAdminCustomerRequest").length===2')
-      await resolve(await indexOf('fetchAdminCustomerRequest'), { ok: true, request: { ...request, revision: 8, paymentSummary: { ...summary, revision: 8 } } })
-      await browser.wait('window.calls.filter(c=>c.name==="fetchQuotationForRequest").length===2')
-      await resolve(await indexOf('fetchQuotationForRequest'), { ok: true, data: { quotation: { ...quotation, requestRevision: 8 } } })
+      await browser.wait('document.body.textContent.includes("Payment ledger updated.")')
+      assert.equal((await calls()).filter(call => call.name === 'fetchAdminCustomerRequest').length, 1)
+      assert.equal((await calls()).filter(call => call.name === 'fetchQuotationForRequest').length, 1)
+      await input('form input[inputmode="decimal"]', '5.00')
+      await browser.eval('document.querySelector("form").requestSubmit()')
+      await browser.wait('window.calls.filter(c=>c.name==="recordRequestPayment").length===2')
+      assert.equal((await calls())[await indexOf('recordRequestPayment')].args[2].revision, 8)
+      await resolve(await indexOf('recordRequestPayment'), { ok: true, summary: { ...summary, revision: 9, receivedPaise: 1500, outstandingPaise: 8500 },
+        entry: { paymentId: 'second-payment', sequence: 52 } })
+      await browser.wait('document.body.textContent.includes("second-payment")')
       await click('Show payment history')
       await browser.wait('window.calls.some(c=>c.name==="fetchRequestPayments")')
       const entries = Array.from({ length: 50 }, (_, i) => ({ sequence: i + 1, paymentId: 'payment-' + i, entryType: 'PAYMENT', amountPaise: 100, paymentMethod: 'CASH' }))

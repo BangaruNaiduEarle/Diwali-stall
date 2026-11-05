@@ -6,6 +6,7 @@ import {
   setAdminLocationSelection,
   setAdminContextSwitching,
   getAdminRequestContext,
+  setAdminRequestIdentity,
 } from '../api/adminSeasonRequest.js'
 import { fetchAdminSession, logoutAdmin } from '../api/adminApi.js'
 import { normalizeAdminRole } from '../lib/adminRoles.js'
@@ -68,6 +69,7 @@ export function AdminSessionProvider({ children }) {
   const retry = useCallback(() => setAttempt((n) => sessionPollAttemptAfterRetry(n)), [])
 
   const applySessionFields = useCallback((result) => {
+    setAdminRequestIdentity(result)
     setEmail(result.email)
     setUserId(result.userId ?? null)
     setRole(normalizeAdminRole(result.role))

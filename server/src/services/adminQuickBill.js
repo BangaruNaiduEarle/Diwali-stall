@@ -90,13 +90,24 @@ export async function resolveQuickBillProductPricing(db, items, seasonId, contex
   /** @type {number[]} */
   const finalStrictLineTotals = []
 
+  // Read each product once, including carts containing both box and piece lines.
+  // Leave room for the ownership predicates added by customerRequestDb.
+  const productIds = [...new Set(items.map(item => item.productId))]
+  const products = new Map()
+  for (let start = 0; start < productIds.length; start += 90) {
+    const ids = productIds.slice(start, start + 90)
+    const sql = QUICK_BILL_PRODUCT_SQL.replace('id = ?', `id IN (${ids.map(() => '?').join(',')})`)
+    const result = await db.prepare(sql).bind(...ids, season).all()
+    for (const row of result.results ?? []) products.set(row.id, row)
+  }
+
   for (let i = 0; i < items.length; i += 1) {
     const item = items[i]
     const unitType = item.unitType === 'piece' ? 'piece' : 'box'
     const productId = item.productId
     const quantity = item.quantity
 
-    const row = await db.prepare(QUICK_BILL_PRODUCT_SQL).bind(productId, season).first()
+    const row = products.get(productId)
     if (!row) {
       fieldErrors[`items[${i}].productId`] = 'Product not found.'
       continue

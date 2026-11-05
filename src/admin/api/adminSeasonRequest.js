@@ -5,6 +5,16 @@ let adminActiveLocationId = null
 let adminActiveBusinessId = null
 let adminContextSwitching = false
 let adminContextGeneration = 0
+let adminIdentityScope = null
+
+// Set only when the session provider accepts a server-confirmed session.
+export function setAdminRequestIdentity(session) {
+  const identity = session?.email ? JSON.stringify([session.userId, session.email,
+    session.role, session.seasonRole, session.locationRole, session.effectiveRole,
+    session.platformAdmin, session.seasonStatus, session.capabilities]) : null
+  if (identity !== adminIdentityScope) adminContextGeneration += 1
+  adminIdentityScope = identity
+}
 
 /** @param {string | null | undefined} seasonId */
 export function setAdminActiveSeasonId(seasonId) {
@@ -19,6 +29,7 @@ export function getAdminActiveSeasonId() {
 }
 
 export function clearAdminActiveSeasonId() {
+  adminIdentityScope = null
   adminActiveSeasonId = null
   adminLocationModeEnabled = false
   adminActiveLocationId = null
@@ -45,7 +56,7 @@ export function setAdminContextSwitching(switching) {
 export function getAdminRequestContext() {
   return { locationModeEnabled: adminLocationModeEnabled, activeLocationId: adminActiveLocationId,
     activeBusinessId: adminActiveBusinessId, activeSeasonId: adminActiveSeasonId,
-    switching: adminContextSwitching, generation: adminContextGeneration }
+    switching: adminContextSwitching, generation: adminContextGeneration, identityScope: adminIdentityScope }
 }
 
 export function isAdminOperationalApiPath(path) {

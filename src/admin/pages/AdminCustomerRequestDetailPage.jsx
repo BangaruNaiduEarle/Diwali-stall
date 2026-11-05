@@ -943,13 +943,17 @@ export default function AdminCustomerRequestDetailPage() {
       <SignedBillFinalization key={`signed:${contextKey}:${requestId}`} requestId={requestId} onAcknowledged={async()=>{await reloadRequest();await loadQuotation()}} />
       {locationModeEnabled ? <AdminRequestPayments key={`payments:${contextKey}:${requestId}`} requestId={requestId}
         contextKey={contextKey} initialSummary={request?.paymentSummary} canRecord={canViewInternalPricing} disabled={isReadOnly}
-        onRecorded={async () => { await reloadRequest(); await loadQuotation() }} /> : null}
+        onRecorded={async (summary) => {
+          if (!Number.isSafeInteger(summary?.revision)) { await reloadRequest(); await loadQuotation(); return }
+          setRequest(previous => previous ? { ...previous, revision: summary.revision, paymentSummary: summary } : previous)
+          setQuotation(previous => previous ? { ...previous, requestRevision: summary.revision } : previous)
+        }} /> : null}
 
       <button type="button" className="admin-touch-button admin-touch-button--secondary" disabled={busy}
         onClick={async () => { await reloadRequest(); await loadQuotation() }}>Refresh request progress</button>
 
       {canViewInternalPricing && quotation?.internalFinancialSummary ? <section className="admin-request-detail__section admin-card">
-        <h3>{quotation.internalFinancialSummary.basis === 'finalization_purchase_snapshot' ? 'Finalized purchase cost and profit' : 'Current purchase and profit estimates'}{' '}
+        <h3>{quotation.internalFinancialSummary.basis === 'finalization_purchase_snapshot' ? 'Finalized purchase cost and profit' : 'Purchase subtotal estimate'}{' '}
           <button type="button" className="admin-icon-btn"
             aria-label={showPurchasePrice ? 'Hide purchase price' : 'Show purchase price'}
             title={showPurchasePrice ? 'Hide purchase price' : 'Show purchase price'}
@@ -960,12 +964,12 @@ export default function AdminCustomerRequestDetailPage() {
         </h3>
         {quotation.internalFinancialSummary.available === false ? <p>Historical purchase cost is unavailable. Profit cannot be calculated for this bill.</p> : null}
         <dl className="admin-request-detail__summary-dl">
-          {quotation.internalFinancialSummary.lines.map(line => <div key={line.lineId}>
+          {quotation.internalFinancialSummary.basis === 'finalization_purchase_snapshot' ? quotation.internalFinancialSummary.lines.map(line => <div key={line.lineId}>
             <dt>{request.items.find(item => item.lineId === line.lineId)?.productName ?? 'Product'} — purchase per unit</dt>
             <dd>{showPurchasePrice ? formatFinancialEstimate(line.purchaseUnitPaise) : '••••'}</dd>
-          </div>)}
+          </div>) : null}
           <div><dt>{quotation.internalFinancialSummary.basis === 'finalization_purchase_snapshot' ? 'Purchase subtotal at finalization' : 'Purchase subtotal estimate'}</dt><dd>{showPurchasePrice ? formatFinancialEstimate(quotation.internalFinancialSummary.purchaseSubtotalPaise) : '••••'}</dd></div>
-          <div><dt>{quotation.internalFinancialSummary.basis === 'finalization_purchase_snapshot' ? 'Profit on finalized bill amount' : 'Profit estimate after discount'}</dt><dd>{formatFinancialEstimate(quotation.internalFinancialSummary.profitPaise)}</dd></div>
+          {quotation.internalFinancialSummary.basis === 'finalization_purchase_snapshot' ? <div><dt>Profit on finalized bill amount</dt><dd>{formatFinancialEstimate(quotation.internalFinancialSummary.profitPaise)}</dd></div> : null}
         </dl>
       </section> : null}
 

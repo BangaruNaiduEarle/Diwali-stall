@@ -68,14 +68,15 @@ test('financial validation rejects unsafe prices, negative/excess discounts and 
   assert.equal((await adjust(db, id, { items: { some: 1 } }, 'owner')).status, 400)
 })
 
-test('purchase/profit estimates are returned only for privileged authority; reference never changes the bill', async t => {
+test('purchase subtotal estimate is returned only for privileged authority; reference never changes the bill', async t => {
   const db = await workflowDb(t), id = await create(db, { pricingMode: 'bargain', acceptedAmountPaise: 17000 }, { actor: 'owner' })
   await db.script(`INSERT INTO product_purchase_rates(product_id,unit_rate_paise,effective_from,season_id,location_id) VALUES('P001',5000,'2026-01-01','season-2026','loc-a');`)
   assert.equal((await adjust(db, id, { items, discountPaise: 1000 }, 'owner')).status, 200)
   const privileged = await quote(db, id, 'owner'), restricted = await quote(db, id)
   assert.equal(privileged.totalPaise, 19000)
   assert.equal(privileged.internalFinancialSummary.purchaseSubtotalPaise, 10000)
-  assert.equal(privileged.internalFinancialSummary.profitPaise, 9000)
+  assert.equal(privileged.internalFinancialSummary.profitPaise, undefined)
+  assert.equal(privileged.internalFinancialSummary.lines, undefined)
   assert.equal(restricted.internalFinancialSummary, undefined)
   assert.ok(!/purchase|profit|margin/.test(JSON.stringify(restricted)))
   const preview = await api(db, `customer-requests/${id}/adjust-bill/preview`, { method: 'POST', actor: 'owner', body: { items } })

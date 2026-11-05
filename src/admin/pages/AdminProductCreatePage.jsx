@@ -18,6 +18,8 @@ import { adminNavigationFlashState } from '../lib/adminNavigationFlash.js'
 import { useAdminSeasonReadOnly } from '../hooks/useAdminSeasonReadOnly.js'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
 import { showAdminProductSensitiveColumns } from '../lib/adminProductTableColumns.js'
+import { getAdminRequestContext } from '../api/adminSeasonRequest.js'
+import { rememberCreatedProduct } from '../lib/adminProductCreateHandoff.js'
 
 const PRODUCT_ID_RE = /^P\d{3,}$/
 
@@ -132,6 +134,7 @@ export default function AdminProductCreatePage() {
     setServerFields(null)
 
     setSubmitting(true)
+    const saveContext = getAdminRequestContext()
     try {
       await uploadCoordinatorRef.current?.waitUntilIdle()
       const imageGate = assertProductSaveNotBlockedByImages({
@@ -158,7 +161,7 @@ export default function AdminProductCreatePage() {
         setServerFields(result.fields ?? null)
         return
       }
-      const product = result.product
+      let product = result.product
       const newId = product?.id ? String(product.id) : values.id
       setPersistedProductId(newId)
       if (showSensitiveColumns && newId) {
@@ -171,9 +174,12 @@ export default function AdminProductCreatePage() {
               setServerFields(purchaseRes.fields ?? null)
               return
             }
+            product = { ...product, purchaseRateInr: purchaseRes.data?.rate?.unitRateInr ?? purchaseInr,
+              purchaseRatePaise: purchaseRes.data?.rate?.unitRatePaise ?? Math.round(purchaseInr * 100), hasPurchaseRate: true }
           }
         }
       }
+      rememberCreatedProduct(product, categories, saveContext)
       navigate(`/admin/products/${encodeURIComponent(newId)}/edit`, {
         replace: true,
         state: adminNavigationFlashState('Product added successfully.'),

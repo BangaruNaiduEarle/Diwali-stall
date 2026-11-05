@@ -67,6 +67,12 @@ export function customerRequestDb(db, seasonId, context, write = false) {
   const origin = context.workflowTransport?.handoverCreator
   const creator = origin ? { id:literal(origin.userId), name:literal(origin.name), role:literal(origin.role),device:literal(origin.deviceId),occurred:literal(origin.occurredAt) } : actor
   const revisions = new Map(), lines = new Map(), quoteRequests = new Map()
+  // Successful ownership checks live only for this scoped request and are
+  // invalidated at every write boundary. Commit-time SQL guards stay intact.
+  const verifiedProducts = new Set(), verifiedPacks = new Set(), verifiedChildren = new Map()
+  function invalidateValidation() {
+    verifiedProducts.clear(); verifiedPacks.clear(); verifiedChildren.clear()
+  }
   const lineKey = row => [row.request_id, row.product_id ?? '', row.family_pack_id ?? '', row.unit_type ?? (String(row.product_name).endsWith(' (loose pc)') ? 'piece' : 'box')].join('|')
   const parent = alias => `${alias}.location_id = ? AND ${alias}.season_id = ?`
   const open = alias => `${alias}.status NOT IN ('closed', 'void') AND ${alias}.finalization_status IS NOT 'finalized'`
@@ -84,16 +90,27 @@ export function customerRequestDb(db, seasonId, context, write = false) {
   const quoteParent = (idExpr) => `EXISTS (SELECT 1 FROM quotations scoped_quote WHERE scoped_quote.id = ${idExpr} AND ${parent('scoped_quote')} AND ${requestParent('scoped_quote.customer_request_id')})`
 
   async function validateReferences(rows) {
+    const products = new Set(), packs = new Set()
     for (const row of rows) {
       const product = row.product_id ?? row.productId
       const pack = row.family_pack_id ?? row.familyPackId
       if (product && pack) throw ownershipError()
-      if (product && !await raw.prepare(`SELECT 1 FROM products WHERE id = ? AND location_id = ? AND ${ownedProductCategory('products')}`).bind(product, loc).first()) throw ownershipError()
-      if (pack && !await raw.prepare('SELECT 1 FROM family_packs WHERE id = ? AND location_id = ?').bind(pack, loc).first()) throw ownershipError()
+      if (product && !verifiedProducts.has(product)) products.add(product)
+      if (pack && !verifiedPacks.has(pack)) packs.add(pack)
+    }
+    for (const [table, ids, verified] of [['products', [...products], verifiedProducts], ['family_packs', [...packs], verifiedPacks]]) {
+      for (let start = 0; start < ids.length; start += 90) {
+        const chunk = ids.slice(start, start + 90)
+        const result = await raw.prepare(`SELECT id FROM ${table} WHERE id IN (${chunk.map(() => '?').join(',')}) AND location_id = ?${table === 'products' ? ` AND ${ownedProductCategory('products')}` : ''}`).bind(...chunk, loc).all()
+        const found = new Set((result.results ?? []).map(row => row.id))
+        if (chunk.some(id => !found.has(id))) throw ownershipError()
+        for (const id of chunk) verified.add(id)
+      }
     }
   }
 
-  async function validateRequestChildren(id) {
+  async function validateRequestChildren(id, revision) {
+    if (Number.isSafeInteger(revision) && verifiedChildren.get(id) === revision) return
     const result = await raw.prepare(`SELECT product_id, family_pack_id FROM customer_request_items
       WHERE request_id = ? AND ${requestParent('customer_request_items.request_id')}`)
       .bind(id, loc, season).all()
@@ -103,6 +120,7 @@ export function customerRequestDb(db, seasonId, context, write = false) {
         AND (location_id IS NOT ? OR season_id IS NOT ?)`)
       .bind(id, loc, season).first()
     if (mismatch) throw ownershipError()
+    if (Number.isSafeInteger(revision)) verifiedChildren.set(id, revision)
   }
 
   function rewrite(original, values) {
@@ -131,7 +149,7 @@ export function customerRequestDb(db, seasonId, context, write = false) {
       const product = /\bFROM products\s+WHERE\b/i.test(sql)
       return constrain(sql, next, 'location_id = ?' + (product ? ` AND ${ownedProductCategory('products')}` : ''), [loc])
     }
-    if (read && /\bFROM product_purchase_rates WHERE product_id = \?/i.test(sql)) {
+    if (read && /\bFROM product_purchase_rates WHERE product_id\s*(?:=\s*\?|IN\s*\()/i.test(sql)) {
       return constrain(sql, values, `location_id = ? AND EXISTS (SELECT 1 FROM products scope_rate_product
         WHERE scope_rate_product.id = product_purchase_rates.product_id AND scope_rate_product.location_id = ? AND ${ownedProductCategory('scope_rate_product')})`, [loc, loc])
     }
@@ -232,6 +250,7 @@ export function customerRequestDb(db, seasonId, context, write = false) {
   }
 
   async function execute(entries) {
+    invalidateValidation()
     const batch = [], prepared = new Set(), cleanup = new Map(), businessIndexes = []
     for (const entry of entries) {
       const t = entry.target
@@ -274,6 +293,8 @@ export function customerRequestDb(db, seasonId, context, write = false) {
         error.status = 409; error.code = 'revision_conflict'
       }
       throw error
+    } finally {
+      invalidateValidation()
     }
   }
 
@@ -296,14 +317,14 @@ export function customerRequestDb(db, seasonId, context, write = false) {
             async first(...args) {
               const row = await statement.first(...args)
               remember(query, row)
-              if (query.requestRows && row?.id) await validateRequestChildren(row.id)
+              if (query.requestRows && row?.id) await validateRequestChildren(row.id, row.revision)
               if (query.references && row) await validateReferences([row])
               return row
             },
             async all(...args) {
               const result = await statement.all(...args)
               for (const row of result.results ?? []) remember(query, row)
-              if (query.requestRows) for (const row of result.results ?? []) if (row.id) await validateRequestChildren(row.id)
+              if (query.requestRows) for (const row of result.results ?? []) if (row.id) await validateRequestChildren(row.id, row.revision)
               if (query.references) await validateReferences(result.results ?? [])
               return result
             },
@@ -320,7 +341,7 @@ export function customerRequestDb(db, seasonId, context, write = false) {
       return execute(unwrapped)
     },
   }
-  wrappers.set(wrapper, { raw, scope, write, context })
+  wrappers.set(wrapper, { raw, scope, write, context, validateReferences })
   inheritAdminServiceMode(wrapper, db)
   return wrapper
 }
@@ -334,6 +355,7 @@ export function customerRequestScope(db) {
 export async function validateTransactionCatalogueReferences(db, rows) {
   const scope = customerRequestScope(db)
   if (!scope) { requireLegacyServiceMode(db); return }
+  if (wrappers.get(db)?.validateReferences) return wrappers.get(db).validateReferences(rows ?? [])
   for (const row of rows ?? []) {
     const product = row.product_id ?? row.productId
     const pack = row.family_pack_id ?? row.familyPackId

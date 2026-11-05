@@ -23,6 +23,7 @@ import { useAdminSeasonReadOnly } from '../hooks/useAdminSeasonReadOnly.js'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
 import { showAdminProductSensitiveColumns } from '../lib/adminProductTableColumns.js'
 import { canDeleteAdminProducts } from '../lib/adminRoles.js'
+import { takeCreatedProduct } from '../lib/adminProductCreateHandoff.js'
 
 const PRODUCT_ID_RE = /^P\d{3,}$/
 
@@ -66,7 +67,10 @@ export default function AdminProductEditPage() {
     setLoading(true)
     setLoadError(null)
 
-    Promise.all([fetchAdminProduct(productId), fetchAdminCategories()]).then(([productRes, catRes]) => {
+    const created = takeCreatedProduct(productId)
+    Promise.all(created
+      ? [{ ok: true, product: created.product }, { ok: true, categories: created.categories }]
+      : [fetchAdminProduct(productId), fetchAdminCategories()]).then(([productRes, catRes]) => {
       if (cancelled) return
       if (!productRes.ok) {
         setLoadError(productRes.message)
@@ -148,6 +152,7 @@ export default function AdminProductEditPage() {
       setServerFields(result.fields ?? null)
       return
     }
+    let savedProduct = result.product
     if (showSensitiveColumns) {
       if (adminRateFieldChanged(initial.purchaseRateInr, values.purchaseRateInr)) {
         const purchaseInr = getPurchaseRateInrFromForm(values)
@@ -159,13 +164,14 @@ export default function AdminProductEditPage() {
             setServerFields(purchaseRes.fields ?? null)
             return
           }
+          savedProduct = { ...savedProduct, purchaseRateInr: purchaseRes.data?.rate?.unitRateInr ?? purchaseInr,
+            purchaseRatePaise: purchaseRes.data?.rate?.unitRatePaise ?? Math.round(purchaseInr * 100), hasPurchaseRate: true }
         }
       }
     }
     setSubmitting(false)
-    const refreshed = await fetchAdminProduct(productId)
-    if (refreshed.ok) {
-      setInitial(productToFormValues(/** @type {Record<string, unknown>} */ (refreshed.product)))
+    if (savedProduct) {
+      setInitial(productToFormValues(/** @type {Record<string, unknown>} */ (savedProduct)))
       setInitialRevision((n) => n + 1)
     }
     setFlash({ type: 'success', message: 'Product updated successfully.' })

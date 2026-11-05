@@ -54,7 +54,7 @@ export default function AdminRequestPayments({ requestId, contextKey, initialSum
       setEntries(previous => !historyLoaded || hasMore || previous.some(row => row.paymentId === result.entry.paymentId) ? previous : [...previous, result.entry])
       setAmountInr(''); setReference(''); setDetails(''); setOccurredAt('')
       setMessage(`${result.idempotentReplay ? 'Previously recorded entry confirmed.' : 'Payment ledger updated.'} Payment ID: ${result.entry.paymentId}`)
-      await onRecorded?.()
+      await onRecorded?.(result.summary)
     } finally { pending.current = false; setBusy(false) }
   }
 

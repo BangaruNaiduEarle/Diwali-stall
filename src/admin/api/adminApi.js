@@ -1,5 +1,5 @@
 import { parseAdminSessionPayload } from '../lib/adminSeasonSession.js'
-import { apiRequest } from './client.js'
+import { apiRequest, cachedApiRequest } from './client.js'
 import { getAdminSessionSeasonHeader, getAdminRequestContext } from './adminSeasonRequest.js'
 import { reconcileOfflineAuthority } from '../offline/authority.js'
 import { newQuickBillCheckoutKey } from '../lib/quickBillCheckoutKey.js'
@@ -119,7 +119,7 @@ export async function updateAdminUserRole(id, role) {
 /**
  * @param {{ page?: number, limit?: number, q?: string, categorySlug?: string, missingRateOnly?: boolean, missingPurchaseRateOnly?: boolean, includeArchived?: boolean, flexSearch?: boolean }} opts
  */
-export async function fetchAdminProductsPage(opts = {}) {
+export async function fetchAdminProductsPage(opts = {}, { signal, cacheSearch = false } = {}) {
   const params = new URLSearchParams()
   params.set('page', String(opts.page ?? 1))
   if (opts.limit != null) params.set('limit', String(opts.limit))
@@ -129,7 +129,8 @@ export async function fetchAdminProductsPage(opts = {}) {
   if (opts.missingRateOnly) params.set('missingRate', '1')
   if (opts.missingPurchaseRateOnly) params.set('missingPurchaseRate', '1')
   if (opts.includeArchived) params.set('includeArchived', '1')
-  const result = await apiRequest(`/api/admin/products?${params.toString()}`)
+  const request = cacheSearch ? cachedApiRequest : apiRequest
+  const result = await request(`/api/admin/products?${params.toString()}`, { signal })
   if (!result.ok) return result
   const data = /** @type {{ products?: unknown[], pagination?: Record<string, number> }} */ (result.data ?? {})
   const pagination = data.pagination ?? { page: 1, limit: 25, total: 0, totalPages: 0 }
@@ -174,7 +175,7 @@ export async function fetchAdminProduct(id) {
 }
 
 export async function fetchAdminCategories() {
-  const result = await apiRequest('/api/admin/categories')
+  const result = await cachedApiRequest('/api/admin/categories')
   if (!result.ok) return result
   const categories = /** @type {{ categories?: unknown[] }} */ (result.data ?? {}).categories
   return { ok: true, categories: Array.isArray(categories) ? categories : [] }

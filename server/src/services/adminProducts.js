@@ -135,6 +135,7 @@ export function mapAdminProductRow(row) {
  *   missingRateOnly?: boolean
  *   missingPurchaseRateOnly?: boolean
  *   flexSearch?: boolean
+ *   searchCandidates?: boolean
  *   seasonId: string
  * }} opts
  */
@@ -153,15 +154,21 @@ export async function listAdminProductsPage(db, opts) {
       q: undefined,
       limit: QUICK_BILL_FLEX_SEARCH_CATALOGUE_CAP,
       offset: 0,
+      searchCandidates: true,
     })
     const filtered = filterProductsForQuickBillSearch(catalogue.products, q)
     const total = filtered.length
     const offset = Math.max(0, Number(opts.offset) || 0)
     const limit = Math.max(1, Number(opts.limit) || 25)
-    return {
-      products: filtered.slice(offset, offset + limit),
-      total,
+    const page = filtered.slice(offset, offset + limit)
+    const products = new Map()
+    for (let start = 0; start < page.length; start += 90) {
+      const ids = page.slice(start, start + 90).map(row => row.id)
+      const result = await db.prepare(`${productSelect(scope)} WHERE p.${scope.column} = ? AND p.id IN (${ids.map(() => '?').join(',')})`)
+        .bind(scope.value, ...ids).all()
+      for (const row of result.results ?? []) products.set(row.id, mapAdminProductRow(row))
     }
+    return { products: page.map(row => products.get(row.id)).filter(Boolean), total }
   }
 
   const wheres = [`p.${scope.column} = ?`]
@@ -207,6 +214,15 @@ export async function listAdminProductsPage(db, opts) {
     ${whereSql}
   `
   const listSql = `${productSelect(scope)} ${whereSql} ORDER BY p.sort_order ASC, p.id ASC LIMIT ? OFFSET ?`
+
+  if (opts.searchCandidates) {
+    // Preserve JS Unicode/whitespace matching and catalogue ordering. Fetch full
+    // descriptions, images and pricing metadata only for the matched page.
+    const from = scope.locationId ? LOCATION_PRODUCT_FROM : ADMIN_PRODUCT_SELECT.slice(ADMIN_PRODUCT_SELECT.indexOf('FROM products'))
+    const result = await db.prepare(`SELECT p.id, p.name, p.company ${from} ${whereSql} ORDER BY p.sort_order ASC, p.id ASC LIMIT ? OFFSET ?`)
+      .bind(...binds, opts.limit, opts.offset).all()
+    return { products: result.results ?? [], total: (result.results ?? []).length }
+  }
 
   const countRow = await db.prepare(countSql).bind(...binds).first()
   const total = Number(countRow?.total ?? 0)

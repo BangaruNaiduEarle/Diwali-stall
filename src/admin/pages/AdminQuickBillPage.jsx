@@ -168,8 +168,9 @@ export default function AdminQuickBillPage() {
 
   useEffect(() => {
     if (seasonSwitching) return
+    let cancelled = false
     fetchAdminCategories().then((res) => {
-      if (!res.ok) return
+      if (cancelled || !res.ok) return
       const mapped = res.categories
         .filter((c) => c && typeof c === 'object')
         .map((c) => ({
@@ -179,9 +180,12 @@ export default function AdminQuickBillPage() {
         .filter((c) => c.slug)
       setCategories(mapped)
     })
-  }, [seasonSwitching])
+    return () => { cancelled = true }
+  }, [seasonSwitching, contextKey, pricingPermissionRole, activeSeasonId])
 
   useEffect(() => {
+    setSearchResults([])
+    setSearchBusy(false)
     if (seasonSwitching) return undefined
     const q = query.trim()
     const hasCategory = categorySlug.length > 0
@@ -190,6 +194,7 @@ export default function AdminQuickBillPage() {
       return undefined
     }
     let cancelled = false
+    const controller = new AbortController()
     const timer = setTimeout(async () => {
       setSearchBusy(true)
       const res = await fetchAdminProductsPage({
@@ -198,7 +203,7 @@ export default function AdminQuickBillPage() {
         page: 1,
         limit: 12,
         flexSearch: Boolean(q),
-      })
+      }, { signal: controller.signal, cacheSearch: true })
       if (!cancelled) {
         setSearchBusy(false)
         setSearchResults(res.ok ? /** @type {Record<string, unknown>[]} */ (res.products) : [])
@@ -207,8 +212,9 @@ export default function AdminQuickBillPage() {
     return () => {
       cancelled = true
       clearTimeout(timer)
+      controller.abort()
     }
-  }, [query, categorySlug, seasonSwitching])
+  }, [query, categorySlug, seasonSwitching, contextKey, pricingPermissionRole, activeSeasonId])
 
   useEffect(() => {
     if (!canUseBargainMode && pricingMode === 'bargain') {

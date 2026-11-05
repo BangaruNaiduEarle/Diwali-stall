@@ -12,11 +12,17 @@ export async function billPurchaseSummary(db, request, quotation, role, seasonId
     return historicalPurchaseSummary(db, request.id, quotation.id)
   }
   let purchaseSubtotalPaise = 0, complete = true
-  const lines = []
+  const rates = new Map()
+  const ids = [...new Set((request.items ?? []).map(item => item.productId).filter(Boolean))]
+  for (let start = 0; start < ids.length; start += 90) {
+    const chunk = ids.slice(start, start + 90)
+    const result = await db.prepare(`SELECT product_id, unit_rate_paise FROM product_purchase_rates WHERE product_id IN (${chunk.map(() => '?').join(',')}) AND effective_to IS NULL`).bind(...chunk).all()
+    for (const rate of result.results ?? []) rates.set(rate.product_id, rate)
+  }
   for (const item of request.items ?? []) {
     let purchaseUnitPaise = null
     if (item.productId) {
-      const rate = await db.prepare('SELECT unit_rate_paise FROM product_purchase_rates WHERE product_id = ? AND effective_to IS NULL').bind(item.productId).first()
+      const rate = rates.get(item.productId)
       if (Number.isSafeInteger(rate?.unit_rate_paise) && rate.unit_rate_paise >= 0) {
         const pieces = item.packSnapshot?.piecesPerPack
         purchaseUnitPaise = item.unitType === 'piece'
@@ -26,11 +32,9 @@ export async function billPurchaseSummary(db, request, quotation, role, seasonId
     }
     if (purchaseUnitPaise == null) complete = false
     else purchaseSubtotalPaise += purchaseUnitPaise * item.quantity
-    lines.push({ lineId: item.lineId, purchaseUnitPaise })
   }
-  complete &&= Number.isSafeInteger(purchaseSubtotalPaise) && Number.isSafeInteger(quotation.totalPaise)
-  return { basis: 'current_purchase_estimate', lines, purchaseSubtotalPaise: complete ? purchaseSubtotalPaise : null,
-    profitPaise: complete ? quotation.totalPaise - purchaseSubtotalPaise : null }
+  complete &&= Number.isSafeInteger(purchaseSubtotalPaise)
+  return { basis: 'current_purchase_estimate', purchaseSubtotalPaise: complete ? purchaseSubtotalPaise : null }
 }
 
 async function historicalPurchaseSummary(db, requestId, quotationId) {

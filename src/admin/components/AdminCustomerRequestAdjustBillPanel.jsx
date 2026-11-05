@@ -20,6 +20,7 @@ import {
 import { paiseToInrHelper } from '../lib/moneyDisplay.js'
 import { resolveQuickBillApiImageUrl } from '../lib/quickBillProductImage.js'
 import { adjustmentPayload, draftHasNewerRevision, paiseInputValue } from '../lib/billAdjustment.js'
+import { useAdminSession } from '../context/AdminSessionContext.jsx'
 
 /** @param {number | null | undefined} paise */
 function formatPaiseLabel(paise) {
@@ -47,6 +48,7 @@ export default function AdminCustomerRequestAdjustBillPanel({
   disabled = false,
   onAdjusted,
 }) {
+  const { contextKey, permissionRole, seasonSwitching, activeSeasonId } = useAdminSession()
   const bargainMode = pricingMode === 'bargain'
   const dirty = useRef(false)
   const [previewRequested, setPreviewRequested] = useState(false)
@@ -118,15 +120,19 @@ export default function AdminCustomerRequestAdjustBillPanel({
   }, [loadPreview, previewRequested])
 
   useEffect(() => {
+    setSearchResults([])
+    setSearchBusy(false)
+    if (seasonSwitching) return undefined
     const q = query.trim()
     if (q.length < 1) {
       setSearchResults([])
       return undefined
     }
     let cancelled = false
+    const controller = new AbortController()
     const timer = setTimeout(async () => {
       setSearchBusy(true)
-      const res = await fetchAdminProductsPage({ q, page: 1, limit: 8, flexSearch: true })
+      const res = await fetchAdminProductsPage({ q, page: 1, limit: 8, flexSearch: true }, { signal: controller.signal, cacheSearch: true })
       if (!cancelled) {
         setSearchBusy(false)
         setSearchResults(res.ok ? /** @type {Record<string, unknown>[]} */ (res.products) : [])
@@ -135,8 +141,9 @@ export default function AdminCustomerRequestAdjustBillPanel({
     return () => {
       cancelled = true
       clearTimeout(timer)
+      controller.abort()
     }
-  }, [query])
+  }, [query, contextKey, permissionRole, seasonSwitching, activeSeasonId])
 
   const agreedPaisePreview = useMemo(() => {
     const trimmed = String(agreedAmountInr ?? '').trim()
