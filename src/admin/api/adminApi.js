@@ -314,6 +314,13 @@ export async function fetchAdminCustomerRequests(opts = {}) {
   }
 }
 
+export async function bulkDeleteAdminCustomerRequests(requestIds) {
+  const result = await apiRequest('/api/admin/customer-requests/bulk-delete', {
+    method: 'POST', body: JSON.stringify({ requestIds }),
+  })
+  return result.ok ? { ok: true, ...result.data } : result
+}
+
 /** @param {string} id */
 export async function fetchAdminCustomerRequest(id) {
   const result = await apiRequest(`/api/admin/customer-requests/${encodeURIComponent(id)}`)

@@ -149,6 +149,7 @@ const CUSTOMER_PHONE_SEARCH_SQL =
 export function buildAdminCustomerRequestListFilter(opts) {
   /** @type {string[]} */
   const wheres = []
+  wheres.push("NOT EXISTS (SELECT 1 FROM request_workflow_events archived WHERE archived.request_id = r.id AND archived.event_type = 'request_archived')")
   /** @type {unknown[]} */
   const binds = []
 

@@ -1,5 +1,6 @@
 import { readJsonBody, validationErrorResponse, JSON_HEADERS } from '../lib/http.js'
 import { customerRequestDb } from '../lib/adminCustomerRequestScope.js'
+import { bulkDeleteAdminCustomerRequests, validateCustomerRequestBulkDelete } from '../services/adminCustomerRequestBulkDelete.js'
 import { adminServiceMode } from '../lib/adminServiceMode.js'
 import { getRequestWorkflowHistory } from '../services/adminRequestWorkflowHistory.js'
 import { attachPaymentSummaries } from '../services/adminPayments.js'
@@ -124,6 +125,19 @@ async function handleScopedAdminCustomerRequestRoutes(request, env, url, identit
   const { pathname } = url
   const method = request.method
   const context = getAdminContext(request)
+  if (pathname === '/api/admin/customer-requests/bulk-delete' && method === 'POST') {
+    const access = requireWritableSeason(request)
+    if (!access.ok) return customerRequestGuardForbiddenResponse(access)
+    if (!['owner', 'super_admin'].includes(access.auth.seasonRole)) {
+      return Response.json({ error: 'forbidden', message: 'Owner or Super Admin access is required.' }, { status: 403, headers: NO_STORE })
+    }
+    const parsed = await readJsonBody(request)
+    if (!parsed.ok) return Response.json({ error: parsed.error, message: parsed.message }, { status: parsed.status, headers: NO_STORE })
+    const valid = validateCustomerRequestBulkDelete(parsed.value)
+    if (!valid.ok) return validationErrorResponse(valid.errors)
+    const result = await bulkDeleteAdminCustomerRequests(env.DB, valid.ids, { seasonId: access.auth.activeSeasonId, context })
+    return Response.json(result, { headers: NO_STORE })
+  }
   let db = env.DB
   if (adminServiceMode(db) === true || context?.locationModeEnabled) {
     const access = resolveAdminCustomerRequestSeasonAccess(request, ['GET', 'HEAD', 'OPTIONS'].includes(method))

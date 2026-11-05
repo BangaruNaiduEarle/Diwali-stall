@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Loader2, RefreshCw, Search, X } from 'lucide-react'
-import { fetchAdminCustomerRequests } from '../api/adminApi.js'
+import { bulkDeleteAdminCustomerRequests, fetchAdminCustomerRequests } from '../api/adminApi.js'
+import AdminConfirmDialog from '../components/AdminConfirmDialog.jsx'
+import { useAdminSeasonReadOnly } from '../hooks/useAdminSeasonReadOnly.js'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
 import { canViewSensitiveProductPricing } from '../lib/adminRoles.js'
 import { STALL_FINALIZATION_FILTER_OPTIONS, stallBillFinalizationDisplay } from '../lib/stallBillFinalization.js'
@@ -20,7 +22,8 @@ import {
 } from '../lib/customerRequestStatus.js'
 
 export default function AdminCustomerRequestsPage() {
-  const { role, permissionRole: seasonRole, activeSeasonId, email: sessionEmail } = useAdminSession()
+  const { role, permissionRole: seasonRole, activeSeasonId, contextKey, email: sessionEmail } = useAdminSession()
+  const { isReadOnly } = useAdminSeasonReadOnly()
   const pricingPermissionRole = activeSeasonId != null ? seasonRole : role
   const canFilterAssignedToMe = canViewSensitiveProductPricing(pricingPermissionRole)
   const [requests, setRequests] = useState(/** @type {Record<string, unknown>[]} */ ([]))
@@ -34,14 +37,55 @@ export default function AdminCustomerRequestsPage() {
   const [debouncedQ, setDebouncedQ] = useState('')
   const [page, setPage] = useState(1)
   const requestSeq = useRef(0)
+  const [selection, setSelection] = useState({ key: '', ids: [] })
+  const [loadedKey, setLoadedKey] = useState('')
+  const [deleteDialog, setDeleteDialog] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteFeedback, setDeleteFeedback] = useState(null)
+  const deletePending = useRef(false)
+  const selectionKey = JSON.stringify([contextKey, activeSeasonId, pricingPermissionRole, page, statusFilter, debouncedQ, stallFinalizationFilter, assignedToMeOnly])
+  const currentView = useRef(selectionKey)
+  useLayoutEffect(() => { currentView.current = selectionKey; return () => { currentView.current = null } }, [selectionKey])
+  useEffect(() => { setDeleteDialog(null); setSelection({ key: selectionKey, ids: [] }) }, [selectionKey])
+  useEffect(() => { setDeleteFeedback(null) }, [contextKey, activeSeasonId, pricingPermissionRole])
+  const canDelete = canFilterAssignedToMe && !isReadOnly
+  const selectedIds = selection.key === selectionKey ? selection.ids.filter(id => requests.some(r => r.id === id)) : []
+  const listReady = !loading && loadedKey === selectionKey
+  const allSelected = requests.length > 0 && selectedIds.length === requests.length
+  function toggleSelected(id) {
+    setSelection(previous => {
+      const ids = new Set(previous.key === selectionKey ? previous.ids : [])
+      if (ids.has(id)) ids.delete(id); else ids.add(id)
+      return { key: selectionKey, ids: [...ids] }
+    })
+  }
+
+  async function deleteSelected() {
+    if (!canDelete || deletePending.current || deleteDialog?.key !== selectionKey) return
+    const { key, ids } = deleteDialog
+    deletePending.current = true
+    setDeleting(true)
+    try {
+      const result = await bulkDeleteAdminCustomerRequests(ids)
+      if (currentView.current !== key) return
+      setDeleteDialog(null)
+      if (!result.ok) { setDeleteFeedback({ message: result.message, failed: [] }); return }
+      setSelection({ key, ids: result.failed.map(row => row.id) })
+      setDeleteFeedback({ message: `${result.deletedIds.length} request${result.deletedIds.length === 1 ? '' : 's'} removed from Customer Requests. ${result.failed.length} could not be removed.`, failed: result.failed })
+      await load()
+    } catch {
+      if (currentView.current === key) { setDeleteDialog(null); setDeleteFeedback({ message: 'Removal could not be confirmed. Refresh before retrying.', failed: [] }) }
+    } finally { deletePending.current = false; setDeleting(false) }
+  }
 
   useEffect(() => {
+    if (searchInput.trim() === debouncedQ) return
     const timer = setTimeout(() => {
       setPage(1)
       setDebouncedQ(searchInput.trim())
     }, 300)
     return () => clearTimeout(timer)
-  }, [searchInput])
+  }, [searchInput, debouncedQ])
 
   useEffect(() => {
     setPage(1)
@@ -74,6 +118,9 @@ export default function AdminCustomerRequestsPage() {
     }
     setRequests(result.requests)
     const p = result.pagination ?? {}
+    const lastPage = Math.max(1, Number(p.totalPages ?? 0))
+    if (page > lastPage) { setPage(lastPage); return }
+    setLoadedKey(selectionKey)
     setPagination({
       page: Number(p.page ?? page),
       limit: Number(p.limit ?? 10),
@@ -81,7 +128,7 @@ export default function AdminCustomerRequestsPage() {
       totalPages: Number(p.totalPages ?? 0),
     })
     setLoading(false)
-  }, [page, statusFilter, debouncedQ, stallFinalizationFilter, assignedToMeOnly, canFilterAssignedToMe])
+  }, [page, statusFilter, debouncedQ, stallFinalizationFilter, assignedToMeOnly, canFilterAssignedToMe, selectionKey])
 
   useEffect(() => {
     load()
@@ -180,7 +227,11 @@ export default function AdminCustomerRequestsPage() {
           </button>
         </div>
       </div>
-      {loading ? (
+      {deleteFeedback ? <div role="status" className="admin-alert">
+        <p>{deleteFeedback.message}</p>
+        {deleteFeedback.failed.length ? <ul>{deleteFeedback.failed.map(row => <li key={row.id}>{row.id}: {row.message}</li>)}</ul> : null}
+      </div> : null}
+      {(loading || (!error && !listReady)) ? (
         <div className="admin-state">
           <Loader2 className="admin-state__icon animate-spin" aria-hidden="true" />
           <p>Loading…</p>
@@ -191,7 +242,7 @@ export default function AdminCustomerRequestsPage() {
           {error}
         </div>
       ) : null}
-      {!loading && !error && requests.length === 0 ? (
+      {listReady && !error && requests.length === 0 ? (
         <div className="admin-state">
           {debouncedQ ? (
             <>
@@ -205,24 +256,36 @@ export default function AdminCustomerRequestsPage() {
           )}
         </div>
       ) : null}
-      {!loading && !error && requests.length > 0 ? (
+      {listReady && !error && requests.length > 0 ? (
         <>
+          {canDelete ? <div className="admin-toolbar">
+            <label><input type="checkbox" aria-label="Select all requests on this page" checked={allSelected} disabled={deleting}
+              ref={node => { if (node) node.indeterminate = selectedIds.length > 0 && !allSelected }}
+              onChange={event => setSelection({ key: selectionKey, ids: event.target.checked ? requests.map(row => String(row.id)) : [] })} /> Select All (current page)</label>
+            <span aria-live="polite">{selectedIds.length} selected</span>
+            <button type="button" className="admin-link-button" disabled={deleting || selectedIds.length === 0}
+              onClick={() => setDeleteDialog({ key: selectionKey, ids: [...selectedIds] })}>Delete Selected</button>
+          </div> : null}
           <p className="admin-hint admin-requests-results-meta" aria-live="polite">
             {resultsSummary}
           </p>
           <div className="admin-card-list admin-show-mobile" aria-label="Customer requests">
             {requests.map((r) => (
+              <div key={String(r.id ?? '')}>
+              {canDelete ? <label><input type="checkbox" aria-label={`Select mobile request ${r.id}`} checked={selectedIds.includes(String(r.id))}
+                disabled={deleting} onChange={() => toggleSelected(String(r.id))} /> Select request</label> : null}
               <AdminCustomerRequestCard
-                key={String(r.id ?? '')}
                 request={r}
                 showListAudit={canFilterAssignedToMe}
               />
+              </div>
             ))}
           </div>
           <div className="admin-table-wrap admin-show-desktop">
             <table className="admin-table">
               <thead>
                 <tr>
+                  {canDelete ? <th>Select</th> : null}
                   <th className="admin-request-list__col-ref">Reference</th>
                   <th className="admin-request-list__col-id">ID</th>
                   <th className="admin-request-list__col-customer">Customer</th>
@@ -239,6 +302,8 @@ export default function AdminCustomerRequestsPage() {
                   const stallFinalization = stallBillFinalizationDisplay(r)
                   return (
                     <tr key={id}>
+                      {canDelete ? <td><input type="checkbox" aria-label={`Select request ${id}`} checked={selectedIds.includes(id)}
+                        disabled={deleting} onChange={() => toggleSelected(id)} /></td> : null}
                       <td className="admin-table__mono">{formatAdminPublicReference(r.publicReference)}</td>
                       <td className="admin-table__mono" title={id}>
                         {formatShortRequestId(id)}
@@ -310,6 +375,9 @@ export default function AdminCustomerRequestsPage() {
           ) : null}
         </>
       ) : null}
+      <AdminConfirmDialog open={Boolean(deleteDialog && deleteDialog.key === selectionKey && canDelete)} title="Remove selected requests from the list?"
+        description={`Remove ${deleteDialog?.ids.length ?? 0} selected request(s) from Customer Requests? Requests will be archived. Bills, invoices, payments and offline history remain available and unchanged. The two permanently protected requests cannot be removed.`}
+        confirmLabel="Delete requests" confirming={deleting} onCancel={() => setDeleteDialog(null)} onConfirm={deleteSelected} />
     </div>
   )
 }
