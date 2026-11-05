@@ -17,6 +17,7 @@ const SUPER_EMAIL = 'super@example.com'
 describe('admin user role management', () => {
   it('owner can change another user role via HTTP', async () => {
     const db = createRoleDb()
+    db.seasonMembers.get(`${DEFAULT_ADMIN_SEASON_ID}:u-staff`).role = 'super_admin'
     const env = localEnv(db)
     const token = await ownerToken(env)
 
@@ -27,15 +28,15 @@ describe('admin user role management', () => {
           'Content-Type': 'application/json',
           'Cf-Access-Jwt-Assertion': token,
         },
-        body: JSON.stringify({ role: 'super_admin' }),
+        body: JSON.stringify({ role: 'admin' }),
       }),
       env,
       {},
     )
     assert.equal(changeRes.status, 200)
     const body = await changeRes.json()
-    assert.equal(body.user.role, 'super_admin')
-    assert.equal(db.seasonMembers.get(`${DEFAULT_ADMIN_SEASON_ID}:u-staff`)?.role, 'super_admin')
+    assert.equal(body.user.role, 'admin')
+    assert.equal(db.seasonMembers.get(`${DEFAULT_ADMIN_SEASON_ID}:u-staff`)?.role, 'admin')
   })
 
   it('rejects invalid role values', async () => {
@@ -48,8 +49,8 @@ describe('admin user role management', () => {
     }
   })
 
-  it('blocks role change for admin and super_admin', async () => {
-    for (const email of [STAFF_EMAIL, SUPER_EMAIL]) {
+  it('blocks role change for admin', async () => {
+    for (const email of [STAFF_EMAIL]) {
       const db = createRoleDb()
       const env = localEnv(db)
       const token = await signLocalDevAdminJwt(

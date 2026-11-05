@@ -16,8 +16,8 @@ const LOCAL_SECRET = 'local-dev-secret-at-least-32-characters-long'
 const OTHER_SEASON_ID = 'season-2099'
 
 describe('season user role policy helpers', () => {
-  it('owner may invite super_admin and admin; super only admin', () => {
-    assert.equal(canCreateSeasonMemberWithRole('owner', 'super_admin'), true)
+  it('Owner cannot invite Super Admin; both managers may invite Admin', () => {
+    assert.equal(canCreateSeasonMemberWithRole('owner', 'super_admin'), false)
     assert.equal(canCreateSeasonMemberWithRole('owner', 'admin'), true)
     assert.equal(canCreateSeasonMemberWithRole('owner', 'owner'), false)
     assert.equal(canCreateSeasonMemberWithRole('super_admin', 'admin'), true)
@@ -32,13 +32,13 @@ describe('createSeasonAdminUser', () => {
     const result = await createSeasonAdminUser(db, OTHER_SEASON_ID, 'owner', {
       email: 'staff@example.com',
       password: 'unused-for-existing',
-      role: 'super_admin',
+      role: 'admin',
     })
     assert.equal(result.ok, true)
     if (!result.ok) return
-    assert.equal(result.user.role, 'super_admin')
+    assert.equal(result.user.role, 'admin')
     const key = `${OTHER_SEASON_ID}:u-staff`
-    assert.equal(db.seasonMembers.get(key)?.role, 'super_admin')
+    assert.equal(db.seasonMembers.get(key)?.role, 'admin')
   })
 
   it('rejects duplicate membership in the same season', async () => {
@@ -144,7 +144,7 @@ describe('season user HTTP routes', () => {
     assert.ok(body.users.every(u => ['owner', 'super_admin'].includes(u.role)))
   })
 
-  it('owner updates season_members role via HTTP', async () => {
+  it('Owner cannot promote season members to Super Admin via HTTP', async () => {
     const db = createSeasonUsersDb()
     const env = localEnv(db, 'owner@example.com')
     const token = await signLocalDevAdminJwt(
@@ -163,16 +163,11 @@ describe('season user HTTP routes', () => {
       env,
       {},
     )
-    assert.equal(res.status, 200)
-    const body = await res.json()
-    assert.equal(body.user.role, 'super_admin')
-    assert.equal(
-      db.seasonMembers.get(`${DEFAULT_ADMIN_SEASON_ID}:u-staff`)?.role,
-      'super_admin',
-    )
+    assert.equal(res.status, 403)
+    assert.equal(db.seasonMembers.get(`${DEFAULT_ADMIN_SEASON_ID}:u-staff`)?.role, 'admin')
   })
 
-  it('blocks super_admin from changing roles', async () => {
+  it('allows Super Admin role updates within its hierarchy', async () => {
     const db = createSeasonUsersDb()
     const env = localEnv(db, 'super@example.com')
     const token = await signLocalDevAdminJwt(
@@ -191,12 +186,12 @@ describe('season user HTTP routes', () => {
       env,
       {},
     )
-    assert.equal(res.status, 403)
+    assert.equal(res.status, 200)
   })
 })
 
 describe('updateSeasonMemberRole service', () => {
-  it('super_admin actor receives forbidden from service', async () => {
+  it('Super Admin may retain an Admin member role', async () => {
     const db = createSeasonUsersDb()
     const result = await updateSeasonMemberRole(
       db,
@@ -205,9 +200,7 @@ describe('updateSeasonMemberRole service', () => {
       'u-staff',
       'admin',
     )
-    assert.equal(result.ok, false)
-    if (result.ok) return
-    assert.equal(result.status, 403)
+    assert.equal(result.ok, true)
   })
 })
 

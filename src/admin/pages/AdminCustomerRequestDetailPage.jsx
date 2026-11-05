@@ -100,6 +100,7 @@ export default function AdminCustomerRequestDetailPage() {
   const [agreementMessage, setAgreementMessage] = useState(/** @type {string | null} */ (null))
   const [request, setRequest] = useState(/** @type {Record<string, unknown> | null} */ (null))
   const [quotation, setQuotation] = useState(/** @type {Record<string, unknown> | null} */ (null))
+  const [quotationLoading, setQuotationLoading] = useState(true)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(/** @type {string | null} */ (null))
@@ -128,19 +129,26 @@ export default function AdminCustomerRequestDetailPage() {
     return res
   }, [requestId])
 
-  const loadQuotation = useCallback(async () => {
+  const loadQuotation = useCallback(async (isCancelled = () => false) => {
+    setQuotationLoading(true)
     const q = await fetchQuotationForRequest(requestId)
+    if (isCancelled()) return
     if (q.ok && q.data?.quotation) {
       setQuotation(/** @type {Record<string, unknown>} */ (q.data.quotation))
     } else {
       setQuotation(null)
     }
-  }, [requestId])
+    setQuotationLoading(false)
+  }, [requestId, contextKey, activeSeasonId])
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    fetchAdminCustomerRequest(requestId).then(async (res) => {
+    setError(null)
+    setRequest(null)
+    setQuotation(null)
+    loadQuotation(() => cancelled)
+    fetchAdminCustomerRequest(requestId).then((res) => {
       if (cancelled) return
       if (!res.ok) {
         setError(res.message)
@@ -149,7 +157,6 @@ export default function AdminCustomerRequestDetailPage() {
       }
       setRequest(res.request)
       setStatusValue(String(res.request?.status ?? ''))
-      await loadQuotation()
       setLoading(false)
     })
     return () => {
@@ -342,7 +349,7 @@ export default function AdminCustomerRequestDetailPage() {
   )
   const agreedAmountReadyToFinalize = customerAgreedAmountReadyToFinalize(quotation, agreedAmountInr)
   const agreedAmountFinalizeBlocked =
-    hasQuotation && isPendingFinalization && !agreedAmountReadyToFinalize
+    quotationLoading || (hasQuotation && isPendingFinalization && !agreedAmountReadyToFinalize)
   const showAgreedAmountRequiredValidation =
     showAgreedAmountForm && isPendingFinalization && !agreedAmountReadyToFinalize
   const stallFinalization = stallBillFinalizationDisplay(request)
@@ -353,7 +360,7 @@ export default function AdminCustomerRequestDetailPage() {
     requestSource === 'web' &&
     !finalizationStatus &&
     !isTerminalCustomerRequestStatus(currentStatus)
-  const showCreateQuotation = !isReadOnly && !hasQuotation && !statusTerminal
+  const showCreateQuotation = !quotationLoading && !isReadOnly && !hasQuotation && !statusTerminal
   const showQuotationMessaging = hasQuotation && !statusTerminal
   const showRegenerateQuotation = !isReadOnly && showQuotationMessaging && requestSource === 'web'
 
@@ -502,7 +509,7 @@ export default function AdminCustomerRequestDetailPage() {
             className="admin-input"
             value={statusValue}
             onChange={handleStatusChange}
-            disabled={isReadOnly || statusTerminal || statusSaving || busy}
+            disabled={quotationLoading || isReadOnly || statusTerminal || statusSaving || busy}
             aria-describedby={statusTerminal ? 'request-status-terminal-hint' : undefined}
           >
             {CUSTOMER_REQUEST_STATUSES.map((value) => (
@@ -614,7 +621,7 @@ export default function AdminCustomerRequestDetailPage() {
                     <button
                       type="button"
                       className="admin-touch-button admin-touch-button--primary"
-                      disabled={busy}
+                      disabled={quotationLoading || busy}
                       onClick={handlePrepareWhatsApp}
                     >
                       Prepare quotation WhatsApp
@@ -622,7 +629,7 @@ export default function AdminCustomerRequestDetailPage() {
                     <button
                       type="button"
                       className="admin-touch-button admin-touch-button--secondary"
-                      disabled={busy}
+                      disabled={quotationLoading || busy}
                       onClick={handlePrepareOrderConfirmation}
                     >
                       Prepare order confirmation
@@ -633,7 +640,7 @@ export default function AdminCustomerRequestDetailPage() {
                   <button
                     type="button"
                     className="admin-touch-button admin-touch-button--secondary"
-                    disabled={busy}
+                    disabled={quotationLoading || busy}
                     onClick={handleRegenerate}
                   >
                     Regenerate quotation
@@ -772,7 +779,7 @@ export default function AdminCustomerRequestDetailPage() {
                       setAgreedAmountInr(e.target.value)
                       if (agreedAmountError) setAgreedAmountError(null)
                     }}
-                    disabled={isReadOnly || agreedAmountBusy || busy}
+                    disabled={quotationLoading || isReadOnly || agreedAmountBusy || busy}
                     readOnly={isReadOnly}
                     placeholder="e.g. 2500"
                     aria-invalid={showAgreedAmountRequiredValidation ? true : undefined}
@@ -784,7 +791,7 @@ export default function AdminCustomerRequestDetailPage() {
                     <button
                       type="button"
                       className="admin-touch-button admin-touch-button--secondary admin-request-detail__agreed-save"
-                      disabled={agreedAmountBusy || busy || !String(agreedAmountInr).trim()}
+                      disabled={quotationLoading || agreedAmountBusy || busy || !String(agreedAmountInr).trim()}
                       onClick={handleSaveAgreedAmount}
                     >
                       {agreedAmountBusy ? 'Saving…' : 'Save agreed amount'}
@@ -815,6 +822,8 @@ export default function AdminCustomerRequestDetailPage() {
               </div>
             ) : null}
           </>
+        ) : quotationLoading ? (
+          <p role="status">Loading quotation…</p>
         ) : showCreateQuotation ? (
           <>
             <p className="admin-hint admin-request-detail__quote-empty">
@@ -852,7 +861,7 @@ export default function AdminCustomerRequestDetailPage() {
             <button
               type="button"
               className="admin-touch-button admin-touch-button--primary"
-              disabled={agreementBusy || busy}
+              disabled={quotationLoading || agreementBusy || busy}
               onClick={handleCustomerAgreed}
             >
               {agreementBusy ? 'Saving…' : 'Customer agreed — pending finalization'}
@@ -895,7 +904,7 @@ export default function AdminCustomerRequestDetailPage() {
             onChange={setAssigneeUserId}
             users={assigneeUsers}
             loading={assigneesLoading}
-            disabled={isReadOnly || assignBusy}
+            disabled={quotationLoading || isReadOnly || assignBusy}
             hint={assigneesError}
           />
           {!isReadOnly ? (
@@ -903,7 +912,7 @@ export default function AdminCustomerRequestDetailPage() {
               <button
                 type="button"
                 className="admin-touch-button admin-touch-button--secondary"
-                disabled={assignBusy || !assigneeUserId.trim()}
+                disabled={quotationLoading || assignBusy || !assigneeUserId.trim()}
                 onClick={handleAssignBill}
               >
                 {assignBusy ? 'Saving…' : 'Save assignment'}
@@ -928,7 +937,7 @@ export default function AdminCustomerRequestDetailPage() {
       {canFinalize && !statusTerminal && finalizationStatus !== 'finalized' ? <RequestPaymentPreferences
         key={`preferences:${contextKey}:${requestId}`}
         request={request} agreedAmountPaise={quotation?.acceptedAmountPaise}
-        revision={currentBillRevision(request, quotation)} disabled={isReadOnly}
+        revision={currentBillRevision(request, quotation)} disabled={quotationLoading || isReadOnly}
         onSaved={async () => { await reloadRequest(); await loadQuotation() }} /> : null}
       {locationModeEnabled ? <p><Link to={`/admin/offline?requestId=${encodeURIComponent(requestId)}`}>Save this request for offline work</Link></p> : null}
       <SignedBillFinalization key={`signed:${contextKey}:${requestId}`} requestId={requestId} onAcknowledged={async()=>{await reloadRequest();await loadQuotation()}} />
@@ -977,7 +986,7 @@ export default function AdminCustomerRequestDetailPage() {
             onReload={async () => { await reloadRequest(); await loadQuotation() }}
             requestItems={Array.isArray(request?.items) ? request.items : []}
             pricingMode={bargainModeQuotation ? 'bargain' : 'selling'}
-            disabled={busy || finalizeBusy}
+            disabled={quotationLoading || busy || finalizeBusy}
             onAdjusted={async (payload) => {
               await reloadRequest()
               await loadQuotation()

@@ -137,9 +137,9 @@ async function handleScopedAdminUsersRoutes(request, env, auth) {
     if (!writeAccess.ok) {
       return guardForbiddenResponse(writeAccess)
     }
-    if (!canChangeSeasonMemberRoles(actorSeasonRole)) {
+    if (!canManageSeasonUsers(actorSeasonRole)) {
       return Response.json(
-        { error: 'forbidden', message: 'Season owner access is required to change roles.' },
+        { error: 'forbidden', message: 'Owner or Super Admin access is required to change roles.' },
         { status: 403, headers: NO_STORE },
       )
     }
@@ -152,6 +152,9 @@ async function handleScopedAdminUsersRoutes(request, env, auth) {
       )
     }
     const body = /** @type {Record<string, unknown>} */ (parsed.value ?? {})
+    if (!parsed.value || Array.isArray(parsed.value) || typeof parsed.value !== 'object' || Object.keys(body).some(key => key !== 'role') || typeof body.role !== 'string') {
+      return Response.json({ error: 'validation_error', message: 'Provide only a valid role.' }, { status: 400, headers: NO_STORE })
+    }
     const result = await updateSeasonMemberRole(
       env.DB,
       seasonId,

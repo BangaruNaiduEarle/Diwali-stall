@@ -1,6 +1,7 @@
 /** @typedef {'owner' | 'super_admin' | 'admin'} AdminRole */
 
 const ADMIN_ROLES = /** @type {const} */ (['owner', 'super_admin', 'admin'])
+export { canUpdateAdminMemberRole } from '../../../src/shared/adminUserRolePolicy.js'
 
 /** @param {unknown} role @returns {AdminRole | null} */
 export function strictParseAdminRole(role) {
@@ -71,7 +72,7 @@ export function canCreateSeasonMemberWithRole(actorSeasonRole, targetRole) {
   const target = strictParseAdminRole(targetRole)
   if (!target || target === 'owner') return false
   const actor = normalizeAdminRole(actorSeasonRole)
-  if (actor === 'owner') return target === 'super_admin' || target === 'admin'
+  if (actor === 'owner') return target === 'admin'
   if (actor === 'super_admin') return target === 'admin'
   return false
 }
@@ -79,7 +80,7 @@ export function canCreateSeasonMemberWithRole(actorSeasonRole, targetRole) {
 /** Location grants require authority at this stall; legacy season policy is unchanged. */
 export function canGrantLocationMemberRole(actorRole, targetRole) {
   const actor = strictParseAdminRole(actorRole), target = strictParseAdminRole(targetRole)
-  return Boolean(target && (actor === 'owner' || (actor === 'super_admin' && target === 'admin')))
+  return Boolean(target && ((actor === 'owner' && target !== 'super_admin') || (actor === 'super_admin' && target === 'admin')))
 }
 
 /** Owner-only: permanent product deletion (super_admin does not inherit this). */

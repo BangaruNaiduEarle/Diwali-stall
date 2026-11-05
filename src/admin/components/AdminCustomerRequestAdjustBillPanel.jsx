@@ -49,6 +49,7 @@ export default function AdminCustomerRequestAdjustBillPanel({
 }) {
   const bargainMode = pricingMode === 'bargain'
   const dirty = useRef(false)
+  const [previewRequested, setPreviewRequested] = useState(false)
   const [draftRevision, setDraftRevision] = useState(revision)
   const draftRevisionRef = useRef(revision)
   const [conflict, setConflict] = useState(false)
@@ -110,10 +111,11 @@ export default function AdminCustomerRequestAdjustBillPanel({
   }, [cart.length, previewPayload, requestId, draftRevision])
 
   useEffect(() => {
+    if (!previewRequested && !dirty.current) return
     let cancelled = false
     const timer = setTimeout(() => loadPreview(() => cancelled), 280)
     return () => { cancelled = true; clearTimeout(timer) }
-  }, [loadPreview])
+  }, [loadPreview, previewRequested])
 
   useEffect(() => {
     const q = query.trim()
@@ -209,7 +211,8 @@ export default function AdminCustomerRequestAdjustBillPanel({
   }
 
   return (
-    <div className="admin-request-detail__adjust-bill">
+    <details className="admin-request-detail__adjust-bill" onToggle={event => setPreviewRequested(event.currentTarget.open)}>
+      <summary>Edit bill</summary>
       <p className="admin-hint">
         Change products or quantities before finalize. Saving voids the previous
         quotation and never carries over a prior customer-agreed amount.
@@ -401,6 +404,6 @@ export default function AdminCustomerRequestAdjustBillPanel({
           {saveError}
         </p>
       ) : null}
-    </div>
+    </details>
   )
 }

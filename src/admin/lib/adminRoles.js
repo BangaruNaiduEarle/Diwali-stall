@@ -1,4 +1,5 @@
 /** @typedef {'owner' | 'super_admin' | 'admin'} AdminRole */
+export { canUpdateAdminMemberRole } from '../../shared/adminUserRolePolicy.js'
 
 /** @param {unknown} role */
 export function normalizeAdminRole(role) {
@@ -73,14 +74,14 @@ export function canCreateSeasonMemberWithRole(actorSeasonRole, targetRole) {
   const target = strictParseAdminRole(targetRole)
   if (!target || target === 'owner') return false
   const actor = normalizeAdminRole(actorSeasonRole)
-  if (actor === 'owner') return target === 'super_admin' || target === 'admin'
+  if (actor === 'owner') return target === 'admin'
   if (actor === 'super_admin') return target === 'admin'
   return false
 }
 
 export function canGrantLocationMemberRole(actorRole, targetRole) {
   const actor = strictParseAdminRole(actorRole), target = strictParseAdminRole(targetRole)
-  return Boolean(target && (actor === 'owner' || (actor === 'super_admin' && target === 'admin')))
+  return Boolean(target && ((actor === 'owner' && target !== 'super_admin') || (actor === 'super_admin' && target === 'admin')))
 }
 
 /** Owner-only: permanent product deletion. */

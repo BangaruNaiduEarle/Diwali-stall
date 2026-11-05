@@ -40,17 +40,17 @@ describe('adminUsersSeasonAccess', () => {
   })
 
   it('filters creatable roles by actor season role', () => {
-    assert.deepEqual(creatableAdminUserRoles('owner'), ['admin', 'super_admin'])
+    assert.deepEqual(creatableAdminUserRoles('owner'), ['admin'])
     assert.deepEqual(creatableAdminUserRoles('super_admin'), ['admin'])
     assert.deepEqual(creatableAdminUserRoles('admin'), [])
   })
 
-  it('allows all stall roles for Owners and only Admin for Super Admins without changing legacy policy', () => {
-    assert.deepEqual(creatableAdminUserRoles('owner', true), ['admin', 'super_admin', 'owner'])
+  it('prevents Owner Super Admin grants while retaining stall Owner grants', () => {
+    assert.deepEqual(creatableAdminUserRoles('owner', true), ['admin', 'owner'])
     assert.deepEqual(creatableAdminUserRoles('super_admin', true), ['admin'])
     assert.deepEqual(creatableAdminUserRoles('admin', true), [])
     assert.deepEqual(creatableAdminUserRoles('platform_admin', true), [])
-    assert.deepEqual(creatableAdminUserRoles('owner', false), ['admin', 'super_admin'])
+    assert.deepEqual(creatableAdminUserRoles('owner', false), ['admin'])
   })
 
   it('omits credentials for an existing login and marks the request as existing-only', () => {

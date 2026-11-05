@@ -15,6 +15,40 @@ const customer = { name: 'Guest', mobile: '9876543210', area: 'Town', pickupPref
 const mismatch = e => e.code === 'request_ownership_mismatch'
 
 describe('quotation and Quick Bill location transactions (mocked D1 only)', () => {
+  it('request quotation GET reuses hydrated request items and retains role redaction', async () => {
+    for (const role of ['owner', 'admin']) {
+      const db = fixture()
+      const prepare = db.prepare.bind(db)
+      db.prepare = sql => sql.includes('FROM product_purchase_rates') ? {
+        bind: (...v) => ({ first: async () => { db.calls.push({ sql, v }); return { unit_rate_paise: 2500 } } }),
+      } : prepare(sql)
+      db.state.locationRole = role
+      const { req } = await attach(db)
+      db.calls.length = 0
+      const response = await handleAdminQuotationRoutes(req, { DB: db }, new URL(`https://example.test/api/admin/customer-requests/${A}/quotation`), { email: 'owner@test.com' })
+      assert.equal(response.status, 200)
+      const { quotation } = await response.json()
+      assert.equal(quotation.customerRequestId, A)
+      const fullItemReads = db.calls.filter(call => call.sql.includes(' FROM customer_request_items WHERE') && call.sql.includes('line_id, unit_type, pack_snapshot, product_details_json, line_number'))
+      assert.equal(fullItemReads.length, 1, 'request item hydration must happen once')
+      assert.ok(fullItemReads[0].sql.includes('scoped_request.location_id = ?'))
+      assert.ok(fullItemReads[0].v.includes('loc-a'))
+      if (role === 'admin') assert.equal(quotation.acceptedAmountPaise, undefined)
+    }
+  })
+
+  it('request quotation GET still rejects foreign requests and foreign child ownership', async () => {
+    const db = fixture(), { req } = await attach(db)
+    for (const id of [B, OLD]) {
+      const response = await handleAdminQuotationRoutes(req, { DB: db }, new URL(`https://example.test/api/admin/customer-requests/${id}/quotation`), { email: 'owner@test.com' })
+      assert.equal(response.status, 404)
+    }
+    db.state.customer_request_items.find(item => item.request_id === A).product_id = 'P002'
+    const response = await handleAdminQuotationRoutes(req, { DB: db }, new URL(`https://example.test/api/admin/customer-requests/${A}/quotation`), { email: 'owner@test.com' })
+    assert.equal(response.status, 409)
+    assert.equal((await response.json()).error, 'request_ownership_mismatch')
+  })
+
   it('preserves disabled ID lookup and original season pricing SQL without 0020 queries', async () => {
     const db = fixture(), { context } = await attach(db, { mode: false })
     assert.ok(await getQuotationById(db, 'q-b', undefined, context))

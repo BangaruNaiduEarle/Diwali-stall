@@ -1,4 +1,4 @@
-import { strictParseAdminRole, canManageSeasonUsers, canGrantLocationMemberRole, canViewSensitiveProductPricing } from '../lib/adminRoles.js'
+import { strictParseAdminRole, canManageSeasonUsers, canGrantLocationMemberRole, canViewSensitiveProductPricing, canUpdateAdminMemberRole } from '../lib/adminRoles.js'
 import { resolveLocationScopedAuthorizationFromContext } from '../middleware/adminLocationGuards.js'
 import { ADMIN_LOCATION_CONTEXT_SQL, resolveAdminLocationContext } from './adminLocationContext.js'
 import { getAdminUserByEmail, getAdminUserById } from './adminUserStore.js'
@@ -126,7 +126,7 @@ function requireOneChange(db, batch, seasonId, userId) {
 async function promoteSeasonAuthority(db, batch, auth, userId, membership, role) {
   const previousRole = strictParseAdminRole(membership.role)
   if (roles.indexOf(role) <= roles.indexOf(previousRole)) return
-  if (auth.effectiveRole !== 'owner') fail(403, 'forbidden', 'Only a stall Owner may raise season authority for a stall role.')
+  if (auth.effectiveRole !== 'owner' && !(auth.effectiveRole === 'super_admin' && role === 'super_admin')) fail(403, 'forbidden', 'Insufficient authority to raise the season role.')
   const siblings = await db.prepare(`SELECT location_id, role FROM location_members
     WHERE season_id = ? AND admin_user_id = ? AND location_id != ?`)
     .bind(auth.activeSeasonId, userId, auth.activeLocationId).all()
@@ -198,9 +198,9 @@ export async function grantLocationAdminUser(db, seasonId, context, input) {
   return { ok: true, user: { id: user.id, email: user.email, displayName: user.displayName, role, disabled: false } }
 }
 
-/** Owner-only changes affect a single location/season and never global sessions. */
+/** Role updates use the hierarchy; other mutations remain Owner-only. */
 export async function changeLocationAdminUser(db, seasonId, context, userId, action, value) {
-  const auth = await authorize(db, seasonId, context, true, true)
+  const auth = await authorize(db, seasonId, context, true, action !== 'role')
   if (!['role', 'disabled', 'remove'].includes(action)) fail(400, 'validation_error', 'Invalid membership operation.')
   if (userId === auth.userId && (action === 'remove' || (action === 'disabled' && value))) fail(400, 'validation_error', 'You cannot disable or remove your own membership.')
   const target = await db.prepare(MEMBER_SQL).bind(auth.activeLocationId, seasonId, auth.businessId, userId).first()
@@ -209,6 +209,8 @@ export async function changeLocationAdminUser(db, seasonId, context, userId, act
   if (!currentRole || !seasonRole) fail(409, 'membership_invalid', 'Invalid stored membership role.')
   const role = action === 'role' ? strictParseAdminRole(value) : currentRole
   if (!role) fail(400, 'validation_error', 'Role must be owner, super_admin, or admin.')
+  if (action === 'role' && !canUpdateAdminMemberRole(auth.effectiveRole, currentRole, role)) fail(403, 'forbidden', 'Not allowed to assign this role or manage this user.')
+  if (action === 'role' && userId === auth.userId && currentRole !== role) fail(400, 'validation_error', 'You cannot change your own role.')
   const grantsAccess = action === 'role' || (action === 'disabled' && !value)
   if (grantsAccess && (!enabled(target.season_disabled_at) || !enabled(target.user_disabled_at))) fail(403, 'forbidden', 'Location role requires an enabled user and season membership.')
   const batch = []
@@ -224,6 +226,21 @@ export async function changeLocationAdminUser(db, seasonId, context, userId, act
       AND (other_au.disabled_at IS NULL OR other_au.disabled_at = ''))`
   const losesOwner = action === 'remove' || (action === 'role' && role !== 'owner') || (action === 'disabled' && value)
   const ownerGuard = losesOwner ? ` AND (role != 'owner' OR (disabled_at IS NOT NULL AND disabled_at != '') OR ${remainingOwner})` : ''
+  const losesSuper = effectiveRole(seasonRole, currentRole) === 'super_admin' &&
+    (action === 'remove' || (action === 'disabled' && value) || (action === 'role' && effectiveRole(seasonRole, role) !== 'super_admin'))
+  const superGuard = losesSuper ? ` AND ((disabled_at IS NOT NULL AND disabled_at != '') OR NOT EXISTS (
+    SELECT 1 FROM season_members target_sm JOIN admin_users target_au ON target_au.id = target_sm.admin_user_id
+    WHERE target_sm.season_id = location_members.season_id AND target_sm.admin_user_id = location_members.admin_user_id
+      AND (target_sm.disabled_at IS NULL OR target_sm.disabled_at = '') AND (target_au.disabled_at IS NULL OR target_au.disabled_at = '')) OR EXISTS (
+    SELECT 1 FROM location_members other_super
+      JOIN season_members other_sm ON other_sm.season_id = other_super.season_id AND other_sm.admin_user_id = other_super.admin_user_id
+      JOIN admin_users other_au ON other_au.id = other_super.admin_user_id
+    WHERE other_super.location_id = location_members.location_id AND other_super.season_id = location_members.season_id
+      AND other_super.admin_user_id != location_members.admin_user_id
+      AND ((other_super.role = 'super_admin' AND other_sm.role IN ('super_admin','owner')) OR (other_super.role = 'owner' AND other_sm.role = 'super_admin'))
+      AND (other_super.disabled_at IS NULL OR other_super.disabled_at = '')
+      AND (other_sm.disabled_at IS NULL OR other_sm.disabled_at = '')
+      AND (other_au.disabled_at IS NULL OR other_au.disabled_at = '')))` : ''
   const sufficientSeason = grantsAccess ? ` AND EXISTS (SELECT 1 FROM season_members target_sm JOIN admin_users target_au ON target_au.id = target_sm.admin_user_id
     WHERE target_sm.season_id = location_members.season_id AND target_sm.admin_user_id = location_members.admin_user_id
       AND target_sm.role IN (${roles.slice(roles.indexOf(role)).map(r => `'${r}'`).join(', ')})
@@ -232,7 +249,7 @@ export async function changeLocationAdminUser(db, seasonId, context, userId, act
     action === 'role' ? "UPDATE location_members SET role = ?, updated_at = datetime('now')" : "UPDATE location_members SET disabled_at = ?, updated_at = datetime('now')"
   const values = action === 'remove' ? [] : [action === 'role' ? role : value ? new Date().toISOString() : null]
   batch.push(db.prepare(`${mutation} WHERE location_id = ? AND season_id = ? AND admin_user_id = ?
-    AND role = ? AND ${guard.sql}${sufficientSeason}${ownerGuard}`)
+    AND role = ? AND ${guard.sql}${sufficientSeason}${ownerGuard}${superGuard}`)
     .bind(...values, auth.activeLocationId, seasonId, userId, currentRole, ...guard.values))
   requireOneChange(db, batch, seasonId, userId)
   await runMembershipBatch(db, batch)
@@ -241,7 +258,7 @@ export async function changeLocationAdminUser(db, seasonId, context, userId, act
 
 async function runMembershipBatch(db, statements) {
   try { return await db.batch(statements) } catch (error) {
-    if (/constraint failed/i.test(String(error?.message ?? error))) fail(409, 'membership_changed', 'Membership changed or the last valid stall Owner would be lost. No change was applied. Refresh and retry.')
+    if (/constraint failed/i.test(String(error?.message ?? error))) fail(409, 'membership_changed', 'Membership changed or the last active Owner or Super Admin would be lost. No change was applied. Refresh and retry.')
     throw error
   }
 }

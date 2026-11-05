@@ -58,12 +58,12 @@ describe('location-scoped admin membership management (mocked D1)', () => {
   it('invites a new login atomically using existing password policy and hashing', async () => {
     const db = locationMembersDb(), { context } = await requestContext(db)
     db.state.users.delete('invite')
-    const result = await createSeasonAdminUser(db, season, 'owner', { email: 'new@test.com', password: 'twelvecharspw', role: 'super_admin' }, context)
+    const result = await createSeasonAdminUser(db, season, 'owner', { email: 'new@test.com', password: 'twelvecharspw', role: 'admin' }, context)
     assert.equal(result.ok, true)
     const user = db.state.users.get(result.user.id)
     assert.equal(await verifyPassword('twelvecharspw', user.password_hash), true)
-    assert.equal(db.state.seasonMembers.get(smKey(user.id)).role, 'super_admin')
-    assert.equal(db.state.locationMembers.get(lmKey(user.id)).role, 'super_admin')
+    assert.equal(db.state.seasonMembers.get(smKey(user.id)).role, 'admin')
+    assert.equal(db.state.locationMembers.get(lmKey(user.id)).role, 'admin')
     assert.equal(db.state.locationMembers.has(lmKey(user.id, 'loc-b')), false)
     assert.ok(!('passwordHash' in result.user))
   })
@@ -80,9 +80,9 @@ describe('location-scoped admin membership management (mocked D1)', () => {
   it('rejects season promotion that would elevate another stall, and never re-enables disabled authority', async () => {
     const db = locationMembersDb(), { context } = await requestContext(db)
     db.state.seasonMembers.get(smKey('staff')).role = 'admin'
-    await assert.rejects(updateSeasonMemberRole(db, season, 'owner', 'staff', 'super_admin', context), e => e.code === 'season_authority_conflict')
+    await assert.rejects(updateSeasonMemberRole(db, season, 'owner', 'staff', 'owner', context), e => e.code === 'season_authority_conflict')
     db.state.locationMembers.delete(lmKey('staff'))
-    await assert.rejects(createSeasonAdminUser(db, season, 'owner', { email: 'staff@test.com', role: 'super_admin' }, context), e => e.code === 'season_authority_conflict')
+    await assert.rejects(createSeasonAdminUser(db, season, 'owner', { email: 'staff@test.com', role: 'owner' }, context), e => e.code === 'season_authority_conflict')
     db.state.seasonMembers.get(smKey('staff')).disabled_at = 'disabled'
     await assert.rejects(createSeasonAdminUser(db, season, 'owner', { email: 'staff@test.com' }, context), denied)
     db.state.users.get('invite').disabled_at = 'disabled'
@@ -91,10 +91,11 @@ describe('location-scoped admin membership management (mocked D1)', () => {
     assert.equal(db.state.seasonMembers.get(smKey('staff')).disabled_at, 'disabled')
   })
 
-  it('retains owner-only changes and limits super_admin invitations to admin', async () => {
+  it('allows Super Admin role updates but retains owner-only disabling/removal and Admin-only invitations', async () => {
     const db = locationMembersDb(), { context: superContext } = await requestContext(db, { actor: 'super' })
     await assert.rejects(createSeasonAdminUser(db, season, 'owner', { email: 'invite@test.com', role: 'super_admin' }, superContext), denied)
-    for (const fn of [() => updateSeasonMemberRole(db, season, 'owner', 'staff', 'admin', superContext), () => setSeasonMemberDisabled(db, season, 'staff', true, superContext), () => removeLocationMember(db, season, 'staff', superContext)]) await assert.rejects(fn(), denied)
+    assert.equal((await updateSeasonMemberRole(db, season, 'super_admin', 'staff', 'admin', superContext)).ok, true)
+    for (const fn of [() => setSeasonMemberDisabled(db, season, 'staff', true, superContext), () => removeLocationMember(db, season, 'staff', superContext)]) await assert.rejects(fn(), denied)
     assert.equal((await createSeasonAdminUser(db, season, 'owner', { email: 'invite@test.com', role: 'admin' }, superContext)).ok, true)
     const { context: staff } = await requestContext(db, { actor: 'staff' })
     await assert.rejects(listSeasonAdminUsers(db, season, staff), denied)
@@ -104,13 +105,14 @@ describe('location-scoped admin membership management (mocked D1)', () => {
 
   it('changes/removes only the selected membership and prevents self-lockout', async () => {
     const db = locationMembersDb(), { context } = await requestContext(db), before = unchangedGlobals(db.state)
-    assert.equal((await updateSeasonMemberRole(db, season, 'owner', 'staff', 'super_admin', context)).ok, true)
+    const { context: superContext } = await requestContext(db, { actor: 'super' })
+    assert.equal((await updateSeasonMemberRole(db, season, 'super_admin', 'staff', 'super_admin', superContext)).ok, true)
     assert.equal((await removeLocationMember(db, season, 'staff', context)).ok, true)
     assert.ok(db.state.locationMembers.has(lmKey('staff', 'loc-b')))
     await assert.rejects(setSeasonMemberDisabled(db, season, 'staff', true, context), e => e.status === 404)
     await assert.rejects(setSeasonMemberDisabled(db, season, 'owner', true, context), e => e.status === 400)
     await assert.rejects(removeLocationMember(db, season, 'owner', context), e => e.status === 400)
-    await assert.rejects(updateSeasonMemberRole(db, season, 'owner', 'owner', 'admin', context), e => e.status === 409)
+    await assert.rejects(updateSeasonMemberRole(db, season, 'owner', 'owner', 'admin', context), e => e.status === 400)
     assert.deepEqual(unchangedGlobals(db.state), before)
   })
 
@@ -123,10 +125,10 @@ describe('location-scoped admin membership management (mocked D1)', () => {
     assert.equal(db.state.locationMembers.get(lmKey('staff')).role, 'owner')
     assert.deepEqual(db.state.locationMembers.get(lmKey('staff', 'loc-b')), sibling)
     assert.deepEqual({ users: db.state.users, sessions: db.state.sessions }, globals)
-    assert.equal((await updateSeasonMemberRole(db, season, 'owner', 'owner', 'admin', context)).ok, true)
     const { context: successor } = await requestContext(db, { actor: 'staff' })
+    assert.equal((await updateSeasonMemberRole(db, season, 'owner', 'owner', 'admin', successor)).ok, true)
     assert.equal((await removeLocationMember(db, season, 'owner', successor)).ok, true)
-    await assert.rejects(updateSeasonMemberRole(db, season, 'owner', 'staff', 'admin', successor), e => e.status === 409)
+    await assert.rejects(updateSeasonMemberRole(db, season, 'owner', 'staff', 'admin', successor), e => e.status === 400)
     assert.ok(db.state.locationMembers.has(lmKey('owner', 'loc-b')))
   })
 
@@ -216,9 +218,10 @@ describe('location-scoped admin membership management (mocked D1)', () => {
   it('allows owner demotion only while another enabled owner remains at the same location/season', async () => {
     const db = locationMembersDb(), { context } = await requestContext(db)
     db.state.locationMembers.set(lmKey('other', 'loc-b'), { location_id: 'loc-b', season_id: season, admin_user_id: 'other', role: 'owner', disabled_at: null })
-    await assert.rejects(updateSeasonMemberRole(db, season, 'owner', 'owner', 'admin', context), e => e.status === 409)
+    await assert.rejects(updateSeasonMemberRole(db, season, 'owner', 'owner', 'admin', context), e => e.status === 400)
     db.state.locationMembers.set(lmKey('other'), { location_id: 'loc-a', season_id: season, admin_user_id: 'other', role: 'owner', disabled_at: null })
-    assert.equal((await updateSeasonMemberRole(db, season, 'owner', 'owner', 'admin', context)).ok, true)
+    const { context: other } = await requestContext(db, { actor: 'other' })
+    assert.equal((await updateSeasonMemberRole(db, season, 'owner', 'owner', 'admin', other)).ok, true)
     assert.equal(db.state.seasonMembers.get(smKey('owner')).role, 'owner')
   })
 
@@ -236,7 +239,7 @@ describe('location-scoped admin membership management (mocked D1)', () => {
   it('rechecks target season role and enabled state inside mutation predicates', async () => {
     const db = locationMembersDb(), { context } = await requestContext(db)
     db.beforeBatch = state => { state.seasonMembers.get(smKey('staff')).role = 'admin' }
-    await assert.rejects(updateSeasonMemberRole(db, season, 'owner', 'staff', 'super_admin', context), e => e.status === 409)
+    await assert.rejects(updateSeasonMemberRole(db, season, 'owner', 'staff', 'owner', context), e => e.status === 409)
     assert.equal(db.state.locationMembers.get(lmKey('staff')).role, 'admin')
     db.beforeBatch = state => { state.associations.get(`loc-a:${season}`).status = 'archived' }
     await assert.rejects(setSeasonMemberDisabled(db, season, 'staff', true, context), e => e.status === 409)
@@ -248,7 +251,7 @@ describe('location-scoped admin membership management (mocked D1)', () => {
     for (const [path, method, body, status] of [
       ['/api/admin/users', 'GET', null, 200],
       ['/api/admin/users', 'POST', { email: 'invite@test.com', role: 'admin', locationId: 'loc-b' }, 201],
-      ['/api/admin/users/staff/role', 'POST', { role: 'super_admin' }, 200],
+      ['/api/admin/users/staff/role', 'POST', { role: 'admin' }, 200],
       ['/api/admin/users/staff/disable', 'POST', null, 200],
       ['/api/admin/users/staff/enable', 'POST', null, 200],
       ['/api/admin/users/staff/reset-password', 'POST', { password: 'twelvecharspw' }, 403],

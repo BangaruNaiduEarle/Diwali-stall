@@ -1,6 +1,7 @@
 import { listLocationAdminUsers, grantLocationAdminUser, changeLocationAdminUser } from './adminLocationMembers.js'
 import {
-  canChangeSeasonMemberRoles,
+  canManageSeasonUsers,
+  canUpdateAdminMemberRole,
   canCreateSeasonMemberWithRole,
   strictParseAdminRole,
 } from '../lib/adminRoles.js'
@@ -210,12 +211,12 @@ export async function createSeasonAdminUser(db, seasonId, actorSeasonRole, input
  */
 export async function updateSeasonMemberRole(db, seasonId, actorSeasonRole, userId, roleInput, context) {
   if (context?.locationModeEnabled) return changeLocationAdminUser(db, seasonId, context, userId, 'role', roleInput)
-  if (!canChangeSeasonMemberRoles(actorSeasonRole)) {
+  if (!canManageSeasonUsers(actorSeasonRole)) {
     return {
       ok: false,
       status: 403,
       code: 'forbidden',
-      message: 'Season owner access is required to change roles.',
+      message: 'Owner or Super Admin access is required to change roles.',
     }
   }
 
@@ -224,15 +225,6 @@ export async function updateSeasonMemberRole(db, seasonId, actorSeasonRole, user
   if (!newRole) {
     return { ok: false, status: 400, code: 'validation_error', message: 'Role must be owner, super_admin, or admin.' }
   }
-  if (newRole === 'owner') {
-    return {
-      ok: false,
-      status: 403,
-      code: 'forbidden',
-      message: 'Owner role cannot be assigned through this endpoint.',
-    }
-  }
-
   const user = await getAdminUserById(db, userId)
   if (!user) {
     return { ok: false, status: 404, code: 'not_found', message: 'User not found.' }
@@ -251,6 +243,13 @@ export async function updateSeasonMemberRole(db, seasonId, actorSeasonRole, user
   const currentRole = strictParseAdminRole(membership.role)
   if (!currentRole) {
     return { ok: false, status: 400, code: 'validation_error', message: 'Invalid stored season role.' }
+  }
+
+  if (!canUpdateAdminMemberRole(actorSeasonRole, currentRole, newRole)) {
+    return { ok: false, status: 403, code: 'forbidden', message: 'Not allowed to assign this role or manage this user.' }
+  }
+  if (context?.userId === userId && currentRole !== newRole) {
+    return { ok: false, status: 400, code: 'validation_error', message: 'You cannot change your own role.' }
   }
 
   if (currentRole === newRole) {
@@ -278,13 +277,24 @@ export async function updateSeasonMemberRole(db, seasonId, actorSeasonRole, user
     }
   }
 
-  await db
+  const updated = await db
     .prepare(
       `UPDATE season_members SET role = ?
-       WHERE season_id = ? AND admin_user_id = ?`,
+       WHERE season_id = ? AND admin_user_id = ? AND role = ?
+         AND (role != 'super_admin' OR ? = 'super_admin' OR (disabled_at IS NOT NULL AND disabled_at != '')
+           OR EXISTS (SELECT 1 FROM admin_users target_au WHERE target_au.id = season_members.admin_user_id AND target_au.disabled_at IS NOT NULL AND target_au.disabled_at != '') OR EXISTS (
+           SELECT 1 FROM season_members other_sm JOIN admin_users other_au ON other_au.id = other_sm.admin_user_id
+           WHERE other_sm.season_id = season_members.season_id AND other_sm.admin_user_id != season_members.admin_user_id
+             AND other_sm.role = 'super_admin' AND (other_sm.disabled_at IS NULL OR other_sm.disabled_at = '') AND (other_au.disabled_at IS NULL OR other_au.disabled_at = '')))
+         AND (? IS NULL OR EXISTS (SELECT 1 FROM season_members actor_sm JOIN admin_users actor_au ON actor_au.id = actor_sm.admin_user_id
+           JOIN business_seasons actor_season ON actor_season.id = actor_sm.season_id
+           WHERE actor_sm.season_id = season_members.season_id AND actor_sm.admin_user_id = ? AND actor_sm.role = ?
+             AND (actor_sm.disabled_at IS NULL OR actor_sm.disabled_at = '') AND (actor_au.disabled_at IS NULL OR actor_au.disabled_at = '') AND actor_season.status = 'active'))`,
     )
-    .bind(newRole, season, userId)
+    .bind(newRole, season, userId, currentRole, newRole, context?.userId ?? null, context?.userId ?? null, actorSeasonRole)
     .run()
+
+  if (updated.meta?.changes !== 1) return { ok: false, status: 409, code: 'membership_changed', message: 'Membership changed or the last active Super Admin would be lost. Refresh and retry.' }
 
   await db.prepare('DELETE FROM admin_sessions WHERE admin_user_id = ?').bind(userId).run()
 
@@ -336,13 +346,20 @@ export async function setSeasonMemberDisabled(db, seasonId, userId, disabled, co
     }
   }
 
-  await db
+  const updated = await db
     .prepare(
       `UPDATE season_members SET disabled_at = ?
-       WHERE season_id = ? AND admin_user_id = ?`,
+       WHERE season_id = ? AND admin_user_id = ?
+         AND (? = 0 OR role != 'super_admin' OR (disabled_at IS NOT NULL AND disabled_at != '')
+           OR EXISTS (SELECT 1 FROM admin_users target_au WHERE target_au.id = season_members.admin_user_id AND target_au.disabled_at IS NOT NULL AND target_au.disabled_at != '') OR EXISTS (
+           SELECT 1 FROM season_members other_sm JOIN admin_users other_au ON other_au.id = other_sm.admin_user_id
+           WHERE other_sm.season_id = season_members.season_id AND other_sm.admin_user_id != season_members.admin_user_id
+             AND other_sm.role = 'super_admin' AND (other_sm.disabled_at IS NULL OR other_sm.disabled_at = '') AND (other_au.disabled_at IS NULL OR other_au.disabled_at = '')))`,
     )
-    .bind(disabled ? new Date().toISOString() : null, season, userId)
+    .bind(disabled ? new Date().toISOString() : null, season, userId, disabled ? 1 : 0)
     .run()
+
+  if (updated.meta?.changes !== 1) return { ok: false, status: 409, code: 'membership_changed', message: 'Membership changed or the last active Super Admin would be lost. Refresh and retry.' }
 
   if (disabled) {
     await db.prepare('DELETE FROM admin_sessions WHERE admin_user_id = ?').bind(userId).run()

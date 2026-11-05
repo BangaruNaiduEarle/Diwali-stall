@@ -31,9 +31,10 @@ import {
  * @param {Record<string, unknown>} quotation
  * @param {unknown} seasonRole
  * @param {string} seasonId
+ * @param {Record<string, unknown>} [loadedRequest] Already scoped and hydrated by this route.
  */
-async function quotationJsonForCustomerRequestDetail(db, requestId, quotation, seasonRole, seasonId) {
-  const request = await getAdminCustomerRequestById(db, requestId, seasonId)
+async function quotationJsonForCustomerRequestDetail(db, requestId, quotation, seasonRole, seasonId, loadedRequest) {
+  const request = loadedRequest ?? await getAdminCustomerRequestById(db, requestId, seasonId)
   return filterQuotationForCustomerRequestDetail(db, quotation, seasonRole, request, seasonId)
 }
 
@@ -180,6 +181,7 @@ async function handleScopedAdminQuotationRoutes(request, env, url, identity) {
             quotation,
             seasonRole,
             seasonId,
+            requestRow,
           ),
         },
         { headers: NO_STORE },

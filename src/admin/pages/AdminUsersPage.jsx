@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 import Button from '../../components/ui/Button.jsx'
 import AdminFeedbackBanner from '../components/AdminFeedbackBanner.jsx'
 import {fetchBillingPermissions,setBillingPermission} from '../api/adminOffline.js'
@@ -20,7 +19,7 @@ import { preventArchivedSeasonFormSubmit } from '../lib/adminSeasonReadOnly.js'
 import {
   ADMIN_USER_EDIT_ROLES,
   adminUserRoleSelectLabel,
-  canChangeSeasonMemberRoles,
+  canUpdateAdminMemberRole,
   normalizeAdminRole,
 } from '../lib/adminRoles.js'
 import {
@@ -29,7 +28,6 @@ import {
   canViewAdminUsersPage,
   creatableAdminUserRoles,
   adminUserAssignmentPayload,
-  shouldLeaveAdminUsersAfterSelfRoleChange,
 } from '../lib/adminUsersSeasonAccess.js'
 
 function PasswordInput({ value, onChange, ...props }) {
@@ -47,16 +45,16 @@ function PasswordInput({ value, onChange, ...props }) {
 }
 
 export default function AdminUsersPage() {
-  const { email: sessionEmail, permissionRole: seasonRole, refreshSession, seasonStatus, locationModeEnabled, location,contextKey } = useAdminSession()
+  const { email: sessionEmail, permissionRole: seasonRole, seasonStatus, locationModeEnabled, location,contextKey } = useAdminSession()
   const { isReadOnly } = useAdminSeasonReadOnly()
   const createRoles = useMemo(() => creatableAdminUserRoles(seasonRole, locationModeEnabled), [seasonRole, locationModeEnabled])
   const showCreateForm = canShowAdminUserCreateForm(seasonRole, isReadOnly)
   const showOwnerActions = canShowAdminUserOwnerActions(seasonRole, isReadOnly)
-  const navigate = useNavigate()
   const [users, setUsers] = useState(/** @type {unknown[]} */ ([]))
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [busy, setBusy] = useState(false)
+  const [roleBusyId, setRoleBusyId] = useState(null)
   const [billingPermissions,setBillingPermissions]=useState(null)
   const [billingError,setBillingError]=useState('')
   const billingChange=useRef(null)
@@ -82,6 +80,7 @@ export default function AdminUsersPage() {
 
   const load = useCallback(async () => {
     const res = await fetchAdminUsers()
+    if (billingContext.current !== contextKey) return
     if (!res.ok) {
       setError(res.message)
       return
@@ -94,9 +93,11 @@ export default function AdminUsersPage() {
       draft[user.id] = normalizeAdminRole(user.role)
     }
     setRoleDraft(draft)
-  }, [])
+  }, [contextKey])
 
   useEffect(() => {
+    setUsers([])
+    setRoleDraft({})
     if (canViewAdminUsersPage(seasonRole)) load()
   }, [seasonRole, load])
 
@@ -214,33 +215,31 @@ export default function AdminUsersPage() {
   }
 
   async function handleSaveRole(userId) {
-    if (!canChangeSeasonMemberRoles(seasonRole) || isReadOnly || busy) return
+    if (isReadOnly || busy) return
     const user = usersById.get(userId)
     if (!user) return
     const nextRole = normalizeAdminRole(roleDraft[userId])
     if (nextRole === normalizeAdminRole(user.role)) return
-    if (locationModeEnabled && !window.confirm(`Change ${user.email} to ${adminUserRoleSelectLabel(nextRole)} in ${location?.name ?? 'the selected stall'}? Promote a successor before demoting the current Owner.`)) return
+    if (user.email.toLowerCase() === String(sessionEmail ?? '').toLowerCase() || !canUpdateAdminMemberRole(seasonRole, user.role, nextRole)) return
+    const capturedContext = contextKey
 
     setBusy(true)
-    setSuccess('')
-    const res = await updateAdminUserRole(userId, nextRole)
-    setBusy(false)
-    if (!res.ok) {
-      setError(res.message)
-      return
-    }
+    setRoleBusyId(userId)
     setError('')
-    setSuccess(`Role updated for ${user.email}.`)
-
-    const selfChange =
-      sessionEmail && user.email.toLowerCase() === String(sessionEmail).toLowerCase()
-    await load()
-    if (selfChange) {
-      await refreshSession()
-      if (shouldLeaveAdminUsersAfterSelfRoleChange(nextRole)) {
-        navigate('/admin/products', { replace: true })
+    setSuccess('')
+    try {
+      const res = await updateAdminUserRole(userId, nextRole)
+      if (billingContext.current !== capturedContext) return
+      if (!res.ok) {
+        setError(res.message)
+        return
       }
-    }
+      setError('')
+      setSuccess(`Role updated for ${user.email}.`)
+      await load()
+    } catch {
+      if (billingContext.current === capturedContext) setError('Role update could not be confirmed. Refresh and try again.')
+    } finally { setBusy(false); setRoleBusyId(null) }
   }
 
   return (
@@ -330,6 +329,8 @@ export default function AdminUsersPage() {
               const draft = roleDraft[user.id] ?? normalizeAdminRole(user.role)
               const roleDirty = normalizeAdminRole(draft) !== normalizeAdminRole(user.role)
               const self = user.email.toLowerCase() === String(sessionEmail ?? '').toLowerCase()
+              const editRoles = ADMIN_USER_EDIT_ROLES.filter(role => canUpdateAdminMemberRole(seasonRole, user.role, role))
+              const canEditRole = !isReadOnly && !self && editRoles.some(role => role !== user.role) && !user.userDisabled && !user.seasonMembershipDisabled
               return (
                 <tr key={user.id}>
                   <td className="px-3 py-3 align-top">
@@ -355,7 +356,16 @@ export default function AdminUsersPage() {
                       Billing Finalization
                     </label>:null}
                     {locationModeEnabled&&billingError?<p className="admin-field-error">{billingError}</p>:null}
-                    {showOwnerActions ? (
+                    <span>{adminUserRoleSelectLabel(user.role)}</span>
+                  </td>
+                  <td className="px-3 py-3 align-top text-[var(--color-muted)]">
+                    {user.disabled ? 'Disabled' : 'Active'}
+                    {locationModeEnabled && user.userDisabled ? <p className="text-xs">Login disabled</p> : null}
+                    {locationModeEnabled && user.seasonMembershipDisabled ? <p className="text-xs">Season membership disabled</p> : null}
+                    {locationModeEnabled && user.effectiveRole && user.effectiveRole !== user.role ? <p className="text-xs">Effective role: {adminUserRoleSelectLabel(user.effectiveRole)}</p> : null}
+                  </td>
+                  <td className="px-3 py-3 align-top">
+                    {canEditRole ? (
                       <div className="flex flex-wrap items-center gap-2">
                         <select
                           className="rounded border px-2 py-1.5 text-sm"
@@ -366,7 +376,7 @@ export default function AdminUsersPage() {
                           }
                           aria-label={`Role for ${user.email}`}
                         >
-                          {ADMIN_USER_EDIT_ROLES.map((r) => (
+                          {[...new Set([user.role, ...editRoles])].map((r) => (
                             <option key={r} value={r}>
                               {adminUserRoleSelectLabel(r)}
                             </option>
@@ -379,21 +389,12 @@ export default function AdminUsersPage() {
                           size="sm"
                           disabled={busy || !roleDirty || (locationModeEnabled && (user.userDisabled || user.seasonMembershipDisabled))}
                           onClick={() => handleSaveRole(user.id)}
+                          loading={roleBusyId === user.id}
                         >
                           Update role
                         </Button>
                       </div>
-                    ) : (
-                      <span>{adminUserRoleSelectLabel(user.role)}</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-3 align-top text-[var(--color-muted)]">
-                    {user.disabled ? 'Disabled' : 'Active'}
-                    {locationModeEnabled && user.userDisabled ? <p className="text-xs">Login disabled</p> : null}
-                    {locationModeEnabled && user.seasonMembershipDisabled ? <p className="text-xs">Season membership disabled</p> : null}
-                    {locationModeEnabled && user.effectiveRole && user.effectiveRole !== user.role ? <p className="text-xs">Effective role: {adminUserRoleSelectLabel(user.effectiveRole)}</p> : null}
-                  </td>
-                  <td className="px-3 py-3 align-top">
+                    ) : null}
                     {showOwnerActions ? (
                       <div className="flex flex-wrap gap-2">
                         {!locationModeEnabled ? <button
