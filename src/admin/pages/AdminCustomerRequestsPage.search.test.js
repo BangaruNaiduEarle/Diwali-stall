@@ -48,7 +48,7 @@ test('Request Search browser behavior with controlled API responses', async t =>
   const response = (name, total = 1, page = 1, totalPages = 1) => ({
     ok: true,
     requests: total ? [{ id: name, publicReference: 'DWL-TKTSWMFM', customerName: name, status: 'received', createdAt: '2026-11-04' }] : [],
-    pagination: { page, limit: 20, total, totalPages },
+    pagination: { page, limit: 10, total, totalPages },
   })
   const resolve = (index, value) => browser.eval(`window.pending[${index}](${JSON.stringify(value)})`)
   const input = value => browser.eval(`{
@@ -63,15 +63,15 @@ test('Request Search browser behavior with controlled API responses', async t =>
     await browser.eval(`document.body.innerHTML='<div id="root"></div>'`)
     await browser.eval(bundle.outputFiles[0].text)
     await browser.wait('window.calls?.length===1')
-    assert.equal((await calls())[0].limit, 20)
-    await resolve(0, response('Initial', 60, 1, 3))
+    assert.equal((await calls())[0].limit, 10)
+    await resolve(0, response('Initial', 30, 1, 3))
     await browser.wait('document.body.textContent.includes("Initial")')
 
     await t.test('debounces partial Reference ID input and resets pagination', async () => {
       await click('Next')
       await browser.wait('window.calls.length===2')
       assert.equal((await calls())[1].page, 2)
-      await resolve(1, response('Second page', 60, 2, 3))
+      await resolve(1, response('Second page', 30, 2, 3))
       await browser.wait('document.body.textContent.includes("Second page")')
       await input('DWL-')
       await delay(100)
@@ -82,14 +82,14 @@ test('Request Search browser behavior with controlled API responses', async t =>
       const call = (await calls())[2]
       assert.equal(call.q, 'DWL-TKTS')
       assert.equal(call.page, 1)
-      await resolve(2, response('Reference match', 60, 1, 3))
+      await resolve(2, response('Reference match', 30, 1, 3))
       await browser.wait('document.body.textContent.includes("Reference match")')
       await click('Next')
       await browser.wait('window.calls.length===4')
       assert.equal((await calls())[3].q, 'DWL-TKTS')
       assert.equal((await calls())[3].page, 2)
-      assert.equal((await calls())[3].limit, 20)
-      await resolve(3, response('Reference page 2', 60, 2, 3))
+      assert.equal((await calls())[3].limit, 10)
+      await resolve(3, response('Reference page 2', 30, 2, 3))
       await browser.wait('document.body.textContent.includes("Reference page 2")')
     })
 
@@ -157,7 +157,7 @@ test('Request Search browser behavior with controlled API responses', async t =>
       assert.equal(await browser.eval('document.body.textContent.includes("Late pre-clear result")'), false)
       assert.equal(await browser.eval('document.body.textContent.includes("Cleared current results")'), true)
     })
-    await t.test('Previous/Next keep every filter and enforce page boundaries at 20 rows', async () => {
+    await t.test('Previous/Next keep every filter and enforce page boundaries at 10 rows', async () => {
       await browser.eval(`{
         const select=document.querySelector('[aria-label="Filter by finalization status"]');
         select.value='pending';select.dispatchEvent(new Event('change',{bubbles:true}));
@@ -166,7 +166,7 @@ test('Request Search browser behavior with controlled API responses', async t =>
       await input('reference')
       await browser.wait("window.calls.at(-1)?.q==='reference'")
       let index=(await calls()).length-1
-      await resolve(index,response('All filters',40,1,2))
+      await resolve(index,response('All filters',20,1,2))
       await browser.wait('document.body.textContent.includes("All filters")')
       assert.equal(await browser.eval("Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='Previous').disabled"),true)
       await click('Next')
@@ -174,19 +174,19 @@ test('Request Search browser behavior with controlled API responses', async t =>
       index=(await calls()).length-1
       const call=(await calls())[index]
       assert.equal(call.page,2)
-      assert.equal(call.limit,20)
+      assert.equal(call.limit,10)
       assert.equal(call.status,'received')
       assert.equal(call.q,'reference')
       assert.equal(call.finalizationStatus,'pending')
       assert.equal(call.assignedToMe,true)
-      await resolve(index,response('Last filtered page',40,2,2))
+      await resolve(index,response('Last filtered page',20,2,2))
       await browser.wait('document.body.textContent.includes("Last filtered page")')
       assert.equal(await browser.eval("Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='Next').disabled"),true)
       await click('Previous')
       await browser.wait(`window.calls.length>${index+1}`)
       index=(await calls()).length-1
       assert.deepEqual({...((await calls())[index]),at:0},{...call,page:1,at:0})
-      await resolve(index,response('First filtered page',40,1,2))
+      await resolve(index,response('First filtered page',20,1,2))
       await browser.wait('document.body.textContent.includes("First filtered page")')
     })
   } finally {

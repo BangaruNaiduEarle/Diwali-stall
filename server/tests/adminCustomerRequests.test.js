@@ -23,8 +23,8 @@ import { attachPaymentSummaries } from '../src/services/adminPayments.js'
 import { fixture as scopeFixture, attach as attachScope, season as scopedSeason } from './helpers/mockAdminTransactionDb.js'
 
 describe('customer request pagination', () => {
-  it('defaults to 20, validates page/limit, and caps limit at 100', () => {
-    assert.equal(parseAdminCustomerRequestListQuery(new URLSearchParams()).data.limit, 20)
+  it('defaults to 10, validates page/limit, and caps limit at 100', () => {
+    assert.equal(parseAdminCustomerRequestListQuery(new URLSearchParams()).data.limit, 10)
     assert.equal(parseAdminCustomerRequestListQuery(new URLSearchParams('page=3&limit=100')).data.offset, 200)
     for (const query of ['page=0','page=-1','page=1.5','page=10001','limit=0','limit=-1','limit=1.5','limit=101','limit=NaN']) {
       assert.equal(parseAdminCustomerRequestListQuery(new URLSearchParams(query)).ok, false, query)
@@ -36,20 +36,20 @@ describe('customer request pagination', () => {
       status:i%2?'quoted':'received',source:'web',customer_name:i%3?'Other':'Matching',created_at:'2026-11-05 10:00:00'}))
     const db=createAdminMockDb({requests,items:[]})
     const first=await (await adminFetch('/api/admin/customer-requests',{db})).json()
-    assert.equal(first.requests.length,20)
-    assert.deepEqual(first.pagination,{page:1,limit:20,total:45,totalPages:3})
+    assert.equal(first.requests.length,10)
+    assert.deepEqual(first.pagination,{page:1,limit:10,total:45,totalPages:5})
     const second=await (await adminFetch('/api/admin/customer-requests?page=2',{db})).json()
-    assert.equal(second.requests.length,20)
-    assert.equal(new Set([...first.requests,...second.requests].map(row=>row.id)).size,40)
-    assert.ok(first.requests[19].id>second.requests[0].id)
+    assert.equal(second.requests.length,10)
+    assert.equal(new Set([...first.requests,...second.requests].map(row=>row.id)).size,20)
+    assert.ok(first.requests[9].id>second.requests[0].id)
     const filtered=await (await adminFetch('/api/admin/customer-requests?page=2&limit=3&status=received&q=Matching',{db})).json()
     assert.deepEqual(filtered.pagination,{page:2,limit:3,total:8,totalPages:3})
     assert.equal(filtered.requests.length,3)
     assert.ok(filtered.requests.every(row=>row.status==='received'&&row.customerName==='Matching'))
     assert.deepEqual(db.lastListBind.slice(-2),[3,3])
     const empty=await (await adminFetch('/api/admin/customer-requests?q=no-such-customer',{db})).json()
-    assert.deepEqual(empty.pagination,{page:1,limit:20,total:0,totalPages:0})
-    const beyond=await (await adminFetch('/api/admin/customer-requests?page=4',{db})).json()
+    assert.deepEqual(empty.pagination,{page:1,limit:10,total:0,totalPages:0})
+    const beyond=await (await adminFetch('/api/admin/customer-requests?page=6',{db})).json()
     assert.equal(beyond.requests.length,0)
     assert.equal(beyond.pagination.total,45)
   })

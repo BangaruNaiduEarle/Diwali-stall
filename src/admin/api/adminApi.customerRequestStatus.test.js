@@ -13,7 +13,7 @@ describe('fetchAdminCustomerRequests pagination', () => {
       const {fetchAdminCustomerRequests}=await import('./adminApi.js')
       await fetchAdminCustomerRequests()
       assert.equal(urls[0].searchParams.get('page'),'1')
-      assert.equal(urls[0].searchParams.get('limit'),'20')
+      assert.equal(urls[0].searchParams.get('limit'),'10')
       const result=await fetchAdminCustomerRequests({page:2,limit:40,status:'quoted',q:' test ',finalizationStatus:'pending',assignedToMe:true})
       assert.deepEqual(Object.fromEntries(urls[1].searchParams),{page:'2',limit:'40',status:'quoted',q:'test',finalizationStatus:'pending',assignedToMe:'1'})
       assert.deepEqual(result.pagination,{page:2,limit:40,total:45,totalPages:2})
