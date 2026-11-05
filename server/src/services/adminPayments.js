@@ -107,6 +107,7 @@ export async function recordRequestPayment(db, requestId, body, options) {
     const committed = await replay()
     if (committed) return committed
     const message = String(error?.message ?? error)
+    if(message.includes('payment_capture_already_recovered'))fail(409,'payment_recovery_conflict','This capture was already recovered through a reviewed payment. Refresh payments; do not record it again.')
     if (message.includes('payment_exceeds_outstanding')) fail(409, 'balance_changed', 'The outstanding balance changed. Refresh before retrying.')
     if (message.includes('NOT NULL constraint failed: customer_requests.status')) fail(409, 'revision_conflict', 'The request changed. Refresh before retrying.')
     if (message.includes('payment_scope_or_authority_changed')) fail(403, 'forbidden', 'Payment authority or location scope changed.')

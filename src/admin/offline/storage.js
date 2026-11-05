@@ -1,4 +1,5 @@
-import { digest, publicJwk, verifyTransfer } from '../../shared/handoverProtocol.js'
+import { canonicalJson, digest, publicJwk, verify, verifyTransfer } from '../../shared/handoverProtocol.js'
+import { grantStatus, verifyOfflineGrant, signGrantedOperation } from '../../shared/offlineGrant.js'
 import { matchTransferCatalogue } from './handover.js'
 import { transferProductIds } from '../../shared/familyPackSnapshot.js'
 
@@ -12,9 +13,11 @@ export function offlineScopeKey(scope) {
 }
 const scopedKey = (scope, key) => JSON.stringify([offlineScopeKey(scope), key])
 
-export function offlineOperationError(profile, operation) {
+export function offlineOperationError(profile, operation, captured = false) {
   if (!profile?.writable || profile.authorityRevoked) return 'This saved workspace is read-only. Reconnect to verify membership.'
-  if (['AGREEMENT','CLOSE','PAYMENT','HANDOVER'].includes(operation?.kind) && !['owner','super_admin'].includes(profile.role)) return 'Only Owner or Super Admin can accept handovers, record agreements, close or record payments.'
+  if (['PAYMENT','HANDOVER'].includes(operation?.kind) && !['owner','super_admin'].includes(profile.role)) return 'Only Owner or Super Admin can accept handovers or record payments.'
+  if (['AGREEMENT','CLOSE'].includes(operation?.kind) && !['owner','super_admin'].includes(profile.role) &&
+      !(profile.role === 'admin' && (captured && operation.authorization || !grantStatus(profile.authorization,profile.scope,Date.now(),true)))) return 'Only Owner or Super Admin can save agreements or finalize without a valid Owner-issued device grant.'
   if (profile.role === 'admin' && (operation?.kind === 'CREATE' ? operation.body.pricingMode && operation.body.pricingMode !== 'selling' || operation.body.acceptedAmountPaise != null
     : operation?.kind === 'EDIT' && (Object.keys(operation.body).some(key => key !== 'items') || operation.body.items?.some(item => Object.hasOwn(item, 'unitRatePaise'))))) return 'Admin cannot change financial amounts.'
   return null
@@ -65,10 +68,12 @@ class OfflineStorage {
   }
   get(store, scope, key) { return this.transact([store], 'readonly', tx => requestResult(tx.objectStore(store).get(scopedKey(scope, key)))) }
   list(store, scope) { return this.transact([store], 'readonly', tx => requestResult(tx.objectStore(store).index('scopeKey').getAll(offlineScopeKey(scope)))) }
-  async activate(profile, products, familyPacks, familyPackIssues) {
+  async activate(profile, products, familyPacks, familyPackIssues, productImages) {
     const scopeKey = offlineScopeKey(profile.scope)
     return this.transact(['profiles','catalogues','meta'], 'readwrite', async tx => {
       const current = await requestResult(tx.objectStore('profiles').get(scopedKey(profile.scope, 'profile')))
+      if ((current?.authorizationRevision ?? 0) > (profile.authorizationRevision ?? 0)) profile = { ...profile,authorization:current.authorization,authorizationRevision:current.authorizationRevision }
+      if (profile.authorization === undefined && current?.authorization && profile.role === 'admin' && !profile.authorityRevoked) profile = { ...profile, authorization: current.authorization }
       // Sync/conflict review may still hold a pre-demotion profile. Only online
       // preparation (which supplies no handover) can establish a fresh profile.
       if (profile.handover && current) {
@@ -79,7 +84,7 @@ class OfflineStorage {
       }
       const previous=await requestResult(tx.objectStore('catalogues').get(scopedKey(profile.scope,'catalogue')))
       tx.objectStore('profiles').put({ ...profile, key: scopedKey(profile.scope, 'profile'), scopeKey })
-      tx.objectStore('catalogues').put({ key: scopedKey(profile.scope, 'catalogue'), scopeKey, products,familyPacks:familyPacks??previous?.familyPacks??[],familyPackIssues:familyPackIssues??previous?.familyPackIssues??[], capturedAt: new Date().toISOString() })
+      tx.objectStore('catalogues').put({ key: scopedKey(profile.scope, 'catalogue'), scopeKey, products,familyPacks:familyPacks??previous?.familyPacks??[],familyPackIssues:familyPackIssues??previous?.familyPackIssues??[], productImages:productImages??previous?.productImages??{}, capturedAt: new Date().toISOString() })
       tx.objectStore('meta').put({ key: 'active-profile', profileKey: scopedKey(profile.scope, 'profile') })
     })
   }
@@ -90,6 +95,19 @@ class OfflineStorage {
     })
   }
   clearActiveProfile() { return this.transact(['meta'], 'readwrite', tx => { tx.objectStore('meta').delete('active-profile') }) }
+  async saveAuthorization(scope, authorization) {
+    if (authorization) {
+      const identity = await this.signingIdentity(scope)
+      const claims = await verifyOfflineGrant(authorization,scope)
+      if (canonicalJson(claims.publicKey) !== canonicalJson(identity.publicKey)) throw Error('Owner authorization does not belong to this device key.')
+    }
+    return this.transact(['profiles'], 'readwrite', async tx => {
+      const store = tx.objectStore('profiles'), profile = await requestResult(store.get(scopedKey(scope,'profile')))
+      if (!profile || profile.authorityRevoked || profile.role !== 'admin' || !profile.writable) throw Error('An enabled Admin workspace is required for device grants.')
+      const next = { ...profile, authorization: authorization ?? null,authorizationRevision:(profile.authorizationRevision??0)+1 }
+      store.put(next); return next
+    })
+  }
   /** Commit only authority reductions. Drafts, QR identities and queued input are untouched. */
   reconcileAuthority(session, requested = {}) {
     const confirmed = session.ok && session.locationModeEnabled && session.userId && Array.isArray(session.authorizedLocations)
@@ -120,8 +138,10 @@ class OfflineStorage {
         const writable = profile.writable && !revoked && authority.capabilities.write === true
         const privateAllowed = !revoked && authority.capabilities.viewSensitiveProductPricing === true && ['owner','super_admin'].includes(role)
         const authorityRevoked = profile.authorityRevoked === true || revoked
-        if (role === profile.role && writable === profile.writable && authorityRevoked === (profile.authorityRevoked === true) && (privateAllowed || !profile.handover?.privateCatalogue?.length)) continue
+        const clearAuthorization = Boolean(profile.authorization && (revoked || role !== 'admin' || !writable))
+        if (!clearAuthorization && role === profile.role && writable === profile.writable && authorityRevoked === (profile.authorityRevoked === true) && (privateAllowed || !profile.handover?.privateCatalogue?.length)) continue
         store.put({ ...profile, role, writable, authorityRevoked,
+          ...(clearAuthorization ? {authorization:null,authorizationRevision:(profile.authorizationRevision??0)+1} : {}),
           ...(profile.handover && !privateAllowed ? { handover: { ...profile.handover, privateCatalogue: [] } } : {}) })
         changed = true
       }
@@ -140,7 +160,12 @@ class OfflineStorage {
       const identity = { key, privateKey:pair.privateKey,publicKey }; store.add(identity); return identity
     })
   }
-  saveHandoverPreparation(scope, preparation) {
+  async saveHandoverPreparation(scope, preparation) {
+    const claims=preparation?.certificate?.claims
+    if(!claims||['businessId','locationId','seasonId'].some(key=>claims.scope?.[key]!==scope[key]))throw Error('QR preparation belongs to another business, stall or season.')
+    const identity=await this.signingIdentity(scope)
+    if(canonicalJson(identity.publicKey)!==canonicalJson(claims.publicKey))throw Error('QR preparation belongs to another device signing key.')
+    await verify(claims,preparation.certificate.signature,preparation.rootKey)
     return this.transact(['profiles'], 'readwrite', async tx => {
       const store = tx.objectStore('profiles'), key = scopedKey(scope, 'profile'), profile = await requestResult(store.get(key))
       if (!profile || preparation.certificate?.claims.userId !== scope.userId || preparation.certificate.claims.deviceId !== scope.deviceId) throw Error('QR preparation belongs to a different device or user.')
@@ -158,19 +183,42 @@ class OfflineStorage {
   async acceptHandover(scope, envelope, catalogue, familyPacks) {
     const profile = await this.get('profiles', scope, 'profile')
     if (!profile?.writable || !['owner','super_admin'].includes(profile.role) || !profile.handover) throw Error('Prepare an authorized Owner/Super Admin profile online before accepting QR.')
-    await verifyTransfer(envelope, {rootKey:profile.handover.rootKey,scope,recipientUserId:scope.userId})
+    await verifyTransfer(envelope, {rootKey:profile.handover.rootKey,grantRootKey:profile.handover.grantRootKey,scope,recipientUserId:scope.userId})
     if(!familyPacks)familyPacks=(await this.get('catalogues',scope,'catalogue'))?.familyPacks??[]
     const payload = envelope.payload, fingerprint = await digest(envelope)
-    if (matchTransferCatalogue(payload,catalogue,familyPacks).some(row=>!row.matches)) throw Error('The QR selling catalogue or Family Pack catalogue version/composition does not match this receiving stall. No data was imported.')
-    const products = transferProductIds(payload.lines).map(id=>catalogue.find(row=>row.id===id))
+    if (payload.v!==3&&matchTransferCatalogue(payload,catalogue,familyPacks).some(row=>!row.matches)) throw Error('The QR selling catalogue or Family Pack catalogue version/composition does not match this receiving stall. No data was imported.')
+    const capturedCatalogue=payload.v===3?payload.bill.operations.filter(op=>['CREATE','EDIT'].includes(op.kind)).at(-1).catalogue:catalogue
+    const sourceItems=payload.v===3?payload.bill.operations.filter(op=>['CREATE','EDIT'].includes(op.kind)).at(-1).body:null
+    const products = transferProductIds(payload.lines).map(id=>capturedCatalogue.find(row=>row.id===id))
     if (products.some(row=>!row)) throw Error('Some QR products are missing from this stall catalogue. Nothing was imported. Refresh preparation online.')
     return this.saveDraft(scope, { draftId:crypto.randomUUID(),requestId:payload.requestId,expectedRevision:payload.revision,
+      ...(payload.v===3?{sellingCatalogue:structuredClone(capturedCatalogue)}:{}),
       handover:{transferId:payload.transferId,creatorUserId:payload.creatorUserId,initiatorUserId:envelope.certificate.claims.userId,recipientUserId:scope.userId,recipientDeviceId:scope.deviceId,occurredAt:new Date().toISOString()},
-      body:{customer:payload.customer,items:payload.lines.map(line=>line.familyPackId?{lineId:line.lineId,familyPackId:line.familyPackId,quantity:line.quantity,unitType:'box',familyPackSnapshot:structuredClone(line.packSnapshot)}:{lineId:line.lineId,productId:line.productId,quantity:line.quantity,unitType:line.unitType})},agreedInr:'',discountInr:'' },
+      body:{customer:payload.customer,items:payload.lines.map(line=>{
+        if(line.familyPackId)return {lineId:line.lineId,familyPackId:line.familyPackId,quantity:line.quantity,unitType:'box',familyPackSnapshot:structuredClone(line.packSnapshot)}
+        const override=sourceItems?.items.find(item=>item.productId===line.productId&&(item.unitType??'box')===line.unitType)?.unitRatePaise
+        return {lineId:line.lineId,productId:line.productId,quantity:line.quantity,unitType:line.unitType,...(override==null?{}:{priceInr:(override/100).toFixed(2)})}
+      })},agreedInr:payload.v===3?(payload.bill.agreedAmountPaise/100).toFixed(2):'',discountInr:sourceItems?.discountPaise==null?'':(sourceItems.discountPaise/100).toFixed(2) },
       {kind:'HANDOVER',body:{transfer:envelope},requestId:payload.requestId,expectedRevision:payload.revision,catalogue:products}, null, fingerprint)
   }
   async saveDraft(scope, draft, operation = null, resolving = null, transferFingerprint = null) {
     const scopeKey = offlineScopeKey(scope), draftId = draft.draftId ?? id()
+    const operationId = operation ? id() : null, occurredAt = operation?.occurredAt ?? new Date().toISOString()
+    let signedOperation = null
+    if (operation && ['AGREEMENT','CLOSE'].includes(operation.kind)) {
+      const profile = await this.get('profiles',scope,'profile')
+      const permissionError = offlineOperationError(profile,operation)
+      if (permissionError) throw Error(permissionError)
+      if (profile?.role === 'admin') {
+        const previous = await this.get('drafts',scope,draftId)
+        const candidate = { ...operation, operationId, scope:{...scope},capturedRole:profile.role,occurredAt,
+          ...(resolving ? {resolutionOf:resolving} : previous?.tailOperationId ? {parentOperationId:previous.tailOperationId} : {}) }
+        delete candidate.deviceToken
+        // WebCrypto must finish outside the IndexedDB transaction; the revision
+        // check below then prevents a stale signature from committing.
+        signedOperation = await signGrantedOperation(candidate,profile.authorization,await this.signingIdentity(scope))
+      }
+    }
     const result = await this.transact(['drafts','versions','outbox','profiles','meta'], 'readwrite', async tx => {
       const profile = await requestResult(tx.objectStore('profiles').get(scopedKey(scope, 'profile')))
       const permissionError = offlineOperationError(profile, operation)
@@ -181,7 +229,18 @@ class OfflineStorage {
         const previous = await requestResult(tx.objectStore('meta').get(scopedKey(scope, 'qr-accepted:' + transferId)))
         if (previous) {
           if (previous.fingerprint !== transferFingerprint) throw Error('This transfer ID was already used with different content.')
+          const original=await requestResult(tx.objectStore('outbox').get(scopedKey(scope,previous.operationId)))
+          if(original&&['resolved','discarded'].includes(original.state))throw Error('This QR acceptance was explicitly cancelled. Obtain a refreshed transfer; its preserved history is still available.')
           return {draft:await requestResult(tx.objectStore('drafts').get(scopedKey(scope,previous.draftId))),duplicate:true}
+        }
+        const requestId=operation.body.transfer.payload.requestId
+        const accepted=await requestResult(tx.objectStore('meta').get(scopedKey(scope,'qr-request:'+requestId)))
+        const drafts=await requestResult(tx.objectStore('drafts').index('scopeKey').getAll(scopeKey))
+        const sameBill=drafts.find(row=>row.requestId===requestId&&row.handover)
+        if(accepted||sameBill){
+          const rows=await requestResult(tx.objectStore('outbox').index('scopeKey').getAll(scopeKey))
+          const claims=rows.filter(row=>row.payload.kind==='HANDOVER'&&row.payload.body.transfer.payload.requestId===requestId)
+          if(!claims.length||claims.some(row=>!['resolved','discarded'].includes(row.state)))throw Error('This bill was already accepted on this device under another transfer. Open its saved bill; explicitly resolve the earlier handoff before accepting a changed QR.')
         }
       }
       const previous = await requestResult(tx.objectStore('drafts').get(scopedKey(scope, draftId)))
@@ -198,11 +257,11 @@ class OfflineStorage {
       if (operation) {
         if (previous?.localClosure && operation.kind !== 'PAYMENT' && !resolving) throw Error('This draft has a queued closure. Resolve or synchronize it before making further changes.')
         if (operation.kind === 'PAYMENT' && !previous?.localClosure && previous?.serverSnapshot?.request.status !== 'closed' && !resolving) throw Error('Finalize the request or queue its closure before capturing a payment.')
-        payload = { ...operation, operationId: id(), scope: { ...scope }, capturedRole: profile.role, occurredAt: operation.occurredAt ?? new Date().toISOString() }
+        payload = { ...operation, operationId, scope: { ...scope }, capturedRole: profile.role, occurredAt }
         delete payload.deviceToken
         if (resolving) {
           const old = await requestResult(tx.objectStore('outbox').get(scopedKey(scope, resolving)))
-          if (!old || !(old.state === 'conflict' || old.state === 'failed' && [400,428].includes(old.lastError?.status)) || old.draftId !== draftId) throw Error('The conflict must be reviewed before replacing it.')
+          if (!old || !(old.state === 'conflict' || old.state === 'failed' && ([400,428].includes(old.lastError?.status) || old.lastError?.code==='offline_grant_denied')) || old.draftId !== draftId) throw Error('The conflict must be reviewed before replacing it.')
           if (payload.kind !== old.payload.kind || payload.kind !== 'CREATE' && !Number.isSafeInteger(payload.expectedRevision) || payload.parentOperationId) throw Error('Choose the reviewed server revision explicitly.')
           payload.resolutionOf = old.payload.operationId
           tx.objectStore('outbox').put({ ...old, state: 'resolved', resolvedBy: payload.operationId })
@@ -212,6 +271,17 @@ class OfflineStorage {
           while (added) { added = false; for (const row of rows) if (cancelled.has(row.payload.parentOperationId) && !cancelled.has(row.payload.operationId)) { cancelled.add(row.payload.operationId); added = true } }
           for (const row of rows) if (row.payload.operationId !== old.payload.operationId && cancelled.has(row.payload.operationId) && row.state !== 'synced') tx.objectStore('outbox').put({ ...row, state: 'discarded', resolution: 'preceding_conflict_replaced' })
         } else if (previous?.tailOperationId) payload.parentOperationId = previous.tailOperationId
+        if (signedOperation) {
+          if (canonicalJson(signedOperation.authorization.grant) !== canonicalJson(profile.authorization?.grant) ||
+              canonicalJson({...signedOperation,authorization:undefined}) !== canonicalJson(payload)) throw Error('The draft or Owner authorization changed while signing. Review and save again.')
+          payload = signedOperation
+        }
+        if(payload.kind==='PAYMENT'&&payload.resolutionOf&&!resolving){
+          const source=await requestResult(tx.objectStore('outbox').get(scopedKey(scope,payload.resolutionOf)))
+          if(!source||source.state!=='discarded'||source.attempts!==0||source.recoveredBy||source.payload.kind!=='PAYMENT'||source.payload.body.entryType!=='PAYMENT'||!source.payload.requestId||source.payload.requestId!==draft.requestId)throw Error('Only a never-sent, retained payment for this same bill can be recovered once.')
+          if(['entryType','amountPaise','paymentMethod','reference','recordingMode'].some(key=>(source.payload.body[key]??'')!==(payload.body[key]??''))||source.payload.occurredAt!==payload.occurredAt)throw Error('Recovery must preserve the original amount, method, reference and occurrence time.')
+          tx.objectStore('outbox').put({...source,recoveredBy:payload.operationId,resolution:'payment_recovered_after_review'})
+        }
         const counterKey = 'outbox-order:' + scopeKey
         const counter = await requestResult(tx.objectStore('meta').get(counterKey))
         const order = (counter?.value ?? 0) + 1
@@ -224,8 +294,10 @@ class OfflineStorage {
       if (previous?.lastAcknowledgement) { saved.lastAcknowledgement = previous.lastAcknowledgement; saved.requestId = previous.requestId }
       if (resolving) saved.localClosure = null
       if (payload?.kind === 'CLOSE') saved.localClosure = { operationId: payload.operationId, occurredAt: payload.occurredAt, actorUserId: scope.userId, roleSnapshot: profile.role, deviceId: scope.deviceId }
+      if(payload?.kind==='HANDOVER'&&payload.body.transfer.payload.v===3)saved.localClosure={operationId:payload.operationId,occurredAt:payload.occurredAt,actorUserId:payload.body.transfer.payload.creatorUserId,roleSnapshot:payload.body.transfer.certificate.claims.role,deviceId:payload.body.transfer.certificate.claims.deviceId,receivedFinalized:true}
       tx.objectStore('drafts').put(saved)
       if (transferId) tx.objectStore('meta').add({key:scopedKey(scope,'qr-accepted:'+transferId),draftId,fingerprint:transferFingerprint,operationId:payload.operationId})
+      if (transferId) tx.objectStore('meta').put({key:scopedKey(scope,'qr-request:'+payload.body.transfer.payload.requestId),draftId,operationId:payload.operationId})
       tx.objectStore('versions').add({ key: scopedKey(scope, id()), scopeKey, draftId, savedAt: saved.savedAt, body: structuredClone(saved.body),
         agreedInr: saved.agreedInr ?? null, discountInr: saved.discountInr ?? null, operationId: payload?.operationId ?? null, resolvesLocalVersion: saved.localConflictResolution ?? null })
       return { draft: saved, operation: payload }

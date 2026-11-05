@@ -35,5 +35,7 @@ describe('logoutAdmin', () => {
     assert.equal(capturedUrl, '/api/admin/auth/logout')
     assert.equal(capturedInit?.method, 'POST')
     assert.equal(capturedInit?.credentials, 'include')
+    assert.match(new Headers(capturedInit?.headers).get('Content-Type'), /^application\/json; charset=UTF-8$/)
+    assert.deepEqual(JSON.parse(capturedInit?.body), {})
   })
 })

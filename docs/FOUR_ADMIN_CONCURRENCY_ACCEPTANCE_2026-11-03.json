@@ -1,0 +1,213 @@
+{
+  "phase": 5,
+  "date": "2026-11-03",
+  "scope": "Four separate Admin Chrome profiles plus independent Owner/Super Admin; actual local Worker and established disposable D1",
+  "counts": {
+    "PASS": 15,
+    "FAIL": 0,
+    "NOT TESTED": 0,
+    "NOT IMPLEMENTED": 0
+  },
+  "focusedBrowserChecks": {
+    "passed": 9,
+    "failed": 0,
+    "evidence": "browser-results-1793709828200.json"
+  },
+  "database": {
+    "status": "PASS",
+    "preExistingRows": 3127,
+    "tables": 34,
+    "requests": 8,
+    "operations": 21,
+    "receipts": 16,
+    "expectedConflicts": 5,
+    "payments": 1,
+    "qrClaims": 1,
+    "finalizedAccounts": 2,
+    "workflowEvents": 91,
+    "evidence": "preservation-1793710159232089700.json"
+  },
+  "evidenceDirectory": "C:\\Users\\naidu\\AppData\\Local\\Temp\\diwali-release-b38657123a324f3a9e7c02c159b82c79\\p5-218d6b5a",
+  "applicationChanges": false,
+  "priorPhasesRerun": false,
+  "releaseApproval": false,
+  "checks": [
+    {
+      "id": "P5-01",
+      "name": "Four isolated Admin profiles create and edit independent requests offline",
+      "status": "PASS",
+      "scenarios": [
+        1,
+        2,
+        15
+      ]
+    },
+    {
+      "id": "P5-02",
+      "name": "Four-way barrier release, lost committed response, partial prefix and unchanged-ID recovery",
+      "status": "PASS",
+      "scenarios": [
+        3,
+        4,
+        5,
+        8,
+        9
+      ]
+    },
+    {
+      "id": "P5-03",
+      "name": "A virgin browser CREATE and concurrent duplicate submissions share one atomic receipt",
+      "status": "PASS",
+      "scenarios": [
+        6,
+        7
+      ]
+    },
+    {
+      "id": "P5-04",
+      "name": "Two Admins race an offline edit; conflict keeps both versions while independent drafts sync",
+      "status": "PASS",
+      "scenarios": [
+        10
+      ]
+    },
+    {
+      "id": "P5-05",
+      "name": "Owner finalization cannot be overwritten by older Admin offline items",
+      "status": "PASS",
+      "scenarios": [
+        11
+      ]
+    },
+    {
+      "id": "P5-06",
+      "name": "Competing Owner and Super Admin offline closures retain one winner and one conflict",
+      "status": "PASS",
+      "scenarios": [
+        12
+      ]
+    },
+    {
+      "id": "P5-07",
+      "name": "Offline payment duplicate delivery and QR duplicate acceptance stay idempotent during recovery",
+      "status": "PASS",
+      "scenarios": [
+        13
+      ]
+    },
+    {
+      "id": "P5-08",
+      "name": "Mutated scopes and foreign direct IDs are rejected after concurrent synchronization",
+      "status": "PASS",
+      "scenarios": [
+        14
+      ]
+    },
+    {
+      "id": "P5-09",
+      "name": "All profiles retain immutable operations and conflict snapshots with independent acknowledgements",
+      "status": "PASS",
+      "scenarios": [
+        4,
+        7,
+        9,
+        10,
+        11,
+        12,
+        15
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": 1,
+      "scenario": "Four Admins create different requests simultaneously",
+      "status": "PASS",
+      "evidence": "P5-01/02: four independent profiles create distinct offline drafts; their first CREATE requests are all held at a browser network barrier, then released together. Four distinct server requests result. Release acknowledgements span 120 ms."
+    },
+    {
+      "id": 2,
+      "scenario": "Each Admin adds/removes products and changes quantities offline",
+      "status": "PASS",
+      "evidence": "P5-01: each adds two products, queues CREATE, changes the retained product quantity to 2/3/4/5, removes the second product and queues dependent EDIT, with no network. Separate IndexedDB outboxes retain all eight identities and the CREATE→EDIT dependencies."
+    },
+    {
+      "id": 3,
+      "scenario": "All four reconnect and synchronize concurrently",
+      "status": "PASS",
+      "evidence": "P5-02: four outstanding browser sync requests released together; remaining operations/recovery use the real application sync controls and Worker/D1. Two unaffected profiles finish while the faulted profiles remain pending."
+    },
+    {
+      "id": 4,
+      "scenario": "Every request created exactly once",
+      "status": "PASS",
+      "evidence": "P5-02/03/09 and SQL audit: the four primary requests each have one CREATE receipt. All eight expected final requests exist; no unexpected request or duplicate active quotation exists."
+    },
+    {
+      "id": 5,
+      "scenario": "Retry after simulated timeout/lost response",
+      "status": "PASS",
+      "evidence": "P5-02: Admin 1's successful CREATE response is inspected at Chrome's response stage, then discarded before client delivery; connection goes offline. The server commit exists but the browser retains the operation as pending. Retry uses the identical operation ID and returns the original receipt/request; its dependent edit then completes. This is lost-response/network-failure simulation, not a wall-clock timeout benchmark."
+    },
+    {
+      "id": 6,
+      "scenario": "Concurrent duplicate operations",
+      "status": "PASS",
+      "evidence": "P5-03: one previously uncommitted browser CREATE and three simultaneous direct copies using that same authenticated device/payload produce one winning commit and three replays, all pointing to one request. P5-07 repeats concurrent same-identity delivery for payment and QR acceptance."
+    },
+    {
+      "id": 7,
+      "scenario": "Unique operation IDs and atomic sync receipts",
+      "status": "PASS",
+      "evidence": "P5-03/09 plus SQL: 21 distinct durable operation IDs, exactly one receipt for each of 16 acknowledgements, no receipts for five conflicts. Every receipt matches its completed request revision and audit event. No partial receipt/request/quotation/payment/claim is present."
+    },
+    {
+      "id": 8,
+      "scenario": "Partial synchronization and interrupted connections",
+      "status": "PASS",
+      "evidence": "P5-02: Admin 2's CREATE is acknowledged, then its dependent EDIT is interrupted before dispatch and the browser is disconnected. CREATE remains synced, EDIT pending; retry sends the same EDIT. Admin 1 independently retains an unacknowledged committed CREATE. Other profiles finish without waiting for them."
+    },
+    {
+      "id": 9,
+      "scenario": "Acknowledged operations never become new transactions on retry",
+      "status": "PASS",
+      "evidence": "P5-02: a later manual sync after recovery produces zero additional sync POSTs for the acknowledged outboxes. P5-03/07: direct duplicate retries return original identities. P5-09/SQL retain acknowledgement/receipt identity across browser resumption."
+    },
+    {
+      "id": 10,
+      "scenario": "Two Admins edit the same request offline; stale conflict preserved",
+      "status": "PASS",
+      "evidence": "P5-04: both download the same revision, queue distinct 18/19 quantities offline, then release EDITs together. Admin 2 wins with 19; Admin 1 gets 409 and retains quantity 18 plus the server version. An earlier retained race also preserves its losing operation and shows independent CREATEs behind that conflict still completing."
+    },
+    {
+      "id": 11,
+      "scenario": "Owner finalizes while an Admin has an older pending revision",
+      "status": "PASS",
+      "evidence": "P5-05: Admin 4 queues quantity 99 offline; Owner saves ₹420 agreement and finalizes the server bill. Later Admin EDIT returns 409 with a closed server snapshot; quantity 99 remains local, server quantity 5/due 42,000 paise and finalization history remain unchanged."
+    },
+    {
+      "id": 12,
+      "scenario": "Competing Owner/Super Admin offline closures become explicit conflicts",
+      "status": "PASS",
+      "evidence": "P5-06: both prepare the same agreed request revision, queue CLOSE offline and release together. Owner wins; Super Admin gets 409, keeps the provisional closure and closed server snapshot. Exactly one finalizer/account persists."
+    },
+    {
+      "id": 13,
+      "scenario": "Payments and QR remain idempotent",
+      "status": "PASS",
+      "evidence": "P5-07: a queued offline payment and three concurrent direct copies yield one ₹100 ledger entry/receipt. A real Admin-generated signed QR is accepted twice locally, retaining one HANDOVER; browser sync plus three copies retain one server claim/receipt/request. Signature independently verified. The late source CREATE becomes a preserved conflict rather than a second request."
+    },
+    {
+      "id": 14,
+      "scenario": "Cross-stall/cross-season operations rejected",
+      "status": "PASS",
+      "evidence": "P5-08: three payload scope mutations and two mismatched request-context submissions all return 409. Actual foreign request snapshot reads return 404 in both other-stall and other-active-season contexts despite explicit memberships. SQL confirms all new business writes stay in A/2026. Earlier phases' broader scope suites were not repeated."
+    },
+    {
+      "id": 15,
+      "scenario": "Actor, device, occurred_at and received_at metadata",
+      "status": "PASS",
+      "evidence": "P5-01/09 and SQL: four distinct Admin/device identities; all 16 receipts match payload actor/device/captured role/occurrence time, acknowledgement revision and final operation audit event. Receipt/event received times are populated. Payment and QR creator/recipient device histories are independently validated."
+    }
+  ]
+}

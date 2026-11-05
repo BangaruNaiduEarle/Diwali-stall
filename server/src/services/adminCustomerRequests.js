@@ -3,6 +3,7 @@ import {
   resolveOwnerListRequestAuditAmounts,
 } from '../lib/adminCustomerRequestListAudit.js'
 import { buildRequestInternalPricingView } from '../lib/adminInternalPricingPreview.js'
+import { hasOfflineFinalization } from '../lib/offlineFinalizationAuthority.js'
 import {
   canFinalizeQuickBillCustomerRequests,
   canViewSensitiveProductPricing,
@@ -11,6 +12,7 @@ import {
 import { getActiveQuotationForRequest } from './adminQuotations.js'
 import { customerRequestDb, customerRequestScope } from '../lib/adminCustomerRequestScope.js'
 import { activeQuotationSnapshot } from '../lib/adminTransactionIntegrity.js'
+import { validateRequestPaymentPreferences } from '../../../src/shared/requestPaymentPreferences.js'
 import { validateCustomerRequestStatusTransition } from '../lib/adminCustomerRequestValidation.js'
 import {
   getAdminUserByEmail,
@@ -67,6 +69,7 @@ export const ADMIN_GET_CUSTOMER_REQUEST_SQL = `
     customer_phone,
     customer_area,
     pickup_preference,
+    payment_preference_status, payment_preference_mode, payment_preference_received_paise,
     customer_note,
     delivery_address,
     delivery_landmark,
@@ -248,6 +251,11 @@ export function mapAdminCustomerRequestDetail(row, items) {
     customerPhone: row.customer_phone ?? null,
     customerArea: row.customer_area ?? null,
     pickupPreference: row.pickup_preference ?? null,
+    paymentPreferences: {
+      status: row.payment_preference_status ?? null,
+      mode: row.payment_preference_mode ?? null,
+      receivedAmountPaise: row.payment_preference_received_paise ?? null,
+    },
     customerNote: row.customer_note ?? null,
     deliveryAddress: row.delivery_address ?? null,
     deliveryLandmark: row.delivery_landmark ?? null,
@@ -377,6 +385,42 @@ export async function getAdminCustomerRequestById(db, requestId, seasonId, conte
     .all()
   const items = itemsResult.results ?? []
   return mapAdminCustomerRequestDetail(row, items)
+}
+
+/** Online-only informational metadata, deliberately separate from payment operations. */
+export async function updateRequestPaymentPreferences(db, requestId, body, opts = {}) {
+  db = customerRequestDb(db, opts.seasonId, opts.context, true)
+  const scope = customerRequestScope(db)
+  if (!canFinalizeQuickBillCustomerRequests(scope?.effectiveRole ?? opts.actorRole)) {
+    return { ok: false, status: 403, code: 'forbidden', message: 'Only Owner or Super Admin can edit payment preferences.' }
+  }
+  const gate = requireCustomerRequestSeasonId(opts.seasonId)
+  if (!gate.ok) return gate
+  if (scope && opts.context?.workflowTransport?.expectedRevision == null) {
+    return { ok: false, status: 428, code: 'revision_required', message: 'Refresh the request before saving payment preferences.' }
+  }
+  const row = await db.prepare(`SELECT id, status, finalization_status,
+    payment_preference_status, payment_preference_mode, payment_preference_received_paise
+    FROM customer_requests WHERE id = ? AND season_id = ?`).bind(requestId, gate.season).first()
+  if (!row) return { ok: false, status: 404, code: 'not_found', message: 'Customer request not found.' }
+  if (['closed', 'void'].includes(row.status) || row.finalization_status === 'finalized') {
+    return { ok: false, status: 409, code: 'request_locked', message: 'Payment preferences can only be edited before finalization on an open request.' }
+  }
+  const quotation = await getActiveQuotationForRequest(db, requestId, gate.season)
+  const parsed = validateRequestPaymentPreferences(body, quotation?.acceptedAmountPaise)
+  if (!parsed.ok) return { ...parsed, status: 400, code: 'invalid_payment_preferences' }
+  const snapshot = scope ? activeQuotationSnapshot(quotation) : null
+  const result = await db.prepare(`UPDATE customer_requests SET
+    payment_preference_status = ?, payment_preference_mode = ?, payment_preference_received_paise = ?,
+    updated_at = datetime('now') WHERE id = ? AND season_id = ?
+    AND status NOT IN ('closed','void') AND finalization_status IS NOT 'finalized'
+    AND payment_preference_status IS ? AND payment_preference_mode IS ? AND payment_preference_received_paise IS ?
+    ${snapshot ? `AND ${snapshot.sql}` : ''}`)
+    .bind(parsed.data.status, parsed.data.mode, parsed.data.receivedAmountPaise, requestId, gate.season,
+      row.payment_preference_status, row.payment_preference_mode, row.payment_preference_received_paise,
+      ...(snapshot?.values ?? [])).run()
+  if (!result.meta?.changes) return { ok: false, status: 409, code: 'request_changed', message: 'The request changed. Refresh before retrying.' }
+  return { ok: true, request: await getAdminCustomerRequestById(db, requestId, gate.season) }
 }
 
 /**
@@ -727,7 +771,7 @@ export function isBargainFinalizeBlockedMissingAgreedAmount(quotation) {
 export async function finalizeAdminCustomerRequest(db, requestId, opts = {}) {
   db = customerRequestDb(db, opts.seasonId, opts.context, true)
   const scope = customerRequestScope(db)
-  if (scope && !canFinalizeQuickBillCustomerRequests(scope.effectiveRole)) {
+  if (scope && !canFinalizeQuickBillCustomerRequests(scope.effectiveRole) && !hasOfflineFinalization(opts.context,scope)) {
     return { ok: false, status: 403, code: 'forbidden', message: 'Only Owner or Super Admin can finalize requests.' }
   }
   const seasonGate = requireCustomerRequestSeasonId(opts.seasonId)

@@ -61,6 +61,7 @@ export async function workflowDb(t, { migrate = true, payments = true, purchaseC
       await db.script(paymentMigration)
       if (purchaseCosts) await db.script(purchaseCostMigration)
     }
+    await db.script(readFileSync(join(migrationDirectory, '0030_request_payment_preferences.sql'), 'utf8'))
   }
   return db
 }

@@ -3,7 +3,12 @@
  * @returns {Promise<{ serverConfirmed: boolean, notice: string | null }>}
  */
 export async function adminLogoutAttempt(logoutAdmin) {
-  const result = await logoutAdmin()
+  let result
+  try {
+    result = await logoutAdmin()
+  } catch {
+    result = { ok: false, status: 0 }
+  }
   if (result.ok) {
     return { serverConfirmed: true, notice: null }
   }

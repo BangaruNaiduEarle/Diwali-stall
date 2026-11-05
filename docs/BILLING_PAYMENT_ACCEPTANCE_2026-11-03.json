@@ -1,0 +1,264 @@
+{
+  "phase": 4,
+  "date": "2026-11-03",
+  "scope": "Established isolated local Worker and disposable D1; retained desktop/offline/QR evidence",
+  "scenarioCounts": {
+    "PASS": 38,
+    "FAIL": 0,
+    "NOT TESTED": 0,
+    "NOT IMPLEMENTED": 0
+  },
+  "newHttpChecks": {
+    "passed": 18,
+    "failed": 0,
+    "evidence": "http-results-1793708382792.json"
+  },
+  "focusedRegressions": {
+    "passed": 5,
+    "failed": 0,
+    "skipped": 35,
+    "storage": "SQLite :memory:"
+  },
+  "preservation": {
+    "status": "PASS",
+    "preExistingRows": 2818,
+    "tables": 34,
+    "requests": 15,
+    "events": 122,
+    "ledgerEntries": 14,
+    "evidence": "preservation-1793708404762214400.json"
+  },
+  "evidenceDirectory": "C:\\Users\\naidu\\AppData\\Local\\Temp\\diwali-release-b38657123a324f3a9e7c02c159b82c79\\p4-8a7a5f1d",
+  "applicationChanges": false,
+  "releaseApproval": false,
+  "scenarios": [
+    {
+      "id": 1,
+      "scenario": "Admin creates requests",
+      "status": "PASS",
+      "evidence": "P4-01: authenticated Admin checkout persists a new request and quotation with creator identity."
+    },
+    {
+      "id": 2,
+      "scenario": "Admin adds/removes products",
+      "status": "PASS",
+      "evidence": "P4-01: adds the second product, then removes it; expected final items and add/remove events remain."
+    },
+    {
+      "id": 3,
+      "scenario": "Quantity changes and stable line IDs",
+      "status": "PASS",
+      "evidence": "P4-01/03: retained product quantity 1 → 3 → 2; same `lineId` survives, quotation references it; SQL audit independently confirms it."
+    },
+    {
+      "id": 4,
+      "scenario": "Customer details and request history",
+      "status": "PASS",
+      "evidence": "P4-01: name, mobile, area and note round-trip; history has contiguous revisions, creation/item/quotation events and scoped actors."
+    },
+    {
+      "id": 5,
+      "scenario": "Online handover to authorized Owner",
+      "status": "PASS",
+      "evidence": "P4-03: Admin assigns Owner A; invalid Admin/other-stall recipients return 400; missing assignment revision returns 428."
+    },
+    {
+      "id": 6,
+      "scenario": "Online handover to authorized Super Admin",
+      "status": "PASS",
+      "evidence": "P4-18: Admin checkout atomically records Super Admin recipient/assignment; Owner later finalizes. MEM-HANDOVER rejects a recipient revoked during commit with no partial checkout."
+    },
+    {
+      "id": 7,
+      "scenario": "Revision checks and stale-update rejection",
+      "status": "PASS",
+      "evidence": "P4-03: stale item adjustment and agreed-amount write each 409; history and recipient edits unchanged. P4-08/11: conflicting payment revision 409; missing revision 428."
+    },
+    {
+      "id": 8,
+      "scenario": "Creator, recipient and actor history",
+      "status": "PASS",
+      "evidence": "P4-03/06/18 and SQL: Admin creator, separate Owner/Super Admin recipient, assigning Admin and distinct finalizer retain their own identities."
+    },
+    {
+      "id": 9,
+      "scenario": "Admin cannot change selling prices or discounts",
+      "status": "PASS",
+      "evidence": "P4-02: bill unit override/discount 403. P4-16: both catalogue selling-price field aliases 403; catalogue price unchanged."
+    },
+    {
+      "id": 10,
+      "scenario": "Admin cannot modify purchase/profit/margin or finalize",
+      "status": "PASS",
+      "evidence": "P4-02: financial aliases, agreement and finalize rejected 403; purchase/private-rate GET/PUT rejected 403; no audit side effects."
+    },
+    {
+      "id": 11,
+      "scenario": "Owner/Super Admin permitted financial adjustments",
+      "status": "PASS",
+      "evidence": "P4-03/05: Owner unit 9,999 paise/discount 101, then Super Admin unit 9,901/discount 103; exact customer totals 19,897 and 19,699."
+    },
+    {
+      "id": 12,
+      "scenario": "Original catalogue prices and adjustment history preserved",
+      "status": "PASS",
+      "evidence": "P4-05 plus SQL: original item and original quotation unit remain 10,001 despite new-fixture catalogue change to 99,999; old/new adjusted values remain in history, original quotation retained."
+    },
+    {
+      "id": 13,
+      "scenario": "Final Price + ₹500 stays reference-only",
+      "status": "PASS",
+      "evidence": "P4-05: preview reference equals final subtotal + 50,000 paise; finalized/payment due remains explicit 12,345 paise. P4-06/07: separate bill due 18,007 equals exact received sum. **Retained:** prior browser offline bill due ₹500, received ₹100, outstanding ₹400; reference is not added."
+    },
+    {
+      "id": 14,
+      "scenario": "Purchase/profit never leak to Admin",
+      "status": "PASS",
+      "evidence": "P4-02: request, quotation, history, payment and product responses exclude purchase/profit/margin/final-subtotal/bargaining-floor fields. P4-05 positively verifies privileged purchase/profit estimates so this is not an empty-data-only redaction test. **Retained:** P3-OFFLINE-01 and P2 browser role controls."
+    },
+    {
+      "id": 15,
+      "scenario": "Owner and Super Admin finalization",
+      "status": "PASS",
+      "evidence": "P4-06: Super Admin closes the Owner-recipient request; P4-18: Owner closes Super Admin-recipient request. Other Phase 4 Owner bills finalize independently."
+    },
+    {
+      "id": 16,
+      "scenario": "Final bill belongs to selected business/stall/season",
+      "status": "PASS",
+      "evidence": "P4-06/12 and SQL: every fixture request, quotation, finalized account, ledger and workflow event has the expected selected scope; B's bill remains independent."
+    },
+    {
+      "id": 17,
+      "scenario": "Separate creator, handover recipient and finalizer",
+      "status": "PASS",
+      "evidence": "P4-06: Admin creator → Owner recipient → Super Admin finalizer. P4-18 verifies the reciprocal privileged roles. SQL checks the distinct persisted fields."
+    },
+    {
+      "id": 18,
+      "scenario": "Duplicate checkout retry returns original result",
+      "status": "PASS",
+      "evidence": "P4-04: same key returns same request without overwriting recipient adjustments; altered input returns 409. Four simultaneous same-key calls commit one request/quotation. P4-18 retry preserves finalized bill. **Retained:** six passing fixed legacy-mode checks, including lost-delivery recovery."
+    },
+    {
+      "id": 19,
+      "scenario": "Different legitimate checkouts remain independent",
+      "status": "PASS",
+      "evidence": "P4-04: same customer/items with distinct keys produce distinct request/quotation identities; SQL confirms all 15 expected requests, exactly one active quotation each, no unexpected requests."
+    },
+    {
+      "id": 20,
+      "scenario": "Unpaid finalized balance",
+      "status": "PASS",
+      "evidence": "P4-06: finalized 18,007-paise account starts UNPAID, received 0, outstanding 18,007, no entries; finalization requires no payment."
+    },
+    {
+      "id": 21,
+      "scenario": "Full payment",
+      "status": "PASS",
+      "evidence": "P4-09: one 12,345-paise payment reaches PAID; five concurrent retries retain one ledger entry. P4-14: offline sync fully settles another bill."
+    },
+    {
+      "id": 22,
+      "scenario": "Partial payment",
+      "status": "PASS",
+      "evidence": "P4-07: first 1,000-paise receipt leaves 17,007 outstanding and PARTIAL; each later receipt produces the expected balance."
+    },
+    {
+      "id": 23,
+      "scenario": "Multiple entries and all five methods",
+      "status": "PASS",
+      "evidence": "P4-07: CASH 1,000; UPI 1,001; CARD 1,002; BANK 1,003; OTHER 14,001 paise. Received sum 18,007, outstanding 0, payment count 5; HOLD/release remain separate entries."
+    },
+    {
+      "id": 24,
+      "scenario": "HOLD without payment",
+      "status": "PASS",
+      "evidence": "P4-07: zero-amount HOLD gives HOLD state with received 0, unchanged due/outstanding and payment count 0; RELEASE_HOLD is independently recorded. P4-17: fully paid HOLD rejected 409."
+    },
+    {
+      "id": 25,
+      "scenario": "Later payments after closure",
+      "status": "PASS",
+      "evidence": "P4-07: all five receipts arrive after closure; request remains closed. P4-17 rejects pre-finalization payment with 409."
+    },
+    {
+      "id": 26,
+      "scenario": "Correct outstanding balances",
+      "status": "PASS",
+      "evidence": "P4-07/08/13 and SQL: account due minus PAYMENT sum equals outstanding for every new bill; hold entries do not receive money; no negative outstanding."
+    },
+    {
+      "id": 27,
+      "scenario": "Recording mode independent of payment method",
+      "status": "PASS",
+      "evidence": "P4-07 alternates ONLINE/OFFLINE recording over the five methods. P4-14 uses actual offline synchronization with OTHER. P4-11 rejects ONLINE-as-method and CASH-as-mode with 400."
+    },
+    {
+      "id": 28,
+      "scenario": "Payment history, actor and device metadata",
+      "status": "PASS",
+      "evidence": "P4-07/14: actor ID/role, terminal/device, occurrence/receipt timestamps, mode/method preserved. SQL matches actor names and every ledger row to its workflow event; pagination retains complete balance."
+    },
+    {
+      "id": 29,
+      "scenario": "Duplicate payment retries",
+      "status": "PASS",
+      "evidence": "P4-07/09/14: original payment/operation acknowledged without another entry or event, even with obsolete revision. Altering payment details under the same operation ID returns 409."
+    },
+    {
+      "id": 30,
+      "scenario": "Concurrent payment submissions",
+      "status": "PASS",
+      "evidence": "P4-08: distinct 7,001-paise submissions sharing one revision yield 201/409, received 7,001, outstanding 3,000; overpaying retry 400. P4-09: five identical submissions yield one 201 and four 200 replays."
+    },
+    {
+      "id": 31,
+      "scenario": "Admin payment restrictions",
+      "status": "PASS",
+      "evidence": "P4-11: Admin PAYMENT and HOLD each 403, no entries/events/balance changes. **Retained:** Phase 3 rejects captured privileged offline operations after demotion."
+    },
+    {
+      "id": 32,
+      "scenario": "Cross-stall payment read/write rejection",
+      "status": "PASS",
+      "evidence": "P4-12: dual-stall Owner uses legitimate B context with A request ID and vice versa; both GET/POST return 404, B balance unchanged."
+    },
+    {
+      "id": 33,
+      "scenario": "Cross-season payment read/write rejection",
+      "status": "PASS",
+      "evidence": "P4-15: explicit Owner membership in another **active** season still yields 404 for foreign GET/POST. P4-12 also verifies historical GET 404 and archived POST 403."
+    },
+    {
+      "id": 34,
+      "scenario": "Atomic business operations and audit events",
+      "status": "PASS",
+      "evidence": "SQL: all 122 workflow revisions contiguous, all 14 ledger entries paired one-to-one with matching audit scope/actor/device/time/payment IDs. MEM-WORKFLOW and MEM-PAYMENT inject audit failures and verify complete rollback. MEM-HANDOVER verifies no partial checkout after recipient revocation. Existing real-D1 batch rollback evidence is retained."
+    },
+    {
+      "id": 35,
+      "scenario": "Integer-paise calculations and rounding",
+      "status": "PASS",
+      "evidence": "P4-05/07/13: exact odd-paise prices, discounts, decimal agreement and 1-paise settlement. Loose price follows existing floor rule: floor(25,003 / 3) = 8,334; quantity 2 totals 16,668. P4-11 rejects fractional/unsafe amounts; MEM-MAX settles MAX_SAFE_INTEGER exactly."
+    },
+    {
+      "id": 36,
+      "scenario": "Unique operation/payment IDs; no duplicate bills/payments",
+      "status": "PASS",
+      "evidence": "P4-04/09/10/14 and SQL: unique complete checkout identities, one payment for concurrent same operation, global operation-ID reuse 409; normalized electronic reference reuse with a new operation ID also 409."
+    },
+    {
+      "id": 37,
+      "scenario": "No silent overwrites",
+      "status": "PASS",
+      "evidence": "P4-03/04/08/09: stale adjustments/agreements rejected, checkout retry retains recipient edits, racing payment loser cannot overwrite winner, changed same-operation input conflicts. Failed probes leave history unchanged."
+    },
+    {
+      "id": 38,
+      "scenario": "Historical/pre-existing records remain intact",
+      "status": "PASS",
+      "evidence": "Final read-only preservation: all **2,818 pre-existing rows across 34 tables unchanged**, including previous multi-stall/offline/QR/Family Pack fixtures; schema/migration records unchanged; integrity `ok`, zero foreign-key violations."
+    }
+  ]
+}

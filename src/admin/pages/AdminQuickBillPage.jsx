@@ -13,6 +13,8 @@ import {
   previewQuickBill,
 } from '../api/adminApi.js'
 import QuickBillAssigneeSelect from '../components/QuickBillAssigneeSelect.jsx'
+import MobileDigitCount from '../components/MobileDigitCount.jsx'
+import SignedBillFinalization from '../components/SignedBillFinalization.jsx'
 import { paiseToInrHelper } from '../lib/moneyDisplay.js'
 import AdminProductNameWithCompany from '../components/AdminProductNameWithCompany.jsx'
 import AdminQuickBillProductThumb from '../components/AdminQuickBillProductThumb.jsx'
@@ -599,6 +601,7 @@ export default function AdminQuickBillPage() {
             New bill
           </Button>
         </div>
+        <SignedBillFinalization requestId={success.requestId} />
       </div>
     )
   }
@@ -805,8 +808,10 @@ export default function AdminQuickBillPage() {
                 }}
                 autoComplete="tel"
                 placeholder="9876543210"
+                aria-describedby={customerMobile ? 'quick-bill-mobile-count' : undefined}
                 aria-invalid={customerMobileInvalid || undefined}
               />
+              <MobileDigitCount value={customerMobile} id="quick-bill-mobile-count" />
             </label>
           </div>
         </section>
@@ -862,10 +867,6 @@ export default function AdminQuickBillPage() {
                 <div className="admin-quick-bill__bargain-row">
                   <dt>Final subtotal</dt>
                   <dd>{formatPreviewPaise(preview, 'finalSubtotalPaise')}</dd>
-                </div>
-                <div className="admin-quick-bill__bargain-row">
-                  <dt>Final Price + ₹500 — reference only</dt>
-                  <dd>{formatPreviewPaise(preview, 'bargainFloorPaise')}</dd>
                 </div>
               </dl>
               <label className="admin-field admin-quick-bill__accepted-field">

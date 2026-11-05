@@ -20,6 +20,8 @@ import AdminCustomerRequestQuotationLineCard from '../components/AdminCustomerRe
 import QuickBillAssigneeSelect from '../components/QuickBillAssigneeSelect.jsx'
 import AdminCustomerRequestAdjustBillPanel from '../components/AdminCustomerRequestAdjustBillPanel.jsx'
 import AdminRequestPayments from '../components/AdminRequestPayments.jsx'
+import RequestPaymentPreferences from '../components/RequestPaymentPreferences.jsx'
+import SignedBillFinalization from '../components/SignedBillFinalization.jsx'
 import AdminCustomerRequestWorkflowAudit from '../components/AdminCustomerRequestWorkflowAudit.jsx'
 import {
   formatAdminPublicReference,
@@ -722,19 +724,6 @@ export default function AdminCustomerRequestDetailPage() {
                     </dt>
                     <dd className="tabular-nums">{formatPaiseOrDash(internalSummary.finalSubtotalPaise)}</dd>
                   </div>
-                  {internalSummary.showBargainFloor ? (
-                    <div>
-                      <dt>
-                        {internalSummary.isBargainMode
-                          ? 'Final Price + ₹500 (reference only)'
-                          : 'Final Price + ₹500 (reference only)'}
-                        {internalSummary.bargainFloorIsEstimate ? (
-                          <span className="admin-request-detail__field-estimate-tag">est.</span>
-                        ) : null}
-                      </dt>
-                      <dd className="tabular-nums">{formatPaiseOrDash(internalSummary.bargainFloorPaise)}</dd>
-                    </div>
-                  ) : null}
                   {internalSummary.acceptedAmountPaise != null ? (
                     <div className="admin-request-detail__summary-agreed">
                       <dt>Customer-agreed amount</dt>
@@ -936,7 +925,13 @@ export default function AdminCustomerRequestDetailPage() {
         </section>
       ) : null}
 
+      {canFinalize && !statusTerminal && finalizationStatus !== 'finalized' ? <RequestPaymentPreferences
+        key={`preferences:${contextKey}:${requestId}`}
+        request={request} agreedAmountPaise={quotation?.acceptedAmountPaise}
+        revision={currentBillRevision(request, quotation)} disabled={isReadOnly}
+        onSaved={async () => { await reloadRequest(); await loadQuotation() }} /> : null}
       {locationModeEnabled ? <p><Link to={`/admin/offline?requestId=${encodeURIComponent(requestId)}`}>Save this request for offline work</Link></p> : null}
+      <SignedBillFinalization key={`signed:${contextKey}:${requestId}`} requestId={requestId} onAcknowledged={async()=>{await reloadRequest();await loadQuotation()}} />
       {locationModeEnabled ? <AdminRequestPayments key={`payments:${contextKey}:${requestId}`} requestId={requestId}
         contextKey={contextKey} initialSummary={request?.paymentSummary} canRecord={canViewInternalPricing} disabled={isReadOnly}
         onRecorded={async () => { await reloadRequest(); await loadQuotation() }} /> : null}

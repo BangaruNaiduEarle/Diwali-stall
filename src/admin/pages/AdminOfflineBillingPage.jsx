@@ -1,20 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
 import { fetchAdminSession } from '../api/adminApi.js'
-import { fetchOfflineCatalogue, fetchOfflineRequest, registerOfflineDevice, sendOfflineOperation } from '../api/adminOffline.js'
+import { fetchOfflineCatalogue, fetchOfflineRequest, registerOfflineDevice, sendOfflineOperation, prepareOfflineAuthorization } from '../api/adminOffline.js'
 import { openOfflineStorage, offlineScopeKey } from '../offline/storage.js'
 import { synchronizeOutbox } from '../offline/synchronize.js'
-import { prepareOfflineAppShell } from '../offline/appShell.js'
+import { prepareOfflineAppShell, offlineAppShellReady } from '../offline/appShell.js'
 import { readStorageHealth } from '../offline/storageHealth.js'
-import OfflineStorageStatus from '../components/OfflineStorageStatus.jsx'
-import OfflineHandover from '../components/OfflineHandover.jsx'
-import OfflineFinancialSummary from '../components/OfflineFinancialSummary.jsx'
 import { sellingLines,assertCompleteFamilyDraft } from '../offline/handover.js'
 import { transferProductIds } from '../../shared/familyPackSnapshot.js'
-import FamilyPackSnapshotPreview from '../components/FamilyPackSnapshotPreview.jsx'
 import { adjustmentPayload, paiseInputValue, rupeesToPaise } from '../lib/billAdjustment.js'
-import { formatPaymentPaise, paymentPayload, PAYMENT_METHOD_OPTIONS } from '../lib/payments.js'
+import { paymentPayload } from '../lib/payments.js'
+import OfflinePosWorkspace from '../components/OfflinePosWorkspace.jsx'
+import { downloadProductPhotos } from '../offline/productPhotos.js'
+import { grantStatus, verifyOfflineGrant } from '../../shared/offlineGrant.js'
 import '../../styles/admin-workspace.css'
 
 const matchingSession = (session, scope) => session.ok && session.userId === scope.userId && session.activeBusinessId === scope.businessId && session.activeLocationId === scope.locationId && session.activeSeasonId === scope.seasonId
@@ -29,35 +28,73 @@ export default function AdminOfflineBillingPage() {
   const session = useAdminSession()
   const [params] = useSearchParams()
   const [profile, setProfile] = useState(null), [catalogue, setCatalogue] = useState([]), [drafts, setDrafts] = useState([]), [operations, setOperations] = useState([])
-  const [familyPacks,setFamilyPacks]=useState([]),[packIssues,setPackIssues]=useState([]),[selectedPack,setSelectedPack]=useState('')
+  const [familyPacks,setFamilyPacks]=useState([]),[packIssues,setPackIssues]=useState([])
+  const [productImages, setProductImages] = useState({})
   const [editor, setEditor] = useState(null), [online, setOnline] = useState(() => navigator.onLine)
   const [localConflict, setLocalConflict] = useState(null), [deviceConflicts, setDeviceConflicts] = useState([])
   const [ready, setReady] = useState(false), [busy, setBusy] = useState(false), [saveCount, setSaveCount] = useState(0)
   const [storageDb, setStorageDb] = useState(null)
   const [storageRevision, setStorageRevision] = useState(0)
+  const [shellReady, setShellReady] = useState(null)
+  const [syncProgress, setSyncProgress] = useState(null)
+  const [verifiedGrant,setVerifiedGrant] = useState(null), [grantClock,setGrantClock] = useState(Date.now)
   const [error, setError] = useState(null), [notice, setNotice] = useState(null), [requestId, setRequestId] = useState(params.get('requestId') ?? '')
-  const [selectedProduct, setSelectedProduct] = useState(''), [review, setReview] = useState(null)
+  const [review, setReview] = useState(null)
+  const [retainedPayment,setRetainedPayment]=useState(null)
   const [payAmount, setPayAmount] = useState(''), [payMethod, setPayMethod] = useState('CASH'), [payReference, setPayReference] = useState('')
   const [payAction, setPayAction] = useState('PAYMENT'), [payDetails, setPayDetails] = useState('')
   const [payOccurredAt, setPayOccurredAt] = useState('')
   const storage = useRef(null), selected = useRef(null), saves = useRef(Promise.resolve()), syncing = useRef(false), scopeRef = useRef(null)
   const localVersions = useRef(new Map())
+  const queueing = useRef(false)
+  const selectionAttempt = useRef(null)
   const profileAllowed = profile && !profile.authorityRevoked && session.errorCode !== 'offline_authority_unavailable' && (session.status !== 'authenticated' || session.userId === profile.scope.userId && session.activeBusinessId === profile.scope.businessId && session.activeLocationId === profile.scope.locationId && session.activeSeasonId === profile.scope.seasonId)
   const privileged = ['owner','super_admin'].includes(session.status === 'authenticated' ? session.permissionRole : profile?.role)
   const writable = profile?.writable && (session.status !== 'authenticated' || session.capabilities.write === true)
+  const grantViewAllowed = profileAllowed && profile?.role === 'admin' && verifiedGrant === profile.authorization && !grantStatus(profile.authorization,profile.scope,grantClock)
+  const canFinalize = privileged || grantViewAllowed && !grantStatus(profile.authorization,profile.scope,grantClock,true)
+  useEffect(() => {
+    let cancelled=false
+    if (profile?.authorization && profile.role==='admin' && profileAllowed) verifyOfflineGrant(profile.authorization,profile.scope).then(()=>{if(!cancelled)setVerifiedGrant(profile.authorization)}).catch(()=>{})
+    return ()=>{cancelled=true}
+  },[profile,profileAllowed])
+  useEffect(()=>{const timer=setInterval(()=>setGrantClock(Date.now()),15000);return()=>clearInterval(timer)},[])
   const saving = saveCount > 0
+  const canPrepare = ready && !busy && !saving && Boolean(storageDb) && online && session.status === 'authenticated' &&
+    !session.seasonSwitching && session.locationModeEnabled && !session.locationSelectionRequired &&
+    Boolean(session.userId && session.activeBusinessId && session.activeLocationId && session.activeSeasonId)
   useEffect(() => { scopeRef.current = profileAllowed ? profile?.scope : null }, [profileAllowed, profile])
 
+  // Only the offline route automatically selects an unambiguous authorized
+  // context. Selection is still verified by the normal session endpoint.
+  useEffect(() => {
+    if (!online || session.status !== 'authenticated' || !session.locationModeEnabled || session.seasonSwitching || session.activeLocationId) return
+    const choices = session.authorizedLocations ?? []
+    const candidates = choices.filter(row => row.operatingSeason.id === session.activeSeasonId)
+    const target = candidates.length === 1 ? candidates[0] : !session.activeSeasonId && choices.length === 1 ? choices[0] : null
+    if (!target) return
+    const key = `${session.userId}:${target.operatingSeason.id}:${target.location.id}`
+    if (selectionAttempt.current === key) return
+    selectionAttempt.current = key
+    const select = target.operatingSeason.id === session.activeSeasonId
+      ? session.selectActiveLocation(target.location.id) : session.selectActiveSeason(target.operatingSeason.id)
+    select.then(result => { if (!result.ok) setError(result.message) }).catch(reason => setError(reason.message))
+  }, [online, session])
+
   async function reload(currentProfile) {
-    const active = currentProfile ?? await storage.current.activeProfile()
+    const requested = currentProfile ?? await storage.current.activeProfile()
+    const active = requested && await storage.current.get('profiles',requested.scope,'profile')
     if (!active) { setReady(true); return }
     const [cached, localDrafts, rows, versions] = await Promise.all([storage.current.get('catalogues', active.scope, 'catalogue'), storage.current.list('drafts', active.scope), storage.current.list('outbox', active.scope), storage.current.list('versions', active.scope)])
     const resolved = new Set(versions.map(version => version.resolvesLocalVersion).filter(Boolean))
     setDeviceConflicts(versions.filter(version => version.conflict && !resolved.has(version.key)))
+    setProductImages(cached?.productImages ?? {})
     setProfile(active); setCatalogue(cached?.products ?? []);setFamilyPacks(cached?.familyPacks??[]);setPackIssues(cached?.familyPackIssues??[]); setDrafts(localDrafts); setOperations(rows.sort((a, b) => a.order - b.order)); setReady(true)
   }
   useEffect(() => {
     let cancelled = false, ownedDb = null
+    const checkShell=()=>offlineAppShellReady().then(value => { if (!cancelled) setShellReady(value) })
+    checkShell()
     openOfflineStorage().then(async db => {
       if (cancelled) { db.close(); return }
       storage.current = db
@@ -74,11 +111,30 @@ export default function AdminOfflineBillingPage() {
       reload().catch(reason => setError(reason.message))
     }
     window.addEventListener('online', update); window.addEventListener('offline', update)
+    window.addEventListener('focus',checkShell);navigator.serviceWorker?.addEventListener('controllerchange',checkShell)
     window.addEventListener('diwali-offline-authority-changed', authorityChanged)
-    return () => { cancelled = true; window.removeEventListener('online', update); window.removeEventListener('offline', update); window.removeEventListener('diwali-offline-authority-changed', authorityChanged); saves.current.then(() => ownedDb?.close(), () => ownedDb?.close()) }
+    return () => { cancelled = true; window.removeEventListener('online', update); window.removeEventListener('offline', update); window.removeEventListener('focus',checkShell);navigator.serviceWorker?.removeEventListener('controllerchange',checkShell);window.removeEventListener('diwali-offline-authority-changed', authorityChanged); saves.current.then(() => ownedDb?.close(), () => ownedDb?.close()) }
   }, [])
 
-  function choose(draft) { selected.current = draft; if (draft) localVersions.current.set(draft.draftId, draft.localRevision); saves.current = saves.current.catch(() => {}); setEditor(draft); setReview(null); setLocalConflict(null); setNotice(null) }
+  function choose(draft) { selected.current = draft; if (draft) localVersions.current.set(draft.draftId, draft.localRevision); saves.current = saves.current.catch(() => {}); setEditor(draft); setReview(null); setLocalConflict(null); setNotice(null); setRetainedPayment(null); setPayAmount(''); setPayReference(''); setPayDetails(''); setPayOccurredAt(''); setPayAction('PAYMENT'); setPayMethod('CASH') }
+  // Reuse this exact user's previously prepared stall without registration or
+  // catalogue downloads. Never restore another user's or another stall's work.
+  useEffect(() => {
+    if (!ready || !storageDb || busy || saving || session.status !== 'authenticated' || session.seasonSwitching || !session.activeLocationId || !session.activeSeasonId) return
+    if (profile && matchingSession({ ...session, ok: true }, profile.scope)) return
+    let cancelled = false
+    ;(async () => {
+      const device = await storageDb.device()
+      const scope = { businessId: session.activeBusinessId, locationId: session.activeLocationId, seasonId: session.activeSeasonId, userId: session.userId, deviceId: device.deviceId }
+      const saved = await storageDb.get('profiles', scope, 'profile')
+      const cached = await storageDb.get('catalogues', scope, 'catalogue')
+      if (cancelled || !saved || saved.authorityRevoked || !cached) return
+      await storageDb.activate(saved, cached.products)
+      if (!cancelled) { choose(null); await reload(saved) }
+    })().catch(reason => { if (!cancelled) setError(reason.message) })
+    return () => { cancelled = true }
+  }, [ready, storageDb, busy, saving, session, profile])
+
   function persist(next) {
     selected.current = next; setEditor(next); setSaveCount(count => count + 1); setError(null)
     const targetScope = profile.scope
@@ -94,10 +150,12 @@ export default function AdminOfflineBillingPage() {
   const patch = changes => persist({ ...selected.current, ...changes })
   function patchBody(changes) { patch({ body: { ...selected.current.body, ...changes } }) }
   async function prepare() {
+    if (!canPrepare) return
     setBusy(true); setError(null); setNotice(null)
     try {
       const confirmed = await fetchAdminSession()
       if (!confirmed.ok || !confirmed.locationModeEnabled || !confirmed.activeLocationId) throw Error('Sign in and select an authorized stall in the online workspace first.')
+      if (!matchingSession(confirmed, { userId: session.userId, businessId: session.activeBusinessId, locationId: session.activeLocationId, seasonId: session.activeSeasonId })) throw Error('The active stall changed. Select and confirm the stall before preparing it.')
       const device = await storage.current.device()
       const registered = await registerOfflineDevice(device)
       if (!registered.ok) throw Error(registered.message)
@@ -108,14 +166,35 @@ export default function AdminOfflineBillingPage() {
       await saves.current
       const next = { scope, role: confirmed.effectiveRole, writable: confirmed.capabilities.write === true, email: confirmed.email,
         label: `${confirmed.business?.name ?? scope.businessId} / ${confirmed.location?.name ?? scope.locationId}`, confirmedAt: new Date().toISOString() }
-      await storage.current.activate(next, snapshot.products,snapshot.familyPacks??[],snapshot.familyPackIssues??[])
-      choose(null); await reload(next)
+      const photos = await downloadProductPhotos(snapshot.productImages)
+      const rechecked = await fetchAdminSession()
+      if (!matchingSession(rechecked, scope)) throw Error('The active stall changed during preparation. Try again.')
+      const prepared = { ...next, role: rechecked.effectiveRole, writable: rechecked.capabilities.write === true }
+      // Refresh does not discard the current customer's editor or QR setup.
+      const previous = await storage.current.get('profiles', scope, 'profile')
+      if (previous?.authorization && prepared.role==='admin' && !previous.authorityRevoked) prepared.authorization=previous.authorization
+      if (previous?.handover && !previous.authorityRevoked && previous.role === prepared.role) {
+        prepared.handover = previous.handover
+        if (!['owner','super_admin'].includes(prepared.role)) prepared.handover = { ...prepared.handover, privateCatalogue: [] }
+      }
+      await storage.current.activate(prepared, snapshot.products, snapshot.familyPacks??[], snapshot.familyPackIssues??[], photos)
+      let authorizationNotice=''
+      if(prepared.role==='admin'){
+        try{
+          const identity=await storage.current.signingIdentity(scope)
+          const result=await prepareOfflineAuthorization({deviceId:device.deviceId,deviceToken:device.deviceToken,publicKey:identity.publicKey})
+          if(result.ok)await storage.current.saveAuthorization(scope,result.authorization)
+          else authorizationNotice=' Optional Owner authorization was not refreshed: '+result.message
+        }catch(reason){authorizationNotice=' Optional Owner authorization was not refreshed: '+reason.message}
+      }
+      if (!profile || offlineScopeKey(profile.scope) !== offlineScopeKey(scope)) choose(null)
+      await reload(prepared)
       const { persistent } = await readStorageHealth(navigator.storage, true)
       setStorageRevision(value => value + 1)
       let shell
-      try { await prepareOfflineAppShell(); shell = 'Offline page reload is ready.' }
-      catch (reason) { shell = `Draft storage is ready, but offline page reload is not confirmed: ${reason.message}` }
-      setNotice(`Workspace saved. ${persistent ? 'Persistent browser storage granted.' : 'Browser storage remains subject to browser eviction.'} ${shell}`)
+      try { await prepareOfflineAppShell(); setShellReady(true); shell = 'Offline billing ready. Offline page reload is ready.' }
+      catch (reason) { setShellReady(false); shell = `Catalogue prepared. Keep this page open; offline page reload is not confirmed: ${reason.message}` }
+      setNotice(`Workspace saved. ${persistent ? 'Persistent browser storage granted.' : 'Browser storage remains subject to browser eviction.'} ${shell}${authorizationNotice}`)
     } catch (reason) { setError(reason.message) } finally { setBusy(false) }
   }
   async function download(fresh = false) {
@@ -134,6 +213,8 @@ export default function AdminOfflineBillingPage() {
     } catch (reason) { setError(reason.message) } finally { setBusy(false) }
   }
   async function queue(kind) {
+    if (queueing.current) return null
+    queueing.current = true
     setBusy(true); setError(null); setNotice(null)
     try {
       await saves.current
@@ -152,7 +233,9 @@ export default function AdminOfflineBillingPage() {
           return product
         })
         if (kind === 'CREATE') {
-          body = { customer: draft.body.customer, items, pricingMode: privileged ? 'bargain' : 'selling' }
+          // An Owner may save an unagreed request too. Bargain mode requires a
+          // captured agreement; otherwise use the existing selling workflow.
+          body = { customer: draft.body.customer, items, pricingMode: privileged && draft.agreedInr ? 'bargain' : 'selling' }
           if (privileged && draft.agreedInr) { const amount = rupeesToPaise(draft.agreedInr, true); if (amount == null) throw Error('Enter a positive customer-agreed amount with at most two decimals.'); body.acceptedAmountPaise = amount }
         } else {
           const parsed = adjustmentPayload(draft.body.items, { privileged, discountInr: draft.discountInr ?? '' })
@@ -161,9 +244,10 @@ export default function AdminOfflineBillingPage() {
         }
       }
       if (kind === 'AGREEMENT') { const amount = rupeesToPaise(draft.agreedInr, true); if (amount == null) throw Error('Enter a positive customer-agreed amount with at most two decimals.'); body = { acceptedAmountPaise: amount } }
+      if (['AGREEMENT','CLOSE'].includes(kind) && !canFinalize) throw Error('A valid Owner-issued grant is required to save agreements or finalize on this Admin device.')
       if (kind === 'CLOSE') {
         const savedAgreement = draft.serverSnapshot?.acceptedAmountPaise > 0 || operations.some(row=>row.draftId===draft.draftId && ['pending','synced'].includes(row.state) && ['AGREEMENT','CREATE'].includes(row.payload.kind) && row.payload.body.acceptedAmountPaise > 0)
-        if (!savedAgreement) throw Error('Queue a positive customer-agreed amount before finalization. An unsaved bargaining field or the reference + ₹500 cannot finalize a bill.')
+        if (!savedAgreement) throw Error('Queue a positive customer-agreed amount before finalization. An unsaved bargaining field cannot finalize a bill.')
         body = {}
       }
       if (kind === 'PAYMENT') {
@@ -173,18 +257,21 @@ export default function AdminOfflineBillingPage() {
       }
       if (review && review.payload.kind !== kind) throw Error(`This review must replace ${review.payload.kind}, or keep the server version instead.`)
       const operation = { kind, body, ...(snapshots ? { catalogue: snapshots } : {}),
+        ...(kind==='PAYMENT'&&retainedPayment?{resolutionOf:retainedPayment.payload.operationId}:{}),
         ...(lineSnapshots ? {lineSnapshots} : {}),
         ...(body.occurredAt ? { occurredAt: body.occurredAt } : {}),
         ...(draft.requestId ? { requestId: draft.requestId, expectedRevision: draft.expectedRevision } : {}) }
       const saved = await storage.current.saveDraft(profile.scope, draft, operation, review?.payload.operationId)
       choose(saved.draft); await reload(profile)
-      setNotice(`${kind} saved to the persistent outbox. It remains provisional until the server acknowledges it.`)
+      const label = { CREATE: 'Bill', EDIT: 'Item changes', AGREEMENT: 'Agreed amount', CLOSE: 'Finalization', PAYMENT: 'Payment / hold action' }[kind] ?? kind
+      setNotice(`${label} saved on this device. Waiting for server acknowledgement.`)
       setPayAmount(''); setPayReference(''); setPayDetails(''); setPayOccurredAt('')
-    } catch (reason) { if (reason.code === 'local_revision_conflict') setLocalConflict(reason); setError(reason.message) } finally { setBusy(false) }
+      return saved.draft
+    } catch (reason) { if (reason.code === 'local_revision_conflict') setLocalConflict(reason); setError(reason.message); return null } finally { queueing.current = false; setBusy(false) }
   }
   async function sync() {
-    if (syncing.current || !profileAllowed || !online) return
-    syncing.current = true; setBusy(true); setError(null)
+    if (syncing.current || !profileAllowed || !online || session.seasonSwitching) return
+    syncing.current = true; setBusy(true); setError(null); setNotice(null); setSyncProgress({ running: true, acknowledged: operations.filter(row => row.state === 'synced').length })
     const scope = profile.scope, scopeKey = offlineScopeKey(scope)
     try {
       await saves.current
@@ -197,18 +284,34 @@ export default function AdminOfflineBillingPage() {
       const device = await storage.current.device()
       await synchronizeOutbox({ storage: storage.current, scope, deviceToken: device.deviceToken, send: sendOfflineOperation, fetchSnapshot: fetchOfflineRequest,
         isCurrent: () => scopeRef.current && offlineScopeKey(scopeRef.current) === scopeKey,
-        onChange: () => { storage.current.list('outbox', scope).then(setOperations).catch(reason => setError(reason.message)) } })
-      await reload(updated)
+        onChange: () => { storage.current.list('outbox', scope).then(rows => {
+          if (!scopeRef.current || offlineScopeKey(scopeRef.current) !== scopeKey) return
+          setOperations(rows)
+          setSyncProgress({ running: true, acknowledged: rows.filter(row => row.state === 'synced').length })
+        }).catch(reason => setError(reason.message)) } })
+      if (!scopeRef.current || offlineScopeKey(scopeRef.current) !== scopeKey) return
+      // Refresh every acknowledged bill, including bills saved before the
+      // operator started the next customer. A stale snapshot must stay visible.
+      const acknowledgedDrafts = await storage.current.list('drafts', scope)
+      // Read the acknowledged bill for its reference and authoritative payment summary.
+      // Never replace local item input or mutate an already queued operation.
+      for (const draft of acknowledgedDrafts) {
+        if (!draft.requestId || !(draft.lastAcknowledgement?.revision > (draft.serverSnapshot?.request.revision ?? -1))) continue
+        const snapshot = await fetchOfflineRequest(draft.requestId)
+        if (!scopeRef.current || offlineScopeKey(scopeRef.current) !== scopeKey) return
+        if (snapshot.ok) {
+          const saved = await storage.current.saveDraft(scope, { ...draft, serverSnapshot: snapshot, expectedRevision: snapshot.request.revision })
+          localVersions.current.set(saved.draft.draftId, saved.draft.localRevision)
+        } else setError('Actions were acknowledged, but bill details could not refresh. Synchronize again to verify balances. ' + snapshot.message)
+      }
       const current = selected.current && await storage.current.get('drafts', scope, selected.current.draftId)
-      if (current) { selected.current = current; setEditor(current) }
-    } catch (reason) { setError(reason.message) } finally { syncing.current = false; setBusy(false) }
+      await reload(updated)
+      if (current && selected.current?.draftId === current.draftId) { selected.current = current; setEditor(current) }
+      const rows = await storage.current.list('outbox', scope)
+      const remaining = rows.filter(row => ['pending','syncing','failed','conflict'].includes(row.state)).length
+      setNotice(remaining ? `${remaining} actions remain on this device. Check pending bills and actions needing attention.` : 'All queued actions acknowledged. Check each bill for its server reference and balance.')
+    } catch (reason) { setError(reason.message) } finally { syncing.current = false; setBusy(false); setSyncProgress(value => value && { ...value, running: false }) }
   }
-  // Online events and periodic retries only dispatch already-saved operations.
-  useEffect(() => {
-    if (!profileAllowed || !online || session.status !== 'authenticated') return
-    const timer = setInterval(() => { if (!syncing.current) sync() }, 15000)
-    return () => clearInterval(timer)
-  })
 
   async function reviewConflict(row, keepServer = false) {
     setBusy(true); setError(null)
@@ -269,109 +372,40 @@ export default function AdminOfflineBillingPage() {
   const hasWorkflow = editor && review?.payload.kind !== 'CREATE' && (editor.requestId || editor.tailOperationId)
   const itemsLocked = Boolean(editor?.localClosure) || ['closed','void'].includes(editor?.serverSnapshot?.request.status)
   const closureAcknowledged = editor?.localClosure && operations.some(row => row.payload.operationId === editor.localClosure.operationId && row.state === 'synced')
-  return <main className="admin-main" style={{ maxWidth: 1050, margin: '0 auto' }}>
-    <h1>Offline billing workspace</h1>
-    <OfflineStorageStatus revision={`${storageRevision}:${saveCount}:${operations.length}`} />
-    <p role="status">{online ? 'Online' : 'Offline'} · {operations.filter(row => row.state === 'pending').length} pending · {operations.filter(row => row.state === 'syncing').length} syncing · {operations.filter(row => row.state === 'synced').length} synced · {operations.filter(row => ['failed','conflict'].includes(row.state)).length} failed / conflict</p>
-    <p><Link to="/admin/context">Online workspace / sign in</Link> · <Link to="/admin/login">Sign in again</Link></p>
-    <p>Local actions are provisional. The server revalidates permissions, device identity, scope, catalogue and revisions during synchronization.</p>
-    {error ? <p role="alert" className="admin-alert admin-alert--error">{error}</p> : null}
-    {notice ? <p role="status">{notice}</p> : null}
-    {!ready ? <p>Opening saved workspace…</p> : null}
-    <button type="button" className="admin-touch-button" disabled={!ready || busy || !storageDb || !online || session.status !== 'authenticated'} onClick={prepare}>Prepare / refresh selected stall for offline use</button>
-    {!profileAllowed ? <p>Select and prepare an authorized stall online. Saved data from another user or stall is kept isolated.</p> : <>
-      <p><strong>{profile.label}</strong> · {profile.email} · {profile.role} · saved {profile.confirmedAt} · {profile.scope.seasonId}</p>
-      <p>Device: {profile.scope.deviceId}. QR exports contain selling snapshots only. Privileged pricing, when prepared, stays in this receiving Owner / Super Admin profile.</p>
-      <OfflineHandover key={offlineScopeKey(profile.scope)} storage={storageDb} profile={profile} draft={editor} catalogue={catalogue} familyPacks={familyPacks} operations={operations}
-        canAccept={privileged && writable} canPrepare={online && session.status === 'authenticated'} disabled={busy || saving || !writable || Boolean(localConflict)}
-        onPrepared={next=>reload(next)} onAccepted={async draft=>{choose(draft);await reload(profile)}} />
-      <button type="button" className="admin-touch-button" disabled={busy || !online} onClick={sync}>Synchronize pending operations</button>
-      <label className="admin-field">Request ID to save for offline work<input className="admin-input" value={requestId} onChange={event => setRequestId(event.target.value)} /></label>
-      <button type="button" className="admin-touch-button" disabled={busy || !online || !requestId.trim()} onClick={()=>download()}>Save request snapshot</button>
-      <button type="button" className="admin-touch-button" disabled={busy || !online || !requestId.trim()} onClick={()=>download(true)}>Save fresh revision as separate draft</button>
-      <h2>Durable drafts</h2>
-      {deviceConflicts.map(version => <p key={version.key}>Saved competing local draft · {version.savedAt} <button type="button" disabled={busy} onClick={async () => {
-        const currentDraft = await storage.current.get('drafts', profile.scope, version.draftId)
-        choose(currentDraft); setLocalConflict({ currentDraft, attemptedDraft: version.attemptedDraft, attemptedOperation: version.attemptedOperation, versionKey: version.key })
-      }}>Review device conflict</button></p>)}
-      <button type="button" className="admin-touch-button" disabled={busy || saving || !writable} onClick={() => { setReview(null); persist({ draftId: crypto.randomUUID(), body: { customer: { name: '', mobile: '' }, items: [] }, agreedInr: '', discountInr: '' }) }}>New local request</button>
-      <ul>{drafts.map(draft => <li key={draft.draftId}><button type="button" disabled={busy || saving} onClick={() => choose(draft)}>{draft.body.customer?.name || 'Unnamed draft'} · {draft.requestId ?? 'local'} · {draft.savedAt}</button></li>)}</ul>
-      {editor ? <section className="admin-card">
-        <h2>{review ? 'Resolve conflict explicitly' : 'Local request draft'}</h2>
-        <p role="status">{saving ? 'Saving draft…' : 'Draft saved on this device'} · server revision {editor.expectedRevision ?? 'new'} · {editor.serverSnapshot?.request.status ?? 'local request'}</p>
-        {editor.handover?<p>Request {editor.requestId} · transfer {editor.handover.transferId} · original creator {editor.handover.creatorUserId} · initiator {editor.handover.initiatorUserId} · recipient {editor.handover.recipientUserId}. Finalizer and payment recorder are retained separately in the operation history.</p>:null}
-        {privileged?<OfflineFinancialSummary profile={profile} draft={editor} catalogue={catalogue} />:null}
-        {editor.localClosure ? <p role="status">Closure captured on this device at {editor.localClosure.occurredAt}. {closureAcknowledged ? 'The server acknowledged this closure.' : 'It remains provisional until acknowledged.'} Later payments are retained in the same operation chain.</p> : null}
-        {localConflict ? <div role="alert"><p>Another tab changed this draft. Both versions are saved. Review quantities, prices and closure before continuing.</p>
-          <h3>Your attempted local version</h3><pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify({ draft: localConflict.attemptedDraft, operation: localConflict.attemptedOperation }, null, 2)}</pre>
-          <h3>Current device version</h3><pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(localConflict.currentDraft, null, 2)}</pre>
-          <button type="button" disabled={busy} onClick={() => resolveLocal(false)}>Keep current device version</button>
-          <button type="button" disabled={busy} onClick={() => resolveLocal(true)}>Use my reviewed fields; queue changes separately</button>
-        </div> : null}
-        <fieldset disabled={busy || !writable || Boolean(localConflict)}>
-          {!hasWorkflow ? <>
-            <label className="admin-field">Customer name<input className="admin-input" value={editor.body.customer.name} onChange={event => patchBody({ customer: { ...editor.body.customer, name: event.target.value } })} /></label>
-            <label className="admin-field">Mobile<input className="admin-input" value={editor.body.customer.mobile} onChange={event => patchBody({ customer: { ...editor.body.customer, mobile: event.target.value } })} /></label>
-          </> : <p>{editor.body.customer.name} · {editor.body.customer.mobile}</p>}
-          <fieldset disabled={itemsLocked && !review}>
-          <label className="admin-field">Saved catalogue<select className="admin-input" value={selectedProduct} onChange={event => setSelectedProduct(event.target.value)}><option value="">Choose product</option>{catalogue.map(product => <option key={product.id} value={product.id}>{product.name} · {product.pack} · {formatPaymentPaise(product.selling_price_paise)}</option>)}</select></label>
-          <button type="button" disabled={!selectedProduct} onClick={() => {
-            const items = selected.current.body.items
-            patchBody({ items: items.some(item => item.productId === selectedProduct && item.unitType === 'box') ? items.map(item => item.productId === selectedProduct && item.unitType === 'box' ? { ...item, quantity: item.quantity + 1 } : item) : [...items, { productId: selectedProduct, quantity: 1, unitType: 'box' }] })
-          }}>Add product</button>
-          <label className="admin-field">Saved Family Pack / variant<select className="admin-input" value={selectedPack} onChange={event=>setSelectedPack(event.target.value)}><option value="">Choose Family Pack</option>{familyPacks.map(pack=><option key={pack.familyPackId} value={pack.familyPackId}>{pack.name} · {pack.variant.label} · {pack.variant.slug} · {formatPaymentPaise(pack.sellingUnitPaise)}</option>)}</select></label>
-          <button type="button" disabled={!familyPacks.some(pack=>pack.familyPackId===selectedPack)} onClick={()=>{
-            const pack=familyPacks.find(pack=>pack.familyPackId===selectedPack),items=selected.current.body.items
-            patchBody({items:items.some(item=>item.familyPackId===selectedPack)?items.map(item=>item.familyPackId===selectedPack?{...item,quantity:item.quantity+1}:item):[...items,{lineId:crypto.randomUUID(),familyPackId:pack.familyPackId,quantity:1,unitType:'box',familyPackSnapshot:structuredClone(pack)}]})
-          }}>Add Family Pack with captured snapshot</button>
-          {packIssues.map(issue=><p role="status" key={issue.familyPackId}>{issue.familyPackId}: {issue.message} It cannot be added from this preparation.</p>)}
-          {editor.body.items.map((item, index) => <div className="admin-card" key={`${item.familyPackId??item.productId}:${index}`}>
-            {item.familyPackId?<FamilyPackSnapshotPreview pack={item.familyPackSnapshot} quantity={item.quantity} />:<p>{catalogue.find(row => row.id === item.productId)?.name ?? item.productId}</p>}
-            <label>Quantity <input type="number" min="1" max="99" value={item.quantity} onChange={event => patchBody({ items: editor.body.items.map((line, i) => i === index ? { ...line, quantity: Number(event.target.value) } : line) })} /></label>
-            {!item.familyPackId?<label>Unit <select value={item.unitType} onChange={event => patchBody({ items: editor.body.items.map((line, i) => i === index ? { ...line, unitType: event.target.value } : line) })}><option value="box">Box / pack</option><option value="piece">Loose piece</option></select></label>:<p>Whole Family Packs; component quantities and units stay as captured.</p>}
-            {privileged && hasWorkflow && !item.familyPackId ? <label>Selling price override (₹)<input inputMode="decimal" value={item.priceInr ?? ''} onChange={event => patchBody({ items: editor.body.items.map((line, i) => i === index ? { ...line, priceInr: event.target.value } : line) })} /></label> : null}
-            <button type="button" onClick={() => patchBody({ items: editor.body.items.filter((_, i) => i !== index) })}>Remove product</button>
-          </div>)}
-          {privileged ? <>
-            <label className="admin-field">Customer-agreed amount (₹)<input className="admin-input" inputMode="decimal" value={editor.agreedInr ?? ''} onChange={event => patch({ agreedInr: event.target.value })} /></label>
-            {hasWorkflow ? <label className="admin-field">Discount for next item adjustment (₹)<input className="admin-input" inputMode="decimal" value={editor.discountInr ?? ''} onChange={event => patch({ discountInr: event.target.value })} /></label> : null}
-          </> : null}
-          <button type="button" className="admin-touch-button" disabled={saving} onClick={() => queue(hasWorkflow ? 'EDIT' : 'CREATE')}>{hasWorkflow ? 'Queue item adjustments' : 'Queue request creation'}</button>
-          </fieldset>
-          {privileged && hasWorkflow ? <>
-            <button type="button" className="admin-touch-button" disabled={saving || Boolean(editor.localClosure) && !review} onClick={() => queue('AGREEMENT')}>Queue agreed amount</button>
-            <button type="button" className="admin-touch-button" disabled={saving || Boolean(editor.localClosure) && !review} onClick={() => queue('CLOSE')}>Queue closure</button>
-            <p>Closure uses the saved agreed amount and remains provisional until synchronization. Queue a positive agreed amount before closure; editing the field alone does not save an agreement.</p>
-            <h3>Capture offline payment</h3>
-            <p>Record only money actually received. Payments synchronize after the request is finalized.</p>
-            <label className="admin-field">Ledger action<select className="admin-input" value={payAction} onChange={event => setPayAction(event.target.value)}><option value="PAYMENT">Payment received</option><option value="HOLD">Place payment hold</option><option value="RELEASE_HOLD">Release payment hold</option></select></label>
-            <label className="admin-field">Received amount (₹)<input className="admin-input" inputMode="decimal" value={payAmount} onChange={event => setPayAmount(event.target.value)} /></label>
-            <label className="admin-field">Method<select className="admin-input" value={payMethod} onChange={event => setPayMethod(event.target.value)}>{PAYMENT_METHOD_OPTIONS.map(method => <option key={method}>{method}</option>)}</select></label>
-            <label className="admin-field">Transaction reference<input className="admin-input" value={payReference} onChange={event => setPayReference(event.target.value)} /></label>
-            <label className="admin-field">Payment details / hold reason<textarea className="admin-input" maxLength={500} value={payDetails} onChange={event => setPayDetails(event.target.value)} /></label>
-            <button type="button" className="admin-touch-button" onClick={() => queue('PAYMENT')}>Save payment to outbox</button>
-          </> : null}
-        </fieldset>
-        {review ? <><h3>Preserved local operation</h3><pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(review.payload, null, 2)}</pre><h3>Competing server version</h3><pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(review.serverSnapshot, null, 2)}</pre><h3>Current catalogue for these products</h3><pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(review.serverCatalogue?.filter(row => review.payload.catalogue?.some(original => original.id === row.id)), null, 2)}</pre></> : null}
-      </section> : null}
-      <h2>Persistent outbox and acknowledgements</h2>
-      <p>Failed chains stay saved. Retrying sends the same operation ID and input. Conflict resolution never changes an earlier queued operation.</p>
-      <ol>{operations.map(row => <li className="admin-card" key={row.payload.operationId}>
-        <strong>{row.payload.kind} · {row.state}</strong><p>{row.payload.operationId} · attempts {row.attempts} · occurred {row.payload.occurredAt}</p>
-        {row.payload.parentOperationId ? <p>Depends on {row.payload.parentOperationId}</p> : null}
-        {row.acknowledgement ? <p>Server acknowledged {row.acknowledgement.receivedAt} · request {row.acknowledgement.requestId} · revision {row.acknowledgement.revision}</p> : null}
-        {row.lastError ? <p role="status">{row.lastError.message}</p> : null}
-        {row.payload.kind==='HANDOVER' && ['failed','conflict'].includes(row.state)?<details><summary>Compare preserved handover and server version</summary>
-          <h3>Signed source handover</h3><pre style={{whiteSpace:'pre-wrap'}}>{JSON.stringify(row.payload.body.transfer,null,2)}</pre>
-          <h3>Server version at conflict</h3><pre style={{whiteSpace:'pre-wrap'}}>{JSON.stringify(row.serverSnapshot,null,2)}</pre>
-          <p>A receiving device cannot change a signed source revision. Keep the server version explicitly or obtain a refreshed transfer from its original creator. Pending dependent operations stay preserved until you resolve them.</p>
-        </details>:null}
-        {row.state === 'failed' ? <button type="button" disabled={busy} onClick={async () => { await storage.current.updateOperation(profile.scope, row.payload.operationId, { state: 'pending', nextAttemptAt: 0 }); await reload(profile) }}>Retry unchanged operation after fixing access / validation</button> : null}
-        {row.state === 'conflict' || row.state === 'failed' && [400,428].includes(row.lastError?.status) ? <>
-          <button type="button" disabled={busy} onClick={() => reviewConflict(row)}>Review local and server versions</button>
-          <button type="button" disabled={busy || !online} onClick={() => reviewConflict(row, true)}>{row.payload.kind === 'CREATE' ? 'Archive failed creation' : 'Keep server version'} and cancel pending descendants, including payment captures</button>
-        </> : null}
-      </li>)}</ol>
-    </>}
-  </main>
+  async function retry(row) {
+    try {
+      await storage.current.updateOperation(profile.scope, row.payload.operationId, { state: 'pending', nextAttemptAt: 0 })
+      await reload(profile)
+    } catch (reason) { setError(reason.message) }
+  }
+  async function reviewRetainedPayment(row){
+    setError(null)
+    try{
+      await saves.current
+      const draft=selected.current
+      if(!privileged||!writable||review||localConflict||!draft?.requestId||draft.requestId!==row.payload.requestId||!(draft.localClosure||draft.serverSnapshot?.request.status==='closed'))throw Error('Open the reviewed, finalized replacement bill first, then return here to review its retained capture.')
+      if(row.state!=='discarded'||row.attempts!==0||row.recoveredBy||row.payload.kind!=='PAYMENT'||row.payload.body.entryType!=='PAYMENT')throw Error('This payment cannot be automatically recovered. Reconcile its original receipt first.')
+      setRetainedPayment(row);setPayAction('PAYMENT');setPayAmount(paiseInputValue(row.payload.body.amountPaise));setPayMethod(row.payload.body.paymentMethod);setPayReference(row.payload.body.reference??'');setPayDetails(row.payload.body.details??'');setPayOccurredAt(row.payload.occurredAt)
+      setNotice(`Review the never-sent payment captured ${new Date(row.payload.occurredAt).toLocaleString()}. Save recovered payment links this original capture to the selected bill. Do not collect the money again.`)
+      return true
+    }catch(reason){setError(reason.message);return false}
+  }
+  async function openDeviceConflict(version) {
+    try {
+      const currentDraft = await storage.current.get('drafts', profile.scope, version.draftId)
+      choose(currentDraft)
+      setLocalConflict({ currentDraft, attemptedDraft: version.attemptedDraft, attemptedOperation: version.attemptedOperation, versionKey: version.key })
+    } catch (reason) { setError(reason.message) }
+  }
+  return <OfflinePosWorkspace
+    {...{ session, profile, profileAllowed, catalogue, productImages, familyPacks, packIssues, drafts, operations, editor, online, ready, busy, saving,
+      storageDb, storageRevision, shellReady, syncProgress, saveCount, canPrepare, privileged, canFinalize, grantViewAllowed, writable, error, notice, localConflict, deviceConflicts, review,
+      hasWorkflow, itemsLocked, closureAcknowledged, requestId, setRequestId }}
+    payment={{ amount: payAmount, setAmount: setPayAmount, method: payMethod, setMethod: setPayMethod,
+      recovery:retainedPayment,
+      reference: payReference, setReference: setPayReference, action: payAction, setAction: setPayAction, details: payDetails, setDetails: setPayDetails }}
+    actions={{ prepare, sync, download, queue, choose, patch, patchBody, resolveLocal, reviewConflict, retry, openDeviceConflict, reload, reviewRetainedPayment,
+      newDraft: () => { choose(null); persist({ draftId: crypto.randomUUID(), body: { customer: { name: '', mobile: '' }, items: [] }, agreedInr: '', discountInr: '' }) },
+      acceptHandover: async draft => { choose(draft); await reload(profile) } }}
+  />
 }

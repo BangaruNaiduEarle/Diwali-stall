@@ -25,6 +25,14 @@ self.addEventListener('install', event => {
   event.waitUntil(cacheWorkspace())
 })
 self.addEventListener('message', event => {
+  if (event.data?.type === 'CHECK_OFFLINE_WORKSPACE') {
+    event.waitUntil((async () => {
+      const cache = await caches.open(CACHE)
+      const entries = await Promise.all([WORKSPACE, ...ASSETS].map(path => cache.match(path)))
+      event.ports[0]?.postMessage({ ok: ASSETS.length > 0 && entries.every(Boolean) })
+    })().catch(() => event.ports[0]?.postMessage({ ok: false })))
+    return
+  }
   if (event.data?.type !== 'CACHE_OFFLINE_WORKSPACE') return
   event.waitUntil(cacheWorkspace().then(() => event.ports[0]?.postMessage({ ok: true }), error => event.ports[0]?.postMessage({ ok: false, message: error.message })))
 })

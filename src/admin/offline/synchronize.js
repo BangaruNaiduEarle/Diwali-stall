@@ -12,7 +12,10 @@ export async function synchronizeOutbox({ storage, scope, deviceToken, send, fet
       if (row.state !== 'pending' || row.nextAttemptAt > now()) continue
       const parent = row.payload.parentOperationId && byId.get(row.payload.parentOperationId)
       if (row.payload.parentOperationId && parent?.state !== 'synced') continue
-      const denied = offlineOperationError(await storage.get('profiles', scope, 'profile'), row.payload)
+      // Captured grant proofs are immutable. Send them even after local expiry
+      // so the Worker can return an existing receipt or explicitly reject a new
+      // commit. Never mint a replacement ID/time during recovery.
+      const denied = offlineOperationError(await storage.get('profiles', scope, 'profile'), row.payload, true)
       if (denied) {
         await storage.updateOperation(scope, row.payload.operationId, { state: 'failed', lastError: { status: 403, code: 'offline_access_denied', message: denied } })
         onChange()
@@ -39,8 +42,8 @@ export async function synchronizeOutbox({ storage, scope, deviceToken, send, fet
         nextAttemptAt: now() + Math.min(60000, 1000 * 2 ** Math.min(attempts, 6)),
       })
       byId.set(row.payload.operationId, saved); onChange()
-      const senderOnlyDenied = row.payload.kind === 'HANDOVER' && ['sender_denied','sender_device_denied'].includes(result.error)
-      if ([0,401].includes(result.status) || result.status === 403 && !senderOnlyDenied || result.error === 'stale_context') break
+      const chainOnlyDenied = row.payload.kind === 'HANDOVER' && ['sender_denied','sender_device_denied'].includes(result.error) || result.error==='offline_grant_denied'
+      if ([0,401].includes(result.status) || result.status === 403 && !chainOnlyDenied || result.error === 'stale_context') break
     }
     return { acknowledged }
   }

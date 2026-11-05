@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Button from '../../components/ui/Button.jsx'
 import ProductImageManager from './ProductImageManager.jsx'
 import { isLocalPreviewUrl } from '../lib/adminImageUploadFlow.js'
@@ -35,6 +35,7 @@ const PRODUCT_ID_RE = /^P\d{3,}$/
  *   showSensitiveColumns?: boolean,
  *   initialRevision?: number,
  *   readOnly?: boolean,
+ *   onCreateCategory?: (body: { slug: string, label: string }) => Promise<object>,
  * }} props
  */
 export default function ProductForm({
@@ -54,10 +55,33 @@ export default function ProductForm({
   onUploadBusyChange,
   showSensitiveColumns = false,
   readOnly = false,
+  onCreateCategory,
 }) {
   const [values, setValues] = useState(initial)
   const [clientErrors, setClientErrors] = useState(/** @type {Record<string, string>} */ ({}))
   const [showManualImages, setShowManualImages] = useState(false)
+  const [categoryDraft, setCategoryDraft] = useState({ slug: '', label: '' })
+  const [creatingCategory, setCreatingCategory] = useState(false)
+  const errorSummaryRef = useRef(null)
+  const focusClientErrorsRef = useRef(false)
+
+  useEffect(() => {
+    if (!focusClientErrorsRef.current) return
+    focusClientErrorsRef.current = false
+    errorSummaryRef.current?.focus()
+    errorSummaryRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [clientErrors])
+
+  useEffect(() => {
+    if (!serverError && !Object.keys(serverFields ?? {}).length) return
+    errorSummaryRef.current?.focus()
+    errorSummaryRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [serverError, serverFields])
+
+  function showClientErrors(errors) {
+    focusClientErrorsRef.current = Object.keys(errors).length > 0
+    setClientErrors(errors)
+  }
 
   useEffect(() => {
     if (mode !== 'edit' || initialRevision <= 0) return
@@ -104,7 +128,8 @@ export default function ProductForm({
       if (!PRODUCT_ID_RE.test(id)) errors.id = 'Product id must look like P001.'
     }
     if (!String(values.name ?? '').trim()) errors.name = 'Name is required.'
-    if (!String(values.categorySlug ?? '').trim()) errors.categorySlug = 'Category is required.'
+    if (!String(values.categorySlug ?? '').trim()) errors.categorySlug = categories.length
+      ? 'Select a category.' : 'This stall has no categories. Create its first category below before saving the product.'
     const sort = Number(values.sortOrder)
     if (!Number.isFinite(sort)) errors.sortOrder = 'Sort order must be a number.'
     const images = values.images ?? []
@@ -120,7 +145,7 @@ export default function ProductForm({
         break
       }
     }
-    setClientErrors(errors)
+    showClientErrors(errors)
     return Object.keys(errors).length === 0
   }
 
@@ -140,9 +165,32 @@ export default function ProductForm({
 
   function handleSubmit(e) {
     e.preventDefault()
-    if (readOnly) return
+    if (readOnly || submitting || creatingCategory) return
     if (!validate()) return
     onSubmit(normalizedValues())
+  }
+
+  async function handleCreateCategory() {
+    if (!onCreateCategory || creatingCategory || readOnly || submitting) return
+    const slug = categoryDraft.slug.trim().toLowerCase()
+    const label = categoryDraft.label.trim()
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || !label || label.length > 120) {
+      showClientErrors({ categorySlug: 'Enter a category name (up to 120 characters) and a unique slug using lowercase letters, numbers and hyphens.' })
+      return
+    }
+    setCreatingCategory(true)
+    try {
+      const result = await onCreateCategory({ slug, label })
+      if (!result.ok) {
+        showClientErrors({ categorySlug: Object.values(result.fields ?? {}).join(' ') || result.message || 'Could not create the category. Try again.' })
+        return
+      }
+      setField('categorySlug', slug)
+    } catch {
+      showClientErrors({ categorySlug: 'Could not create the category. Check your connection and try again.' })
+    } finally {
+      setCreatingCategory(false)
+    }
   }
 
   async function handleEnsureProduct() {
@@ -165,13 +213,14 @@ export default function ProductForm({
     setImages(lines.slice(0, MAX_PRODUCT_IMAGES))
   }
 
-  const formDisabled = submitting || readOnly
+  const formDisabled = submitting || readOnly || creatingCategory
 
   return (
     <form className="admin-form" onSubmit={handleSubmit} noValidate>
-      {serverError ? (
-        <div className="admin-alert admin-alert--error" role="alert">
-          {serverError}
+      {serverError || Object.keys(fieldError).length ? (
+        <div ref={errorSummaryRef} tabIndex={-1} className="admin-alert admin-alert--error" role="alert">
+          <p>{serverError || 'Please correct the following before saving:'}</p>
+          {Object.keys(fieldError).length ? <ul>{Object.entries(fieldError).map(([key, message]) => <li key={key}>{message}</li>)}</ul> : null}
         </div>
       ) : null}
 
@@ -233,6 +282,18 @@ export default function ProductForm({
           ))}
         </select>
         {fieldError.categorySlug ? <p className="admin-field-error">{fieldError.categorySlug}</p> : null}
+        {mode === 'create' && !categories.length && onCreateCategory ? (
+          <div className="mt-3 space-y-3">
+            <p role="status">This stall has no categories. Create its first category here; your product details will be kept.</p>
+            <label className="admin-label" htmlFor="new-category-label">New category name</label>
+            <input id="new-category-label" className="admin-input" maxLength={120} value={categoryDraft.label}
+              disabled={formDisabled} onChange={event => setCategoryDraft(previous => ({ ...previous, label: event.target.value }))} />
+            <label className="admin-label" htmlFor="new-category-slug">New category slug</label>
+            <input id="new-category-slug" className="admin-input" placeholder="e.g. stall-b-sparklers" value={categoryDraft.slug}
+              disabled={formDisabled} onChange={event => setCategoryDraft(previous => ({ ...previous, slug: event.target.value }))} />
+            <Button type="button" variant="secondary" disabled={formDisabled} loading={creatingCategory} onClick={handleCreateCategory}>Create category for this stall</Button>
+          </div>
+        ) : null}
       </div>
 
       <div className="admin-field">

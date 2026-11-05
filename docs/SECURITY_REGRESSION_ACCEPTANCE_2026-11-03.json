@@ -1,0 +1,305 @@
+{
+  "phase": 7,
+  "date": "2026-11-03",
+  "verdict": "PASS for isolated local security/regression scope; no overall release approval",
+  "counts": {
+    "PASS": 10,
+    "FAIL": 0,
+    "NOT TESTED": 0
+  },
+  "scenarioCountScope": "Requested isolated checks; separate unverified deployment/device limits below",
+  "audits": [
+    {
+      "name": "root-audit",
+      "status": "PASS",
+      "exitCode": 0,
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "server-audit",
+      "status": "PASS",
+      "exitCode": 0,
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      }
+    }
+  ],
+  "suites": [
+    {
+      "name": "backend",
+      "tests": 286,
+      "pass": 286,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0,
+      "exitCode": 0,
+      "status": "PASS"
+    },
+    {
+      "name": "scope",
+      "tests": 420,
+      "pass": 420,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0,
+      "exitCode": 0,
+      "status": "PASS"
+    },
+    {
+      "name": "billing",
+      "tests": 138,
+      "pass": 138,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0,
+      "exitCode": 0,
+      "status": "PASS"
+    },
+    {
+      "name": "offline",
+      "tests": 37,
+      "pass": 37,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0,
+      "exitCode": 0,
+      "status": "PASS"
+    },
+    {
+      "name": "tooling",
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0,
+      "exitCode": 0,
+      "status": "PASS"
+    },
+    {
+      "name": "frontend",
+      "tests": 49,
+      "pass": 49,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0,
+      "exitCode": 0,
+      "status": "PASS"
+    }
+  ],
+  "patches": {
+    "vite": {
+      "expected": "8.3.3",
+      "installed": "8.3.3",
+      "match": true
+    },
+    "wrangler": {
+      "expected": "4.85.0",
+      "installed": "4.85.0",
+      "match": true
+    },
+    "miniflare": {
+      "expected": "4.20260424.0",
+      "installed": "4.20260424.0",
+      "match": true
+    },
+    "esbuild": {
+      "expected": "0.28.1",
+      "installed": "0.28.1",
+      "match": true
+    },
+    "sharp": {
+      "expected": "0.35.5",
+      "installed": "0.35.5",
+      "match": true
+    },
+    "undici": {
+      "expected": "7.30.1",
+      "installed": "7.30.1",
+      "match": true
+    },
+    "ws": {
+      "expected": "8.21.0",
+      "installed": "8.21.0",
+      "match": true
+    },
+    "workerd": {
+      "expected": "1.20260424.1",
+      "installed": "1.20260424.1",
+      "match": true
+    }
+  },
+  "secretBoundary": {
+    "status": "PASS",
+    "filesScanned": 781,
+    "knownIsolatedValues": 22,
+    "findings": 0,
+    "qrEnvelopes": 2,
+    "unknownProductionInventory": "NOT TESTED",
+    "intentionalBrowserDeviceKeysAndOwnerSnapshots": true
+  },
+  "liveLocalProbes": [
+    {
+      "name": "actual-local-health",
+      "route": "/health",
+      "method": "GET",
+      "status": "PASS",
+      "httpStatus": 200,
+      "error": null,
+      "cacheControl": "no-store"
+    },
+    {
+      "name": "forged-role-user-headers-do-not-authenticate",
+      "route": "/api/admin/session",
+      "method": "GET",
+      "status": "PASS",
+      "httpStatus": 401,
+      "error": "unauthorized",
+      "cacheControl": "no-store"
+    },
+    {
+      "name": "forged-stall-season-without-session-is-denied",
+      "route": "/api/admin/products",
+      "method": "GET",
+      "status": "PASS",
+      "httpStatus": 401,
+      "error": "unauthorized",
+      "cacheControl": "no-store"
+    },
+    {
+      "name": "platform-without-session-is-denied",
+      "route": "/api/admin/platform/session",
+      "method": "GET",
+      "status": "PASS",
+      "httpStatus": 401,
+      "error": "unauthorized",
+      "cacheControl": "no-store"
+    },
+    {
+      "name": "sync-without-session-is-denied",
+      "route": "/api/admin/offline/sync",
+      "method": "POST",
+      "status": "PASS",
+      "httpStatus": 401,
+      "error": "unauthorized",
+      "cacheControl": "no-store"
+    },
+    {
+      "name": "untrusted-origin-mutation-is-denied",
+      "route": "/api/admin/offline/sync",
+      "method": "POST",
+      "status": "PASS",
+      "httpStatus": 403,
+      "error": "untrusted_origin",
+      "cacheControl": "no-store"
+    }
+  ],
+  "preservation": {
+    "status": "PASS",
+    "tables": 36,
+    "rows": 3486,
+    "businessRows": 3476,
+    "schemaUnchanged": true,
+    "migrationsUnchanged": true,
+    "exactRowEquality": true,
+    "packageAndLockFilesUnchanged": true
+  },
+  "notTested": [
+    {
+      "scope": "Physical Android PWA/camera/device/storage/network acceptance",
+      "status": "NOT TESTED"
+    },
+    {
+      "scope": "Production Cloudflare/runtime/HTTPS/cookie/proxy/routing parity",
+      "status": "NOT TESTED"
+    },
+    {
+      "scope": "Unknown production/account secret inventory and runtime exposure",
+      "status": "NOT TESTED"
+    }
+  ],
+  "dependencyChanges": false,
+  "applicationChanges": false,
+  "existingDatabaseMigrations": false,
+  "releaseApproval": false,
+  "evidenceDirectory": "C:\\Users\\naidu\\AppData\\Local\\Temp\\diwali-release-b38657123a324f3a9e7c02c159b82c79\\p7-dfaffcaf",
+  "scenarios": [
+    {
+      "id": 1,
+      "scenario": "Root and separate server/tooling audits remain clean",
+      "status": "PASS",
+      "evidence": "New `root-audit.json` and `server-audit.json`: both registry audits exit 0, zero info/low/moderate/high/critical/total vulnerabilities. Both complete installed dependency trees also exit 0. Audits include development dependencies."
+    },
+    {
+      "id": 2,
+      "scenario": "Vite and previously patched advisories remain resolved",
+      "status": "PASS",
+      "evidence": "New `patched-versions.json`, both clean audits and installed trees. Vite 8.3.3 and bundled launch-editor/middleware 2.14.2 verified; exact server override versions remain installed. `inputs-before.json` / `inputs-after.json` confirm both package manifests and lockfiles unchanged."
+    },
+    {
+      "id": 3,
+      "scenario": "Server signing secrets and sensitive credentials are not exposed to clients",
+      "status": "PASS",
+      "evidence": "New `secret-boundaries.json`: 781 source/public/build files, 22 known isolated signing/fixture credential values, two actual captured QR envelopes, zero findings. `public-root-material.json`: actual authenticated preparation roots have only `kty/crv/x/y`, no private fields. Fresh QR/key/cookie/cache regressions pass. Scope and intentional device-key storage are clarified below."
+    },
+    {
+      "id": 4,
+      "scenario": "Backend stall/season/membership/role authorization",
+      "status": "PASS",
+      "evidence": "New 420-test scope group plus backend/offline/billing groups: validated operational context, membership and lesser-role enforcement, revoked sender/device checks, platform separation and transactional authority revalidation. Six new actual-Worker HTTP probes also reject missing authentication, forged role/user/context headers and unsafe-origin mutation. Prior authenticated real-D1 role evidence from Phases 3–6 retained."
+    },
+    {
+      "id": 5,
+      "scenario": "Admin cannot read Owner purchase/cost/profit/margin data",
+      "status": "PASS",
+      "evidence": "New catalogue/rate/quotation scope tests, billing redaction tests and recursive history-redaction cases pass. Named billing test: `Admin cannot record payments or hold; summaries and history never expose purchase/profit details`. Positive privileged pricing and lower effective-role cases remain covered. Retained Phase 6 actual Admin responses/preparation/QR are redacted while Owner preparation contains private rows."
+    },
+    {
+      "id": 6,
+      "scenario": "Cross-stall/cross-season API requests rejected",
+      "status": "PASS",
+      "evidence": "New scope and payment/offline groups exercise foreign IDs, operating seasons, catalogue/rate/quotation/request boundaries and current memberships. Billing test `another authorized operating season cannot read or pay a previous season request` passes. Retained Phase 4/5 actual dual-membership foreign-ID probes returned 404/409; no authenticated live fixture writes were repeated here."
+    },
+    {
+      "id": 7,
+      "scenario": "Payment/finalization/QR/sync idempotency",
+      "status": "PASS",
+      "evidence": "New 138-test billing/QR/Family Pack/atomic checkout suite and offline suite: concurrent/replayed checkout/payment/claim operations, lost acknowledgements, unique keys, revision conflicts, atomic rollback and one winning closure. Both fixed legacy and location modes pass. Retained Phase 5/6 real Worker receipts/claims/payment evidence provides end-to-end confirmation."
+    },
+    {
+      "id": 8,
+      "scenario": "Offline conflicts, session expiry and authorization regressions",
+      "status": "PASS",
+      "evidence": "New offline 37/37 and backend authentication/session tests pass. Named cases include expired authentication rejected before mutation, captured role never granting privileges, permission/device changes during commit rolling back, and conflict chains retaining both versions while independent drafts proceed. Retained Phase 6 real expired-session row probe is 401, fresh password session 200."
+    },
+    {
+      "id": 9,
+      "scenario": "Existing focused backend/scope/billing/QR/Family Pack/offline/tooling suites",
+      "status": "PASS",
+      "evidence": "All six groups below completed successfully, including focused frontend boundary tests. Exact argument/file lists, exit codes and TAP logs recorded under `P7`; no migration lifecycle hook used."
+    },
+    {
+      "id": 10,
+      "scenario": "Skips, environment limitations and runtime-parity gaps reported",
+      "status": "PASS",
+      "evidence": "Zero runtime skips in selected suites. Excluded entrypoints/files, memory-fixture limitations, known-value scan scope, Android and production-parity NOT TESTED items are explicitly listed below."
+    }
+  ]
+}

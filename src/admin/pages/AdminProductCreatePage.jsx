@@ -3,6 +3,7 @@ import { assertProductSaveNotBlockedByImages } from '../lib/adminProductImageSav
 import { Link, useNavigate } from 'react-router-dom'
 import {
   createAdminProduct,
+  createAdminCategory,
   fetchAdminCategories,
   updateAdminProduct,
   updateAdminPurchaseRate,
@@ -61,11 +62,24 @@ export default function AdminProductCreatePage() {
         .filter((c) => c.slug)
       setCategories(mapped)
       setLoadingCategories(false)
+    }).catch(() => {
+      if (cancelled) return
+      setCategoryError('Could not load categories. Check your connection and reload this page.')
+      setLoadingCategories(false)
     })
     return () => {
       cancelled = true
     }
   }, [])
+
+  async function handleCreateCategory(body) {
+    const result = await createAdminCategory(body)
+    if (result.ok) {
+      setCategories(previous => [...previous, body])
+      setCategoryError(null)
+    }
+    return result
+  }
 
   async function ensureProduct(values) {
     if (persistedProductId && PRODUCT_ID_RE.test(persistedProductId)) {
@@ -117,54 +131,58 @@ export default function AdminProductCreatePage() {
     setServerError(null)
     setServerFields(null)
 
-    await uploadCoordinatorRef.current?.waitUntilIdle()
-    const imageGate = assertProductSaveNotBlockedByImages({
-      uploading: uploadCoordinatorRef.current?.isBusy() ?? imageUploadBusy,
-      images: values.images ?? [],
-    })
-    if (!imageGate.ok) {
-      setServerError(imageGate.message)
-      return
-    }
-
     setSubmitting(true)
-    const body = buildProductPayload(values, {
-      includeSellingPrice: showSensitiveColumns,
-      includeFinalPrice: showSensitiveColumns,
-    })
-    delete body.id
-    const result =
-      persistedProductId && persistedProductId === values.id
-        ? await updateAdminProduct(persistedProductId, body)
-        : await createAdminProduct({ ...body, id: values.id })
+    try {
+      await uploadCoordinatorRef.current?.waitUntilIdle()
+      const imageGate = assertProductSaveNotBlockedByImages({
+        uploading: uploadCoordinatorRef.current?.isBusy() ?? imageUploadBusy,
+        images: values.images ?? [],
+      })
+      if (!imageGate.ok) {
+        setServerError(imageGate.message)
+        return
+      }
 
-    if (!result.ok) {
-      setSubmitting(false)
-      setServerError(result.message)
-      setServerFields(result.fields ?? null)
-      return
-    }
-    const product = result.product
-    const newId = product?.id ? String(product.id) : values.id
-    if (showSensitiveColumns && newId) {
-      if (adminRateFieldChanged('', values.purchaseRateInr)) {
-        const purchaseInr = getPurchaseRateInrFromForm(values)
-        if (purchaseInr !== null && Number.isFinite(purchaseInr)) {
-          const purchaseRes = await updateAdminPurchaseRate(newId, purchaseInr)
-          if (!purchaseRes.ok) {
-            setSubmitting(false)
-            setServerError(purchaseRes.message)
-            setServerFields(purchaseRes.fields ?? null)
-            return
+      const body = buildProductPayload(values, {
+        includeSellingPrice: showSensitiveColumns,
+        includeFinalPrice: showSensitiveColumns,
+      })
+      delete body.id
+      const result =
+        persistedProductId && persistedProductId === values.id
+          ? await updateAdminProduct(persistedProductId, body)
+          : await createAdminProduct({ ...body, id: values.id })
+
+      if (!result.ok) {
+        setServerError(result.message)
+        setServerFields(result.fields ?? null)
+        return
+      }
+      const product = result.product
+      const newId = product?.id ? String(product.id) : values.id
+      setPersistedProductId(newId)
+      if (showSensitiveColumns && newId) {
+        if (adminRateFieldChanged('', values.purchaseRateInr)) {
+          const purchaseInr = getPurchaseRateInrFromForm(values)
+          if (purchaseInr !== null && Number.isFinite(purchaseInr)) {
+            const purchaseRes = await updateAdminPurchaseRate(newId, purchaseInr)
+            if (!purchaseRes.ok) {
+              setServerError(purchaseRes.message)
+              setServerFields(purchaseRes.fields ?? null)
+              return
+            }
           }
         }
       }
+      navigate(`/admin/products/${encodeURIComponent(newId)}/edit`, {
+        replace: true,
+        state: adminNavigationFlashState('Product added successfully.'),
+      })
+    } catch {
+      setServerError('Could not confirm the product save. Check your connection and refresh the product list before retrying.')
+    } finally {
+      setSubmitting(false)
     }
-    setSubmitting(false)
-    navigate(`/admin/products/${encodeURIComponent(newId)}/edit`, {
-      replace: true,
-      state: adminNavigationFlashState('Product added successfully.'),
-    })
   }
 
   if (loadingCategories) {
@@ -199,6 +217,7 @@ export default function AdminProductCreatePage() {
         serverError={serverError}
         serverFields={serverFields}
         onSubmit={handleSubmit}
+        onCreateCategory={handleCreateCategory}
         onCancel={() => navigate('/admin/products')}
         resolvedProductId={persistedProductId}
         onEnsureProduct={ensureProduct}

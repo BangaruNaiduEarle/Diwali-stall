@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Button from '../../components/ui/Button.jsx'
 import AdminFeedbackBanner from '../components/AdminFeedbackBanner.jsx'
+import {fetchBillingPermissions,setBillingPermission} from '../api/adminOffline.js'
 import {
   createAdminUser,
   disableAdminUser,
@@ -46,7 +47,7 @@ function PasswordInput({ value, onChange, ...props }) {
 }
 
 export default function AdminUsersPage() {
-  const { email: sessionEmail, permissionRole: seasonRole, refreshSession, seasonStatus, locationModeEnabled, location } = useAdminSession()
+  const { email: sessionEmail, permissionRole: seasonRole, refreshSession, seasonStatus, locationModeEnabled, location,contextKey } = useAdminSession()
   const { isReadOnly } = useAdminSeasonReadOnly()
   const createRoles = useMemo(() => creatableAdminUserRoles(seasonRole, locationModeEnabled), [seasonRole, locationModeEnabled])
   const showCreateForm = canShowAdminUserCreateForm(seasonRole, isReadOnly)
@@ -56,6 +57,21 @@ export default function AdminUsersPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [busy, setBusy] = useState(false)
+  const [billingPermissions,setBillingPermissions]=useState(null)
+  const [billingError,setBillingError]=useState('')
+  const billingChange=useRef(null)
+  const billingContext=useRef(contextKey)
+  useLayoutEffect(()=>{billingContext.current=contextKey;return()=>{billingContext.current=null}},[contextKey])
+  useEffect(()=>{
+    setBillingPermissions(null);setBillingError('');billingChange.current=null
+    let cancelled=false
+    if(locationModeEnabled&&canViewAdminUsersPage(seasonRole))fetchBillingPermissions().then(result=>{
+      if(cancelled)return
+      if(result.ok)setBillingPermissions({contextKey,rows:result.permissions})
+      else setBillingError(result.message)
+    }).catch(()=>{if(!cancelled)setBillingError('Billing Finalization permissions could not be loaded.')})
+    return ()=>{cancelled=true}
+  },[contextKey,locationModeEnabled,seasonRole])
   const [existingLogin, setExistingLogin] = useState(true)
   const [form, setForm] = useState({ email: '', displayName: '', password: '', role: 'admin' })
   const [passwordFormVersion, setPasswordFormVersion] = useState(0)
@@ -126,6 +142,24 @@ export default function AdminUsersPage() {
     if (!result.ok) { setError(result.message); return }
     setSuccess(`Final Rate visibility ${enabled ? 'enabled' : 'disabled'} for this stall. The Admin must refresh their session or sign in again.`)
     await load()
+  }
+  async function handleBillingAccess(userId,enabled){
+    if(!locationModeEnabled||isReadOnly||busy||billingPermissions?.contextKey!==contextKey)return
+    const capturedContext=contextKey
+    const identity=JSON.stringify([contextKey,userId,enabled])
+    if(!billingChange.current||billingChange.current.identity!==identity)billingChange.current={identity,operationId:crypto.randomUUID()}
+    setBusy(true);setError('');setSuccess('')
+    try{
+      const result=await setBillingPermission({userId,enabled,operationId:billingChange.current.operationId})
+      if(billingContext.current!==capturedContext)return
+      if(!result.ok)throw Error(result.message)
+      billingChange.current=null
+      const refreshed=await fetchBillingPermissions()
+      if(billingContext.current!==capturedContext)return
+      if(!refreshed.ok)throw Error(refreshed.message)
+      setBillingPermissions({contextKey,rows:refreshed.permissions})
+      setSuccess(`Billing Finalization ${enabled?'enabled':'revoked'} for this Admin in this stall and season. Refresh signed authorization online on each device. Existing independent Phase 2 device grants are unchanged.`)
+    }catch(reason){if(billingContext.current===capturedContext)setError(reason.message)}finally{setBusy(false)}
   }
 
   async function handleDisable(id) {
@@ -214,6 +248,7 @@ export default function AdminUsersPage() {
       <header>
         <h2 className="text-lg font-semibold">{locationModeEnabled ? `Members · ${location?.name ?? 'Selected stall'}` : 'Admin users'}</h2>
         <p className="text-sm text-[var(--color-muted)]">{locationModeEnabled ? 'Manage access to this stall only. Logins are shared across stalls; each stall has its own membership and role.' : 'Up to five active accounts. Disabled users cannot sign in.'}</p>
+        {locationModeEnabled?<p className="mt-2 text-sm text-[var(--color-muted)]">Billing Finalization starts off and is separate from Final Rate visibility. Existing Phase 2 device grants remain independent; revoke those separately in Offline Billing when required.</p>:null}
         {locationModeEnabled && showOwnerActions ? <p className="mt-2 text-sm text-[var(--color-muted)]">To replace an Owner, first add or promote the successor to Owner, then demote or remove the former Owner. At least one enabled Owner must remain.</p> : null}
       </header>
 
@@ -312,6 +347,14 @@ export default function AdminUsersPage() {
                         Final Rate visibility
                       </label>
                     ) : null}
+                    {locationModeEnabled && (user.effectiveRole ?? user.role)==='admin'?<label className="mb-3 flex items-center gap-2 text-sm">
+                      <input type="checkbox" aria-label={`Billing Finalization for ${user.email}`}
+                        checked={billingPermissions?.contextKey===contextKey&&Boolean(billingPermissions.rows.find(row=>row.userId===user.id))}
+                        disabled={busy||isReadOnly||user.disabled||billingPermissions?.contextKey!==contextKey}
+                        onChange={event=>handleBillingAccess(user.id,event.target.checked)} />
+                      Billing Finalization
+                    </label>:null}
+                    {locationModeEnabled&&billingError?<p className="admin-field-error">{billingError}</p>:null}
                     {showOwnerActions ? (
                       <div className="flex flex-wrap items-center gap-2">
                         <select

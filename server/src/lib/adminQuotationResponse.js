@@ -179,7 +179,7 @@ export async function filterQuotationForCustomerRequestDetail(db, quotation, rol
  * @param {Record<string, unknown> | null | undefined} request
  * @param {unknown} role
  */
-const RESTRICTED_REQUEST_DETAIL_KEYS = ['internalPricingView']
+const RESTRICTED_REQUEST_DETAIL_KEYS = ['internalPricingView', 'paymentPreferences']
 
 /**
  * @param {Record<string, unknown>} request

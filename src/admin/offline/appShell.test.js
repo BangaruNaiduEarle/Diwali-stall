@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import vm from 'node:vm'
 import { readFileSync } from 'node:fs'
-import { prepareOfflineAppShell } from './appShell.js'
+import { prepareOfflineAppShell, offlineAppShellReady } from './appShell.js'
 
 const source = readFileSync(new URL('../../../public/offline-billing-sw.js', import.meta.url), 'utf8')
   .replace('/* BUILD_ASSETS */ []', JSON.stringify(['/assets/app.js', '/assets/style.css', '/assets/lazy.js', '/manifest.webmanifest', '/icons/diwali-192.png']))
@@ -76,4 +76,38 @@ test('browser preparation waits for service-worker cache confirmation and report
   const active = { postMessage: (message, ports) => ports[0].postMessage({ ok: true }) }
   await prepareOfflineAppShell({ register: async () => ({ active }) })
   await assert.rejects(prepareOfflineAppShell({ register: async () => ({ active: { postMessage: (message, ports) => ports[0].postMessage({ ok: false, message: 'missing built assets' }) } }) }), /missing built assets/)
+})
+
+test('reload readiness checks every cached asset without fetching or trusting profile metadata', async () => {
+  const { handlers, entries, fetches } = worker()
+  let done, result
+  const check = async () => {
+    handlers.get('message')({ data: { type: 'CHECK_OFFLINE_WORKSPACE' }, ports: [{ postMessage: value => { result = value } }], waitUntil: promise => { done = promise } })
+    await done
+    return result.ok
+  }
+  assert.equal(await check(), false)
+  handlers.get('install')({ waitUntil: promise => { done = promise } }); await done
+  const downloaded = fetches.length
+  assert.equal(await check(), true)
+  entries.delete('/assets/lazy.js')
+  assert.equal(await check(), false)
+  assert.equal(fetches.length, downloaded)
+})
+
+test('browser readiness is false without an active worker and follows its cache acknowledgement', async () => {
+  assert.equal(await offlineAppShellReady({}), false)
+  for (const ready of [false,true]) {
+    const active = { postMessage: (message, ports) => {
+      assert.equal(message.type, 'CHECK_OFFLINE_WORKSPACE')
+      ports[0].postMessage({ ok: ready })
+    } }
+    assert.equal(await offlineAppShellReady({ getRegistration: async () => ({ active }) }), ready)
+  }
+})
+
+test('a waiting app update is explicit and never forces reload during a sale',async()=>{
+  let cached=false
+  await assert.rejects(prepareOfflineAppShell({register:async()=>({waiting:{},active:{postMessage:()=>{cached=true}}})}),/app update is waiting/i)
+  assert.equal(cached,false)
 })

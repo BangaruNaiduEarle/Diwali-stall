@@ -50,7 +50,11 @@ export async function loginAdmin({ email, password }) {
 }
 
 export async function logoutAdmin() {
-  return apiRequest('/api/admin/auth/logout', { method: 'POST' })
+  return apiRequest('/api/admin/auth/logout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+    body: JSON.stringify({}),
+  })
 }
 
 export async function fetchAdminUsers() {
@@ -343,11 +347,26 @@ export async function patchAdminCustomerRequestCustomerAgreed(id, { revision } =
   return { ok: true, request: data.request }
 }
 
+export async function patchRequestPaymentPreferences(id, body, { revision } = {}) {
+  const result = await apiRequest(`/api/admin/customer-requests/${encodeURIComponent(id)}/payment-preferences`, {
+    method: 'PATCH',
+    headers: { ...requestRevisionHeaders(revision), 'Content-Type': 'application/json; charset=UTF-8' },
+    body: JSON.stringify(body),
+  })
+  if (!result.ok) return result
+  if (!result.data?.request) return { ok: false, message: 'Invalid payment preferences response.' }
+  return { ok: true, request: result.data.request }
+}
+
 /** @param {string} id */
 export async function patchAdminCustomerRequestFinalize(id, { revision } = {}) {
   const result = await apiRequest(
     `/api/admin/customer-requests/${encodeURIComponent(id)}/finalize`,
-    { method: 'PATCH', headers: requestRevisionHeaders(revision) },
+    {
+      method: 'PATCH',
+      headers: { ...requestRevisionHeaders(revision), 'Content-Type': 'application/json; charset=UTF-8' },
+      body: JSON.stringify({}),
+    },
   )
   if (!result.ok) return result
   const data = /** @type {{ request?: Record<string, unknown> }} */ (result.data ?? {})

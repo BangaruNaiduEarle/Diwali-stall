@@ -53,9 +53,10 @@ export function AdminSessionProvider({ children }) {
   const platformAdminRef = useRef(platformAdmin)
   /** Monotonic guard: stale in-flight session fetches must not call applySessionFields after a season switch. */
   const sessionFetchGenerationRef = useRef(0)
+  const logoutInProgressRef = useRef(false)
 
   const isSessionFetchGenerationCurrent = useCallback(
-    (capturedGeneration) => capturedGeneration === sessionFetchGenerationRef.current,
+    (capturedGeneration) => !logoutInProgressRef.current && capturedGeneration === sessionFetchGenerationRef.current,
     [],
   )
 
@@ -105,7 +106,7 @@ export function AdminSessionProvider({ children }) {
   }, [])
 
   const refreshSession = useCallback(async () => {
-    if (switchingRef.current) return { ok: false }
+    if (switchingRef.current || logoutInProgressRef.current) return { ok: false }
     const fetchGeneration = sessionFetchGenerationRef.current
     const result = await fetchAdminSession()
     if (!isSessionFetchGenerationCurrent(fetchGeneration)) {
@@ -129,7 +130,7 @@ export function AdminSessionProvider({ children }) {
 
   const selectContext = useCallback(
     async (seasonId, locationId) => {
-      if (switchingRef.current) return { ok: false, message: 'A context switch is already in progress.' }
+      if (switchingRef.current || logoutInProgressRef.current) return { ok: false, message: 'A context switch or sign-out is already in progress.' }
       switchingRef.current = true
       const switchGeneration = invalidateSessionFetches()
       setSeasonSwitching(true)
@@ -196,6 +197,7 @@ export function AdminSessionProvider({ children }) {
   const selectActiveLocation = useCallback(locationId => selectContext(getAdminActiveSeasonId(), locationId), [selectContext])
 
   useEffect(() => {
+    if (logoutInProgressRef.current) return
     let cancelled = false
     setStatus('loading')
     setError(null)
@@ -223,8 +225,6 @@ export function AdminSessionProvider({ children }) {
     }
   }, [attempt, applySessionFields, clearSessionFields, isSessionFetchGenerationCurrent])
 
-  const logoutInProgressRef = useRef(false)
-
   const logout = useCallback(async () => {
     if (logoutInProgressRef.current) {
       return { serverConfirmed: false, notice: null, skipped: true }
@@ -235,7 +235,10 @@ export function AdminSessionProvider({ children }) {
     try {
       const outcome = await adminLogoutAttempt(logoutAdmin)
       // Keep unsynchronized records, but remove automatic local workspace access.
-      try { const offline = await openOfflineStorage(); await offline.clearActiveProfile(); offline.close() } catch { /* Logout must still complete if storage is unavailable. */ }
+      try {
+        const offline = await openOfflineStorage()
+        try { await offline.clearActiveProfile() } finally { offline.close() }
+      } catch { /* Logout must still complete if storage is unavailable. */ }
       clearSessionFields()
       setStatus('denied')
       setError(null)
@@ -244,6 +247,7 @@ export function AdminSessionProvider({ children }) {
       // Do not bump `attempt` — that re-runs session fetch and can re-authenticate via local dev JWT proxy.
       return outcome
     } finally {
+      invalidateSessionFetches()
       logoutInProgressRef.current = false
     }
   }, [clearSessionFields, invalidateSessionFetches])

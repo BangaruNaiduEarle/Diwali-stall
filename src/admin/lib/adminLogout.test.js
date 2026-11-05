@@ -28,4 +28,10 @@ describe('adminLogoutAttempt', () => {
     assert.equal(outcome.serverConfirmed, false)
     assert.match(outcome.notice, /Internal error/)
   })
+
+  it('still completes local sign-out when the logout API throws', async () => {
+    const outcome = await adminLogoutAttempt(async () => { throw new Error('Connection lost') })
+    assert.equal(outcome.serverConfirmed, false)
+    assert.match(outcome.notice, /could not be confirmed/i)
+  })
 })

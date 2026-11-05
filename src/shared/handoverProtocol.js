@@ -1,5 +1,6 @@
 // Shared browser/Worker wire format. Only explicit selling/customer fields cross QR.
 import { validateFamilyPackSnapshot, verifyFamilyPackSnapshot } from './familyPackSnapshot.js'
+import { verifyOfflineGrant, grantOperationMessage } from './offlineGrant.js'
 export const HANDOVER_VERSION = 1
 export const MAX_TRANSFER_BYTES = 65536
 const encoder = new TextEncoder()
@@ -42,8 +43,8 @@ export const transferScope = scope => ({ businessId: scope.businessId, locationI
 export const CUSTOMER_FIELDS = {name:80,mobile:10,area:120,pickupPreference:40,note:300,deliveryAddress:240,deliveryLandmark:120,deliveryMapsUrl:500}
 export function transferCustomer(customer) { return Object.fromEntries(Object.keys(CUSTOMER_FIELDS).map(key=>[key,customer[key]??''])) }
 export function validatePayload(payload) {
-  keys(payload, ['v', 'transferId', 'scope', 'requestId', 'revision', 'sourceOperationId', 'creatorUserId', 'recipientUserId', 'occurredAt', 'sourceOccurredAt', 'customer', 'lines'])
-  if (![HANDOVER_VERSION,2].includes(payload.v)) bad('Unsupported QR version. Update both devices online.')
+  keys(payload, ['v', 'transferId', 'scope', 'requestId', 'revision', 'sourceOperationId', 'creatorUserId', 'recipientUserId', 'occurredAt', 'sourceOccurredAt', 'customer', 'lines',...(payload.v===3?['bill']:[])])
+  if (![HANDOVER_VERSION,2,3].includes(payload.v)) bad('Unsupported QR version. Update both devices online.')
   validateScope(payload.scope)
   if (![payload.transferId, payload.requestId, payload.creatorUserId, payload.recipientUserId].every(value=>identifier(value)) || !/^[A-Za-z0-9_-]{8,128}$/.test(payload.transferId) || !date(payload.occurredAt) || !date(payload.sourceOccurredAt) || Date.parse(payload.sourceOccurredAt)>Date.parse(payload.occurredAt)) bad('Invalid transfer identity or time.')
   if (payload.revision === null ? !identifier(payload.sourceOperationId) : !Number.isSafeInteger(payload.revision) || payload.revision < 0 || payload.sourceOperationId !== null) bad('Invalid source request revision.')
@@ -52,7 +53,7 @@ export function validatePayload(payload) {
   if (!Array.isArray(payload.lines) || payload.lines.length < 1 || payload.lines.length > 50) bad('QR requests support 1–50 complete lines; split larger requests explicitly.')
   const ids = new Set(), products = new Set()
   for (const line of payload.lines) {
-    if(payload.v===2 && line?.familyPackId){
+    if(payload.v>=2 && line?.familyPackId){
       keys(line,['lineId','familyPackId','productName','quantity','unitType','packSnapshot','sellingUnitPaise'])
       validateFamilyPackSnapshot(line.packSnapshot)
       const pack=line.packSnapshot
@@ -70,8 +71,40 @@ export function validatePayload(payload) {
     if (ids.has(line.lineId) || products.has(productKey)) bad('Duplicate line identity in QR.')
     ids.add(line.lineId); products.add(productKey)
   }
+  if(payload.v===3){
+    keys(payload.bill,['agreedAmountPaise','operations'])
+    const chain=payload.bill.operations
+    if(!Number.isSafeInteger(payload.bill.agreedAmountPaise)||payload.bill.agreedAmountPaise<=0||!Array.isArray(chain)||chain.length<2||chain.length>25||payload.revision!==null||!payload.sourceOperationId)bad('A finalized bill needs its positive agreement and complete original operation chain (up to 25 actions).')
+    const ids=new Set()
+    for(let index=0;index<chain.length;index++){
+      const op=chain[index]
+      if(!object(op)||Object.keys(op).some(key=>!['operationId','kind','scope','occurredAt','body','catalogue','lineSnapshots','capturedRole','parentOperationId','requestId','expectedRevision','authorization','resolutionOf'].includes(key))||!identifier(op.operationId)||ids.has(op.operationId)||!['CREATE','EDIT','AGREEMENT','CLOSE'].includes(op.kind)||!object(op.body)||!date(op.occurredAt)||Date.parse(op.occurredAt)>Date.parse(payload.occurredAt)||op.resolutionOf&&!identifier(op.resolutionOf))bad('Invalid finalized bill operation chain.')
+      keys(op.scope,['businessId','locationId','seasonId','userId','deviceId'])
+      const reviewedRebase=op.resolutionOf&&op.requestId===payload.requestId&&Number.isSafeInteger(op.expectedRevision)&&op.expectedRevision>=0&&!op.parentOperationId
+      if(canonicalJson(transferScope(op.scope))!==canonicalJson(payload.scope)||op.scope.userId!==payload.creatorUserId||(index===0?(op.kind!=='CREATE'||op.operationId!==payload.sourceOperationId||op.parentOperationId):op.parentOperationId!==chain[index-1].operationId&&!reviewedRebase))bad('Finalized bill operations must keep their original identity, scope and dependency order.')
+      if(op.requestId&&op.requestId!==payload.requestId)bad('A source operation refers to another bill.')
+      const allowedBody={CREATE:['customer','items','pricingMode','acceptedAmountPaise'],EDIT:['items','discountPaise','acceptedAmountInr'],AGREEMENT:['acceptedAmountPaise'],CLOSE:[]}[op.kind]
+      if(Object.keys(op.body).some(key=>!allowedBody.includes(key)))bad('Unsupported fields in finalized bill source input.')
+      if(op.kind==='CREATE'&&(!object(op.body.customer)||Object.entries(op.body.customer).some(([key,value])=>!Object.hasOwn(CUSTOMER_FIELDS,key)||typeof value!=='string'||value.length>CUSTOMER_FIELDS[key])))bad('Unsupported customer fields in finalized source input.')
+      if(['CREATE','EDIT'].includes(op.kind)){
+        if(!Array.isArray(op.body.items)||op.body.items.length<1||op.body.items.length>50||op.body.items.some(item=>!object(item)||Object.keys(item).some(key=>!['productId','familyPackId','quantity','unitType','unitRatePaise'].includes(key))))bad('Unsupported item fields in finalized source input.')
+        const sellingFields=['id','name','pack','company','category_slug','selling_price_paise','pieces_per_pack','allow_loose_sale','active','stock_status']
+        if(!Array.isArray(op.catalogue)||op.catalogue.length>5000||op.catalogue.some(product=>!object(product)||Object.keys(product).some(key=>!sellingFields.includes(key))))bad('Only selling catalogue snapshots may cross finalized QR.')
+        const {bill,...sourcePayload}=payload
+        void bill
+        validatePayload({...sourcePayload,v:op.lineSnapshots?.some(line=>line.familyPackId)?2:1,revision:0,sourceOperationId:null,lines:op.lineSnapshots})
+      }
+      if(index>0&&op.kind==='CREATE'||op.kind==='CLOSE'&&index!==chain.length-1)bad('Invalid finalized bill closure order.')
+      if(/"(?:deviceToken|privateKey|purchase_unit_paise|purchasePricePaise|profit|margin)"/.test(canonicalJson(op)))bad('Private credentials or purchase/profit data cannot cross QR.')
+      ids.add(op.operationId)
+    }
+    if(chain.at(-1).kind!=='CLOSE')bad('The original finalization must be the last source operation.')
+    const agreement=chain.filter(op=>['CREATE','AGREEMENT'].includes(op.kind)&&op.body.acceptedAmountPaise>0).at(-1)
+    const items=chain.filter(op=>['CREATE','EDIT'].includes(op.kind)).at(-1)
+    if(agreement?.body.acceptedAmountPaise!==payload.bill.agreedAmountPaise||canonicalJson(items?.lineSnapshots)!==canonicalJson(payload.lines)||canonicalJson(transferCustomer(chain[0].body.customer??{}))!==canonicalJson(transferCustomer(payload.customer)))bad('Finalized amount, customer and item snapshots must match the original saved chain.')
+  }
 }
-export async function verifyTransfer(envelope, { rootKey, scope, recipientUserId, now = Date.now(), allowExpired = false }) {
+export async function verifyTransfer(envelope, { rootKey, grantRootKey=rootKey, scope, recipientUserId, now = Date.now(), allowExpired = false }) {
   keys(envelope, ['payload', 'certificate', 'signature'])
   if (encoder.encode(canonicalJson(envelope)).length > MAX_TRANSFER_BYTES) bad('Transfer is too large. No data was imported.')
   validatePayload(envelope.payload)
@@ -86,6 +119,17 @@ export async function verifyTransfer(envelope, { rootKey, scope, recipientUserId
   if (canonicalJson(transferScope(scope)) !== canonicalJson(payload.scope) || canonicalJson(cert.scope) !== canonicalJson(payload.scope) || payload.recipientUserId !== recipientUserId) bad('QR is addressed to a different user, business, stall or season.')
   if (payload.creatorUserId !== cert.userId) bad('QR initiator must be the original request creator.')
   await verify(payload, envelope.signature, cert.publicKey)
+  if(payload.v===3){
+    if(await offlineRequestId(payload.scope,payload.sourceOperationId)!==payload.requestId)bad('Finalized bill identity does not match its original creation.')
+    for(const op of payload.bill.operations){
+      if(op.scope.deviceId!==cert.deviceId||op.capturedRole!==cert.role)bad('A finalized source operation belongs to another device or role.')
+      if(cert.role==='admin'&&['AGREEMENT','CLOSE'].includes(op.kind)){
+        const claims=await verifyOfflineGrant({rootKey:grantRootKey,grant:op.authorization?.grant},op.scope,{now:Date.parse(op.occurredAt),finalize:true,prices:false})
+        if(canonicalJson(claims.publicKey)!==canonicalJson(cert.publicKey))bad('The finalization grant belongs to another signing device.')
+        await verify(grantOperationMessage(op),op.authorization.proof,claims.publicKey)
+      }
+    }
+  }
   for(const line of payload.lines)if(line.familyPackId)await verifyFamilyPackSnapshot(line.packSnapshot)
   return envelope
 }

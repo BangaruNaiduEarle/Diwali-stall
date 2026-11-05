@@ -1,0 +1,309 @@
+{
+  "phase": 6,
+  "date": "2026-11-03",
+  "verdict": "INCOMPLETE: physical Android acceptance NOT TESTED",
+  "desktopVerdict": "PASS",
+  "requestedScenarioCounts": {
+    "PASS": 11,
+    "FAIL": 0,
+    "NOT TESTED": 1,
+    "NOT IMPLEMENTED": 0
+  },
+  "scope": "Established local Worker/disposable D1; actual desktop Chrome camera pipeline with synthetic video; no physical Android device",
+  "newEvidence": {
+    "browserChecks": 6,
+    "moduleChecks": 30,
+    "realExpiredSessionChecks": 1,
+    "dataAudit": "PASS",
+    "browserFile": "browser-results-1793711104949.json",
+    "guardFiles": [
+      "guard-results-1793711178478.json",
+      "guard-results-1793711402948.json"
+    ],
+    "authFile": "expiry-1793711496181.json",
+    "preservationFile": "preservation-1793711552391394000.json"
+  },
+  "baseline": {
+    "preservedRows": 3382,
+    "tables": 34,
+    "schemaUnchanged": true,
+    "migrationsUnchanged": true,
+    "integrity": [
+      [
+        "ok"
+      ]
+    ],
+    "foreignKeyViolations": 0
+  },
+  "databaseAudit": {
+    "status": "PASS",
+    "requests": 2,
+    "localOperations": 8,
+    "receipts": 6,
+    "sourceConflictsWithoutReceipts": 2,
+    "qrClaims": 2,
+    "accounts": 1,
+    "payments": 1,
+    "workflowEvents": 31,
+    "unchangedPackSnapshots": 2,
+    "variantQuantities": [
+      2,
+      1
+    ],
+    "variantUnitLabels": [
+      "box",
+      "piece",
+      "packet",
+      "bundle"
+    ],
+    "originalQuotationPaise": 163000,
+    "adjustedQuotationPaise": 161700,
+    "amountDuePaise": 50000,
+    "receivedPaise": 10000,
+    "outstandingPaise": 40000
+  },
+  "physicalAndroidChecks": [
+    {
+      "scenario": "PWA installation and cold offline startup",
+      "status": "NOT TESTED"
+    },
+    {
+      "scenario": "Physical camera, permissions and screen-to-screen normal/multipart pack scanning",
+      "status": "NOT TESTED"
+    },
+    {
+      "scenario": "Device reconnection, reboot/storage retention and authenticated billing sync",
+      "status": "NOT TESTED"
+    }
+  ],
+  "applicationChanges": false,
+  "migrationsApplied": false,
+  "releaseApproval": false,
+  "evidenceDirectory": "C:\\Users\\naidu\\AppData\\Local\\Temp\\diwali-release-b38657123a324f3a9e7c02c159b82c79\\p6-87ca4e48",
+  "scenarios": [
+    {
+      "id": 1,
+      "scenario": "PWA offline readiness and offline request creation",
+      "status": "PASS",
+      "evidence": "**New P6-01/04:** actual online catalogue/device/QR preparation, two requests queued offline, cached shell verified, full Owner Chrome process restart and offline page reopening with all five mixed-request operation IDs/snapshots intact. Desktop scope; Android installation remains NOT TESTED below."
+    },
+    {
+      "id": 2,
+      "scenario": "Normal QR generation, scanning, preview, acceptance and handover",
+      "status": "NOT TESTED",
+      "evidence": "**New desktop PASS, P6-01/02/05:** real signed v1 export, three QR frames, actual `getUserMedia` → video → canvas → `jsQR` decoding → full preview → explicit offline acceptance → later Worker handover. Repeated camera scan retains one operation; tracks stop after decoding. Camera input is synthetic desktop video, not a physical Android camera. Full physical screen-to-screen acceptance remains unperformed."
+    },
+    {
+      "id": 3,
+      "scenario": "Supported Family Pack variants/components/quantities/units/selling prices",
+      "status": "PASS",
+      "evidence": "**New P6-01/03/05 + DB:** v2 mixed transfer with two separate fixed catalogue variants, complete ordered components and metadata, exact quantities/labels/prices, actual synthetic-camera preview and acceptance, unchanged saved snapshots through adjusted quotation, closure and payment. **Retained:** `logs/fix-handover.log` passing 80-component transfer/server-boundary tests."
+    },
+    {
+      "id": 4,
+      "scenario": "Owner offline adjustments, finalization and payment",
+      "status": "PASS",
+      "evidence": "**New P6-04/05:** ordinary loose-unit override ₹9 and bill discount ₹10; queued ₹500 agreement, closure and ₹100 payment. Original pack prices unchanged. Adjusted quotation ₹1,617; final due ₹500; received ₹100; outstanding ₹400. **Retained:** Phase 4's full/partial/HOLD/method/permission matrix."
+    },
+    {
+      "id": 5,
+      "scenario": "Reconnection and interrupted-sync recovery",
+      "status": "PASS",
+      "evidence": "**New P6-05:** successful HANDOVER response dropped after commit; original HANDOVER retried, EDIT acknowledged, AGREEMENT then interrupted before dispatch. Same five IDs eventually acknowledge once. No second bill, claim, receipt or payment."
+    },
+    {
+      "id": 6,
+      "scenario": "Duplicate scans/acceptance, lost responses and duplicate operations",
+      "status": "PASS",
+      "evidence": "**New P6-02/05 + DB:** same normal camera sequence scanned/accepted twice, one local HANDOVER; mixed lost-response replay returns original identity; six receipts for six acknowledged operations, one payment. **Retained P5-03/07:** simultaneous same-operation CREATE/payment/QR copies share one commit, plus duplicate local QR acceptance."
+    },
+    {
+      "id": 7,
+      "scenario": "Expired authentication, changed membership and invalid recipients",
+      "status": "PASS",
+      "evidence": "**New P6-AUTH-TTL:** real newly inserted expired Owner session returns 401, fresh password session 200; server clock unchanged. **New P6-06:** invalid-session replay of the acknowledged mixed operation returns 401. Guards reject expired preparation and wrong recipient. **Retained P3-QR-01/02:** signature-valid wrong Owner rejected; sender removal and recipient demotion invalidate new reconciliation attempts (403); intended recipient succeeds."
+    },
+    {
+      "id": 8,
+      "scenario": "Tampering, incompatible catalogue versions and revision conflicts",
+      "status": "PASS",
+      "evidence": "**New guards:** tampered composition, private-field injection, missing products/variants, version-only mismatch, changed composition/unit/price/variant and substitution explicitly rejected with no local draft/outbox commit. **Retained real Worker:** `Family Pack catalogue drift rejects handover and preserves original accepted snapshot`; P5-04/05 stale revisions preserve local/server versions and final bills."
+    },
+    {
+      "id": 9,
+      "scenario": "Competing QR claims and offline closures",
+      "status": "PASS",
+      "evidence": "**Retained real Worker:** `competing offline QR claims preserve one server claim and detect the loser`, `competing closures cannot both commit`. **Retained P5-06:** separate Owner/Super Admin browser closures produce one winner and a preserved 409 conflict. **New DB:** exactly two claims, one per new normal/mixed transfer, without retry duplication. No new competitive race was executed merely to repeat Phase 5."
+    },
+    {
+      "id": 10,
+      "scenario": "Admin cannot access Owner-only purchase/profit information",
+      "status": "PASS",
+      "evidence": "**New P6-01/03/06:** Admin private preparation is empty; Owner preparation positively contains two private rows. QR contains no purchase/profit/margin/final-price/device-secret/private-key data. Admin catalogue/request/quotation/history surfaces redact private values. Guards reject Admin acceptance and private snapshot field injection. **Retained:** P3/P4 role and financial-modification denials."
+    },
+    {
+      "id": 11,
+      "scenario": "QR handover independent from cloud synchronization",
+      "status": "PASS",
+      "evidence": "**New P6-02/03/05:** offline QR acceptance produces only local draft/outbox; authoritative Worker lookup still returns 404 and no sync POST occurs. Only explicit online synchronization materializes each original request/claim. Sender retains its original CREATEs; later source sync becomes preserved conflicts against the same request IDs, not new bills."
+    },
+    {
+      "id": 12,
+      "scenario": "Unsupported Family Pack cases safely blocked",
+      "status": "PASS",
+      "evidence": "**New P6-BLOCK/P6-GUARD cases:** unsupported options/nesting/empty definitions, invalid quantities/loose packs, over-limit payloads, missing historical snapshots, legacy partial drafts and offline pack price overrides rejected explicitly. Failed imports leave zero new drafts/outbox entries in isolated module tests. Unsupported capabilities remain NOT IMPLEMENTED, as detailed below. No feature was added."
+    }
+  ],
+  "guards": [
+    {
+      "name": "P6-GUARD-valid-signature",
+      "category": "control",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-GUARD-tampered-composition",
+      "category": "security",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-GUARD-private-field-injection",
+      "category": "security",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-GUARD-invalid-recipient",
+      "category": "security",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-GUARD-expired-preparation",
+      "category": "security",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-GUARD-admin-acceptance",
+      "category": "security",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-GUARD-missing-component",
+      "category": "catalogue",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-GUARD-missing-variant",
+      "category": "catalogue",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-GUARD-version-only-mismatch",
+      "category": "catalogue",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-GUARD-changed-variant",
+      "category": "catalogue",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-GUARD-changed-units",
+      "category": "catalogue",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-GUARD-changed-composition",
+      "category": "catalogue",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-GUARD-changed-fixed-price",
+      "category": "catalogue",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-BLOCK-custom-options",
+      "category": "unsupported",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-BLOCK-empty-components",
+      "category": "unsupported",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-BLOCK-nested-pack",
+      "category": "unsupported",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-BLOCK-component-fraction",
+      "category": "unsupported",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-BLOCK-component-over-limit",
+      "category": "unsupported",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-BLOCK-81-components",
+      "category": "unsupported",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-BLOCK-fractional-whole-pack",
+      "category": "unsupported",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-BLOCK-100-whole-packs",
+      "category": "unsupported",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-BLOCK-loose-pack-unit",
+      "category": "unsupported",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-BLOCK-historical-missing-snapshot",
+      "category": "unsupported",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-BLOCK-legacy-partial-draft",
+      "category": "unsupported",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-BLOCK-pack-unit-price-override",
+      "category": "unsupported",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-BLOCK-oversized-cart",
+      "category": "unsupported",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-BLOCK-51-request-lines",
+      "category": "unsupported",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-GUARD-incomplete-and-mixed-frames",
+      "category": "framing",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-GUARD-component-substitution",
+      "category": "catalogue",
+      "status": "PASS"
+    },
+    {
+      "name": "P6-GUARD-no-inferred-pack-financials",
+      "category": "unsupported",
+      "status": "PASS"
+    }
+  ]
+}

@@ -339,21 +339,12 @@ export default function AdminCustomerRequestAdjustBillPanel({
               {previewBusy ? '…' : formatPaiseLabel(preview?.finalSubtotalPaise)}
             </dd>
           </div> : null}
-          {privileged && bargainMode ? (
-            <div>
-              <dt>Final Price + ₹500 — reference only</dt>
-              <dd className="tabular-nums">
-                {previewBusy ? '…' : formatPaiseLabel(preview?.bargainFloorPaise)}
-              </dd>
-            </div>
-          ) : null}
         </dl>
         {previewError ? (
           <p className="admin-alert admin-alert--error" role="alert">
             {previewError}
           </p>
         ) : null}
-        <p className="admin-hint">Reference amounts never set the bill or customer-agreed amount.</p>
       </div>
 
       {privileged ? <label className="admin-field">

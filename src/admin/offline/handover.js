@@ -22,11 +22,12 @@ export async function generateHandover({storage,profile,draft,operations,catalog
   const durable=await storage.get('drafts',profile.scope,draft.draftId)
   if(!durable || durable.localRevision!==draft.localRevision || canonicalJson(durable.body)!==canonicalJson(draft.body))throw Error('Wait for this exact draft version to be saved before generating QR.')
   if (!profile.handover.recipients.some(user=>user.userId===recipientUserId)) throw Error('Select a prepared authorized recipient.')
-  if (draft.handover || draft.localClosure || ['closed','void'].includes(draft.serverSnapshot?.request.status)) throw Error('A received or finalized request cannot be handed over again.')
-  const rows = operations.filter(row=>row.draftId===draft.draftId)
+  if (draft.handover || draft.serverSnapshot?.request.status==='void') throw Error('A received or void request cannot be handed over again.')
+  const finalized=Boolean(draft.localClosure)||draft.serverSnapshot?.request.status==='closed'
+  const rows = operations.filter(row=>row.draftId===draft.draftId).sort((a,b)=>a.order-b.order)
   const source = rows.find(row=>row.payload.kind==='CREATE'&&!['resolved','discarded'].includes(row.state))
   const unsettled = rows.filter(row=>!['synced','resolved','discarded'].includes(row.state))
-  if(unsettled.some(row=>row.state!=='pending' || !['CREATE','EDIT'].includes(row.payload.kind)))throw Error('Resolve failed/conflicting work and finish synchronization before exporting this source. Nothing was removed.')
+  if(unsettled.some(row=>row.state!=='pending' || !(finalized?['CREATE','EDIT','AGREEMENT','CLOSE']:['CREATE','EDIT']).includes(row.payload.kind)))throw Error('Resolve failed/conflicting work before exporting this source. Nothing was removed.')
   let requestId = draft.requestId, revision = draft.lastAcknowledgement?.revision ?? draft.expectedRevision, sourceOperationId = null
   if (!requestId) {
     if (!source || source.state !== 'pending') throw Error('Queue request creation before generating a QR.')
@@ -39,14 +40,22 @@ export async function generateHandover({storage,profile,draft,operations,catalog
     recipientUserId,occurredAt:new Date().toISOString(),sourceOccurredAt:source?.payload.occurredAt ?? new Date(draft.serverSnapshot?.request.createdAt ?? draft.savedAt).toISOString(),customer:transferCustomer(draft.body.customer),
     lines:sellingLines(draft.body.items,catalogue,draft.draftId)}
   if(payload.lines.some(line=>line.familyPackId)||draft.serverSnapshot?.request.items.some(item=>item.familyPackId)||rows.some(row=>row.payload.lineSnapshots?.some(line=>line.familyPackId)))payload.v=2
+  if(finalized){
+    const chain=rows.filter(row=>!['resolved','discarded'].includes(row.state)).map(row=>row.payload)
+    if(chain.some(op=>op.kind==='PAYMENT')||!source)throw Error('Finalized offline handoff requires the complete original device history and no source payment captures. Keep existing payments and synchronize them first.')
+    payload.v=3;payload.revision=null;payload.sourceOperationId=source.payload.operationId
+    payload.requestId=await offlineRequestId(profile.scope,payload.sourceOperationId)
+    payload.lines=structuredClone(chain.filter(op=>['CREATE','EDIT'].includes(op.kind)).at(-1)?.lineSnapshots)
+    payload.bill={agreedAmountPaise:chain.filter(op=>['CREATE','AGREEMENT'].includes(op.kind)&&op.body.acceptedAmountPaise>0).at(-1)?.body.acceptedAmountPaise,operations:chain}
+  }
   validatePayload(payload)
   const cacheKey = await digest({...payload,transferId:null,occurredAt:null,certificate:profile.handover.certificate})
   const previous = await storage.transferExport(profile.scope,cacheKey)
-  if (previous) { await verifyTransfer(previous,{rootKey:profile.handover.rootKey,scope:profile.scope,recipientUserId}); return previous }
+  if (previous) { await verifyTransfer(previous,{rootKey:profile.handover.rootKey,grantRootKey:profile.handover.grantRootKey,scope:profile.scope,recipientUserId}); return previous }
   const key = await storage.signingIdentity(profile.scope)
   if (canonicalJson(key.publicKey) !== canonicalJson(profile.handover.certificate.claims.publicKey)) throw Error('The local signing key does not match online preparation.')
   const envelope = {payload,certificate:profile.handover.certificate,signature:await sign(payload,key.privateKey)}
-  await verifyTransfer(envelope,{rootKey:profile.handover.rootKey,scope:profile.scope,recipientUserId})
+  await verifyTransfer(envelope,{rootKey:profile.handover.rootKey,grantRootKey:profile.handover.grantRootKey,scope:profile.scope,recipientUserId})
   return storage.transferExport(profile.scope,cacheKey,envelope)
 }
 

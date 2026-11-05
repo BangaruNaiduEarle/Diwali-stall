@@ -46,7 +46,9 @@ export async function prepareHandover(db, body, options, env) {
     if (result.results.length > 5000) fail(409, 'catalogue_too_large', 'Privileged offline snapshot exceeds the limit.')
     privateCatalogue = result.results
   }
-  return { ok: true, rootKey, certificate: { claims, signature: await sign(claims, privateKey) }, recipients, privateCatalogue, preparedAt: claims.issuedAt }
+  let grantRootKey=rootKey
+  if(env.OFFLINE_GRANT_SIGNING_JWK){try{grantRootKey=publicJwk(JSON.parse(env.OFFLINE_GRANT_SIGNING_JWK))}catch{grantRootKey=null}}
+  return { ok: true, rootKey, grantRootKey, certificate: { claims, signature: await sign(claims, privateKey) }, recipients, privateCatalogue, preparedAt: claims.issuedAt }
 }
 
 export async function resolveHandover(db, envelope, scope, options, env) {
@@ -54,7 +56,9 @@ export async function resolveHandover(db, envelope, scope, options, env) {
   const { rootKey } = await handoverRoot(env)
   // A previously accepted transfer may sync after expiry. Live registry,
   // membership and transactional authority checks below still apply.
-  await verifyTransfer(envelope, { rootKey, scope, recipientUserId: scope.userId, allowExpired:true })
+  let grantRootKey=rootKey
+  if(envelope?.payload?.v===3&&env.OFFLINE_GRANT_SIGNING_JWK){try{grantRootKey=publicJwk(JSON.parse(env.OFFLINE_GRANT_SIGNING_JWK))}catch{fail(503,'offline_grant_not_configured','Finalized QR authorization verification is not configured. Pending request handover remains available.')}}
+  await verifyTransfer(envelope, { rootKey, grantRootKey, scope, recipientUserId: scope.userId, allowExpired:true })
   const { payload, certificate } = envelope, signer = certificate.claims
   const member = await handoverMember(db, scope, signer.userId)
   if (!member || member.role !== signer.role) fail(403, 'sender_denied', 'The original creator no longer has the certified role at this stall.')
@@ -64,6 +68,7 @@ export async function resolveHandover(db, envelope, scope, options, env) {
   if (!key || key.public_key_json !== canonicalJson(signer.publicKey)) fail(403, 'sender_device_denied', 'The sending device key is not currently authorized.')
   const claim = await db.prepare('SELECT transfer_id FROM request_handover_claims WHERE transfer_id = ? OR request_id = ?').bind(payload.transferId, payload.requestId).first()
   if (claim) fail(409, 'handover_claim_conflict', 'Another acceptance already owns the server claim. Both local versions must be reviewed; no pending work was removed.')
+  if(payload.v===3)return {kind:'FINALIZED',envelope,creator:{userId:member.id,email:member.email,name:member.display_name,role:member.role,deviceId:signer.deviceId,occurredAt:payload.sourceOccurredAt}}
   const request = await db.prepare('SELECT id,revision,status,creator_user_id,customer_name,customer_phone,customer_area,customer_note,pickup_preference,delivery_address,delivery_landmark,delivery_maps_url FROM customer_requests WHERE id = ? AND location_id = ? AND season_id = ?').bind(payload.requestId, scope.locationId, scope.seasonId).first()
   let expectedRevision = payload.revision
   if (payload.revision === null) {

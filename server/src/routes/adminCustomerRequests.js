@@ -32,6 +32,7 @@ import {
   enrichAdminCustomerRequestListForRole,
   listAdminCustomerRequests,
   updateAdminCustomerRequestStatus,
+  updateRequestPaymentPreferences,
 } from '../services/adminCustomerRequests.js'
 import {
   requireActiveSeason,
@@ -205,6 +206,23 @@ async function handleScopedAdminCustomerRequestRoutes(request, env, url, identit
       { request: (await attachPaymentSummaries(env.DB, [await filterCustomerRequestDetailForRole(db, requestDetail, seasonRole, seasonId)], { seasonId, context }))[0] },
       { headers: NO_STORE },
     )
+  }
+
+  const preferencesMatch = pathname.match(/^\/api\/admin\/customer-requests\/([^/]+)\/payment-preferences\/?$/)
+  if (preferencesMatch && method === 'PATCH') {
+    const access = resolveAdminCustomerRequestSeasonAccess(request, false)
+    if (!access.ok) return access.response
+    if (!canFinalizeQuickBillCustomerRequests(access.seasonRole)) {
+      return Response.json({ error: 'forbidden', message: 'Only Owner or Super Admin can edit payment preferences.' }, { status: 403, headers: NO_STORE })
+    }
+    if (!isValidCustomerRequestId(preferencesMatch[1])) return Response.json({ error: 'not_found' }, { status: 404, headers: NO_STORE })
+    const parsed = await readJsonBody(request)
+    if (!parsed.ok) return Response.json({ error: parsed.error, message: parsed.message }, { status: parsed.status, headers: NO_STORE })
+    const result = await updateRequestPaymentPreferences(db, preferencesMatch[1], parsed.value, {
+      seasonId: access.seasonId, actorRole: access.seasonRole, context,
+    })
+    if (!result.ok) return Response.json({ error: result.code, message: result.message }, { status: result.status, headers: NO_STORE })
+    return Response.json({ request: await filterCustomerRequestDetailForRole(db, result.request, access.seasonRole, access.seasonId) }, { headers: NO_STORE })
   }
 
   const assignMatch = pathname.match(/^\/api\/admin\/customer-requests\/([^/]+)\/assign\/?$/)
