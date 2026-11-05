@@ -108,3 +108,45 @@ test('list API fails closed for absent or invalid Worker cutoff even with protec
     assert.equal(data.requests,undefined)
   }
 })
+
+test('ten-row list batches ownership reads, preserves fields and exposes only numeric phase timings', async t => {
+  const db = await fixture(t)
+  for (let i = 0; i < 37; i++) {
+    const id = `perf-${String(i).padStart(2, '0')}`
+    await db.prepare(`INSERT INTO customer_requests(id,status,source,customer_name,created_at,location_id,season_id)
+      VALUES(?,'received','web','Performance fixture','2099-12-01','loc-a','season-2026')`).bind(id).run()
+    await db.prepare(`INSERT INTO customer_request_items(request_id,line_number,line_id,product_id,product_name,quantity,unit_price_paise)
+      VALUES(?,1,?,'P001','Product A',1,10000)`).bind(id, `line-${id}`).run()
+  }
+  await db.prepare(`INSERT INTO quotations(id,customer_request_id,status,currency,subtotal_paise,total_paise,
+    selling_subtotal_paise,final_subtotal_paise,accepted_amount_paise,season_id,location_id)
+    VALUES('perf-quote','perf-36','draft','INR',10000,10000,10000,8000,9000,'season-2026','loc-a')`).bind().run()
+  const calls = [], prepare = db.prepare.bind(db)
+  db.prepare = sql => { calls.push(sql); return prepare(sql) }
+  const response = await api(db, '?page=1&limit=10')
+  assert.equal(response.status, 200)
+  const data = await response.json()
+  assert.deepEqual(data.pagination, { page: 1, limit: 10, total: 42, totalPages: 5 })
+  assert.deepEqual(data.requests.map(row => row.id), Array.from({ length: 10 }, (_, i) => `perf-${36 - i}`))
+  assert.equal(data.requests[0].itemCount, 1)
+  assert.ok(data.requests[0].auditSummary)
+  assert.ok(data.requests.every(row => row.paymentSummary && Object.keys(row.paymentSummary).sort().join(',') ===
+    'amountDuePaise,outstandingPaise,paymentStatus,receivedPaise'))
+  assert.equal(calls.filter(sql => /FROM customer_request_items\s+WHERE request_id IN/.test(sql)).length, 1)
+  assert.equal(calls.filter(sql => /SELECT 1 AS mismatch FROM quotations/.test(sql)).length, 1)
+  assert.equal(calls.filter(sql => /^SELECT id FROM products WHERE id IN/.test(sql)).length, 1)
+  assert.equal(calls.filter(sql => /SELECT COUNT\(\*\) AS total FROM customer_requests/.test(sql)).length, 1)
+  assert.equal(calls.filter(sql => /FROM request_payment_summaries/.test(sql)).length, 1)
+  const timing = response.headers.get('Server-Timing')
+  const names = timing.split(', ').map(span => {
+    assert.match(span, /^[a-z]+;dur=\d+\.\d$/)
+    return span.split(';')[0]
+  })
+  for (const name of ['season', 'location', 'data', 'ownership', 'count', 'audit', 'payments']) assert.ok(names.includes(name))
+  assert.equal(response.headers.get('Cache-Control'), 'no-store')
+  await db.prepare("UPDATE customer_request_items SET product_id='P002' WHERE request_id='perf-36'").bind().run()
+  assert.equal((await api(db, '?page=1&limit=10')).status, 409)
+  await db.prepare("UPDATE customer_request_items SET product_id='P001' WHERE request_id='perf-36'").bind().run()
+  await db.prepare("UPDATE quotations SET location_id='loc-b' WHERE id='perf-quote'").bind().run()
+  assert.equal((await api(db, '?page=1&limit=10')).status, 409)
+})

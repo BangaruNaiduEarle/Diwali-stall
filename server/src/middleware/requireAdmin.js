@@ -3,6 +3,7 @@ import { resolveAdminSeasonContext } from '../services/adminSeasonContext.js'
 import { resolveAdminLocationContext } from '../services/adminLocationContext.js'
 import { adminLocationMode, adminServiceMode, bindAdminServiceMode } from '../lib/adminServiceMode.js'
 import { readWorkflowTransport } from '../lib/requestWorkflowAudit.js'
+import { measureCustomerRequestList } from '../lib/customerRequestListTiming.js'
 export { adminLocationMode } from '../lib/adminServiceMode.js'
 
 /** @typedef {import('../services/adminSeasonContext.js').AdminSeasonContext} AdminSeasonContext */
@@ -38,7 +39,7 @@ export function getAdminLocationContext(request) {
 export async function attachAdminRequestContext(request, db, identity, env = {}) {
   adminContextByRequest.delete(request)
   bindAdminServiceMode(db, env)
-  const adminContext = /** @type {AdminRequestContext} */ (await attachAdminSeasonContext(request, db, identity))
+  const adminContext = /** @type {AdminRequestContext} */ (await measureCustomerRequestList(request, 'season', () => attachAdminSeasonContext(request, db, identity)))
   const mode = adminLocationMode(env)
   if (mode === false) return { ok: true, adminContext }
 
@@ -61,12 +62,12 @@ export async function attachAdminRequestContext(request, db, identity, env = {})
   }
 
   try {
-    const location = await resolveAdminLocationContext(db, {
+    const location = await measureCustomerRequestList(request, 'location', () => resolveAdminLocationContext(db, {
       userId: adminContext.userId,
       activeSeasonId: adminContext.activeSeasonId,
       request,
       access: ['GET', 'HEAD', 'OPTIONS'].includes(request.method) ? 'read' : 'write',
-    })
+    }))
     if (!location.ok) {
       adminContext.locationError = location
       return location
@@ -110,7 +111,7 @@ export async function attachAdminSeasonContext(request, db, identity) {
  */
 export async function requireAdmin(request, env) {
   adminContextByRequest.delete(request)
-  const auth = await authenticateAdmin(request, env)
+  const auth = await measureCustomerRequestList(request, 'auth', () => authenticateAdmin(request, env))
   if (!auth.ok) {
     return auth
   }

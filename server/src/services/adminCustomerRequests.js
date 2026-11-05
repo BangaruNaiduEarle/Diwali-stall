@@ -317,8 +317,11 @@ export async function listAdminCustomerRequests(db, opts) {
   const listSql = `${ADMIN_LIST_CUSTOMER_REQUESTS_SQL} ${whereSql} ORDER BY r.created_at DESC, r.id DESC LIMIT ? OFFSET ?`
   const countSql = `SELECT COUNT(*) AS total FROM customer_requests r ${whereSql}`
 
-  const listResult = await db.prepare(listSql).bind(...binds, limit, offset).all()
-  const countRow = await db.prepare(countSql).bind(...binds).first()
+  const measure = opts.measure ?? ((_name, work) => work())
+  const [listResult, countRow] = await Promise.all([
+    db.prepare(listSql).bind(...binds, limit, offset).all(),
+    measure('count', () => db.prepare(countSql).bind(...binds).first()),
+  ])
 
   const total = Number(countRow?.total ?? 0)
   const requests = (listResult.results ?? []).map(mapAdminCustomerRequestListRow)

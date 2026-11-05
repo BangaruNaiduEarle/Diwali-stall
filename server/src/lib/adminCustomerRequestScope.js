@@ -123,6 +123,28 @@ export function customerRequestDb(db, seasonId, context, write = false) {
     if (Number.isSafeInteger(revision)) verifiedChildren.set(id, revision)
   }
 
+  async function validateRequestPage(rows) {
+    const pending = rows.filter(row => row.id &&
+      (!Number.isSafeInteger(row.revision) || verifiedChildren.get(row.id) !== row.revision))
+    // Validate the complete returned page, never a broader unpaginated set.
+    // Retain both reference ownership checks and foreign active-quote rejection.
+    for (let start = 0; start < pending.length; start += 90) {
+      const chunk = pending.slice(start, start + 90)
+      const ids = chunk.map(row => row.id)
+      const placeholders = ids.map(() => '?').join(',')
+      const children = await raw.prepare(`SELECT product_id, family_pack_id FROM customer_request_items
+        WHERE request_id IN (${placeholders}) AND ${requestParent('customer_request_items.request_id')}`)
+        .bind(...ids, loc, season).all()
+      await validateReferences(children.results ?? [])
+      const mismatch = await raw.prepare(`SELECT 1 AS mismatch FROM quotations
+        WHERE customer_request_id IN (${placeholders}) AND status != 'void'
+          AND (location_id IS NOT ? OR season_id IS NOT ?) LIMIT 1`)
+        .bind(...ids, loc, season).first()
+      if (mismatch) throw ownershipError()
+      for (const row of chunk) if (Number.isSafeInteger(row.revision)) verifiedChildren.set(row.id, row.revision)
+    }
+  }
+
   function rewrite(original, values) {
     let sql = original.trim().replace(/;$/, '')
     if (sql.includes(';')) throw new Error('Multiple statements are not supported by customer request scope.')
@@ -322,9 +344,14 @@ export function customerRequestDb(db, seasonId, context, write = false) {
               return row
             },
             async all(...args) {
-              const result = await statement.all(...args)
+              const measure = query.requestRows && context.measureRequestList
+                ? context.measureRequestList : (_name, work) => work()
+              const result = await measure('data', () => statement.all(...args))
               for (const row of result.results ?? []) remember(query, row)
-              if (query.requestRows) for (const row of result.results ?? []) if (row.id) await validateRequestChildren(row.id, row.revision)
+              if (query.requestRows) await measure('ownership', async () => {
+                if (context.measureRequestList) return validateRequestPage(result.results ?? [])
+                for (const row of result.results ?? []) if (row.id) await validateRequestChildren(row.id, row.revision)
+              })
               if (query.references) await validateReferences(result.results ?? [])
               return result
             },

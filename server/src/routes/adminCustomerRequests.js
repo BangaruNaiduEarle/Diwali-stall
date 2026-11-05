@@ -6,6 +6,7 @@ import { getRequestWorkflowHistory } from '../services/adminRequestWorkflowHisto
 import { attachPaymentSummaries } from '../services/adminPayments.js'
 import { filterQuickBillPreviewForRole } from '../lib/quickBillBargain.js'
 import { getAdminContext } from '../middleware/requireAdmin.js'
+import { measureCustomerRequestList, customerRequestListTimingHeaders } from '../lib/customerRequestListTiming.js'
 import {
   isValidCustomerRequestId,
   parseAdminCustomerRequestListQuery,
@@ -163,6 +164,9 @@ async function handleScopedAdminCustomerRequestRoutes(request, env, url, identit
     if (!access.ok) return access.response
     const { seasonId, seasonRole } = access
 
+    const measure = (name, work) => measureCustomerRequestList(request, name, work)
+    if (context) context.measureRequestList = measure
+
     const parsed = parseAdminCustomerRequestListQuery(url.searchParams)
     if (!parsed.ok) return validationErrorResponse(parsed.errors)
 
@@ -187,9 +191,14 @@ async function handleScopedAdminCustomerRequestRoutes(request, env, url, identit
       assignedToEmail,
       seasonId,
       context,
+      measure,
     })
-    const enriched = await enrichAdminCustomerRequestListForRole(db, requests, seasonRole, seasonId, context)
-    const requestsOut = await attachPaymentSummaries(env.DB, enriched, { seasonId, context, listView: true })
+    const [enriched, withPayments] = await Promise.all([
+      measure('audit', () => enrichAdminCustomerRequestListForRole(db, requests, seasonRole, seasonId, context)),
+      measure('payments', () => attachPaymentSummaries(env.DB, requests, { seasonId, context, listView: true })),
+    ])
+    const paymentsById = new Map(withPayments.map(row => [row.id, row]))
+    const requestsOut = enriched.map(row => ({ ...paymentsById.get(row.id), ...row }))
     const totalPages = total === 0 ? 0 : Math.ceil(total / limit)
 
     return Response.json(
@@ -202,7 +211,7 @@ async function handleScopedAdminCustomerRequestRoutes(request, env, url, identit
           totalPages,
         },
       },
-      { headers: NO_STORE },
+      { headers: { ...NO_STORE, ...customerRequestListTimingHeaders(request) } },
     )
   }
 
