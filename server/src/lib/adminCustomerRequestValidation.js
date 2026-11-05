@@ -11,6 +11,16 @@ export const CUSTOMER_REQUEST_STATUSES = Object.freeze([
 
 const STATUS_SET = new Set(CUSTOMER_REQUEST_STATUSES)
 
+/** Required Worker setting ADMIN_CUSTOMER_REQUEST_VISIBLE_FROM; no permissive fallback. */
+export function parseAdminCustomerRequestVisibilityCutoff(value) {
+  if (typeof value !== 'string') return null
+  const input = value.trim()
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(input)) return null
+  const normalized = input.length === 20 ? input.replace('Z', '.000Z') : input
+  const date = new Date(input)
+  return Number.isFinite(date.getTime()) && date.toISOString() === normalized ? normalized : null
+}
+
 /** Terminal statuses — cannot transition to a different status. */
 export const TERMINAL_CUSTOMER_REQUEST_STATUSES = Object.freeze(['closed', 'void'])
 

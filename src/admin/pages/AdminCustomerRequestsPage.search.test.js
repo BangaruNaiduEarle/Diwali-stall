@@ -37,7 +37,7 @@ test('Request Search browser behavior with controlled API responses', async t =>
       b.onResolve({ filter: /AdminCustomerRequest(?:Card|ListAudit|WorkflowAudit)\.jsx$/ }, args => ({ path: args.path, namespace: 'search-test' }))
       b.onLoad({ filter: /.*/, namespace: 'search-test' }, args => ({
         contents: args.path.endsWith('adminApi.js')
-          ? `export function fetchAdminCustomerRequests(opts){window.calls.push({...opts,at:performance.now()});return new Promise(resolve=>window.pending.push(resolve))}`
+          ? `export function fetchAdminCustomerRequests(opts){window.calls.push({...opts,at:performance.now()});return new Promise(resolve=>window.pending.push(resolve))} export function bulkDeleteAdminCustomerRequests(){throw Error('Unexpected deletion')}`
           : args.path.endsWith('AdminSessionContext.jsx')
             ? `export const useAdminSession=()=>({role:'owner',permissionRole:'owner',activeSeasonId:'test-season',email:'owner@test.com'})`
             : `export default function Boundary(){return null}`,

@@ -96,6 +96,7 @@ const ALLOWED_EMAIL = 'owner@example.com'
 function localEnv(db) {
   return {
     DB: db,
+    ADMIN_CUSTOMER_REQUEST_VISIBLE_FROM: '2000-01-01T00:00:00.000Z',
     ADMIN_LOCAL_DEV_AUTH: '1',
     ADMIN_LOCAL_DEV_SECRET: LOCAL_SECRET,
     ADMIN_LOCAL_DEV_EMAIL: ALLOWED_EMAIL,
@@ -125,10 +126,11 @@ describe('admin customer request SQL separation', () => {
       const lower = sql.toLowerCase()
       assert.ok(!lower.includes('private_rates'))
       assert.ok(!lower.includes('unit_rate'))
-      assert.ok(!lower.includes('paise'))
       assert.ok(!lower.includes('subtotal'))
       assert.ok(!lower.includes('total_paise'))
     }
+    // Only the list excludes all monetary columns; detail includes payment preferences.
+    assert.ok(!ADMIN_LIST_CUSTOMER_REQUESTS_SQL.toLowerCase().includes('paise'))
     const itemsSql = ADMIN_LIST_CUSTOMER_REQUEST_ITEMS_SQL.toLowerCase()
     assert.ok(!itemsSql.includes('private_rates'))
     assert.ok(itemsSql.includes('unit_price_paise'))
@@ -386,17 +388,17 @@ describe('admin customer request API (mock D1)', () => {
 
   it('uses bound parameters in list queries (no string concatenation of user input)', async () => {
     const db = createAdminMockDb({ requests: sampleRequests, items: sampleItems })
-    await listAdminCustomerRequests(db, { limit: 10, offset: 0, status: 'received' })
+    await listAdminCustomerRequests(db, { visibilityCutoff: '2000-01-01T00:00:00.000Z', limit: 10, offset: 0, status: 'received' })
     const last = db.lastListBind
-    assert.deepEqual(last, ['received', 10, 0])
+    assert.deepEqual(last, ['received', '2000-01-01T00:00:00.000Z', 10, 0])
   })
 
   it('binds search text instead of interpolating it into SQL', async () => {
     const db = createAdminMockDb({ requests: sampleRequests, items: [] })
-    await listAdminCustomerRequests(db, { limit: 10, offset: 0, q: "O'Hara%" })
+    await listAdminCustomerRequests(db, { visibilityCutoff: '2000-01-01T00:00:00.000Z', limit: 10, offset: 0, q: "O'Hara%" })
     assert.equal(String(db.lastListSql).includes("O'Hara"), false)
     assert.match(String(db.lastListSql), /LIKE \?/)
-    assert.deepEqual(db.lastListBind, ["%O'Hara\\%%", "%O'Hara\\%%", "%O'Hara\\%%", 10, 0])
+    assert.deepEqual(db.lastListBind, ["%O'Hara\\%%", "%O'Hara\\%%", "%O'Hara\\%%", '2000-01-01T00:00:00.000Z', 10, 0])
   })
 })
 
@@ -597,6 +599,10 @@ function filterCustomerRequestRows(rows, normalized, params) {
       if (!phonePattern) return false
       return sqlLikeMatch(normalizeCustomerRequestPhoneSearch(row.customer_phone), phonePattern)
     })
+  }
+  if (normalized.includes('julianday(r.created_at)')) {
+    const cutoff = Date.parse(String(params[index++]))
+    filtered = filtered.filter(row => ['cr-737b1d5a26c757f6588763e787854700', '77ece069-78e3-4fab-8a4d-ad118845dd47'].includes(row.id) || Date.parse(row.created_at) >= cutoff)
   }
   return { filtered, nextIndex: index }
 }

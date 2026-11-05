@@ -1,5 +1,18 @@
 # Admin API — local vs production
 
+## Customer request list visibility
+
+The Worker requires `ADMIN_CUSTOMER_REQUEST_VISIBLE_FROM=2026-11-05T15:45:16.000Z`.
+Configure this fixed cutoff in each Worker environment; it is not a frontend variable.
+Use a valid UTC ISO timestamp with seconds and optional three-digit milliseconds.
+Missing or invalid configuration makes the customer request list API return HTTP 503;
+there is no fallback that exposes historical requests. Do not advance the cutoff on startup.
+Within existing authorization, search, status and archive filters, the list includes requests
+created at or after this timestamp, plus `cr-737b1d5a26c757f6588763e787854700`
+and `77ece069-78e3-4fab-8a4d-ad118845dd47` regardless of creation time.
+The SQL predicate applies to both paginated results and total counts. Detail and billing APIs
+are unchanged. No database records are modified by this visibility rule.
+
 ## Summary
 
 | Environment | `VITE_API_BASE_URL` | Admin API target | Auth |

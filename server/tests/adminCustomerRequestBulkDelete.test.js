@@ -133,9 +133,9 @@ test('bulk removal archives in local D1 without deleting billing, purchase, stoc
     assert.deepEqual(await protectedSnapshot(),protectedBefore)
     assert.ok((await row(db,'customer_requests',id(4))).results.length)
     const context=await contextFor(db)
-    const list=await listAdminCustomerRequests(db,{seasonId:'season-2026',context,limit:10,offset:0})
+    const list=await listAdminCustomerRequests(db,{visibilityCutoff:'2000-01-01T00:00:00.000Z',seasonId:'season-2026',context,limit:10,offset:0})
     assert.equal(list.total,6);assert.ok(list.requests.every(request=>!data.archivedIds.includes(request.id)))
-    const filtered=await listAdminCustomerRequests(db,{seasonId:'season-2026',context,limit:10,offset:0,status:'closed'})
+    const filtered=await listAdminCustomerRequests(db,{visibilityCutoff:'2000-01-01T00:00:00.000Z',seasonId:'season-2026',context,limit:10,offset:0,status:'closed'})
     assert.equal(filtered.total,0)
     const detail=await getAdminCustomerRequestById(db,id(6),'season-2026',context)
     assert.equal(detail.status,'closed');assert.equal(detail.finalizationStatus,'finalized');assert.equal(detail.items.length,1)
@@ -164,7 +164,7 @@ test('bulk removal archives in local D1 without deleting billing, purchase, stoc
     for(const table of ['quotations','quotation_items','bill_item_purchase_costs','request_payment_accounts','offline_sync_receipts','products','product_purchase_rates']) {
       assert.deepEqual((await db.prepare(`SELECT * FROM ${table}`).all()).results,unchangedBefore[table],table)
     }
-    assert.equal((await listAdminCustomerRequests(db,{seasonId:'season-2026',context,limit:10,offset:0,status:'closed'})).total,0)
+    assert.equal((await listAdminCustomerRequests(db,{visibilityCutoff:'2000-01-01T00:00:00.000Z',seasonId:'season-2026',context,limit:10,offset:0,status:'closed'})).total,0)
   })
   await t.test('archive-event trigger rejection rolls back revision advancement without changing billing',async()=>{
     const before=(await row(db,'customer_requests',id(2))).results

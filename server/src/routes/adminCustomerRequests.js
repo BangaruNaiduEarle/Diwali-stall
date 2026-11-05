@@ -9,6 +9,7 @@ import { getAdminContext } from '../middleware/requireAdmin.js'
 import {
   isValidCustomerRequestId,
   parseAdminCustomerRequestListQuery,
+  parseAdminCustomerRequestVisibilityCutoff,
   validateCustomerRequestStatusPatchBody,
 } from '../lib/adminCustomerRequestValidation.js'
 import { validateCustomerRequestAssignBody } from '../lib/adminCustomerRequestFinalization.js'
@@ -165,10 +166,19 @@ async function handleScopedAdminCustomerRequestRoutes(request, env, url, identit
     const parsed = parseAdminCustomerRequestListQuery(url.searchParams)
     if (!parsed.ok) return validationErrorResponse(parsed.errors)
 
+    const visibilityCutoff = parseAdminCustomerRequestVisibilityCutoff(env.ADMIN_CUSTOMER_REQUEST_VISIBLE_FROM)
+    if (!visibilityCutoff) {
+      return Response.json(
+        { error: 'request_visibility_unavailable', message: 'Customer request visibility cutoff is not configured correctly.' },
+        { status: 503, headers: NO_STORE },
+      )
+    }
+
     const { page, limit, offset, status, q, finalizationStatus, assignedToMe } = parsed.data
     const assignedToEmail =
       assignedToMe && identity?.email ? String(identity.email).trim().toLowerCase() : undefined
     const { requests, total } = await listAdminCustomerRequests(db, {
+      visibilityCutoff,
       limit,
       offset,
       status,

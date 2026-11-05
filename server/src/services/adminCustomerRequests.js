@@ -12,7 +12,7 @@ import { getActiveQuotationForRequest } from './adminQuotations.js'
 import { customerRequestDb, customerRequestScope } from '../lib/adminCustomerRequestScope.js'
 import { activeQuotationSnapshot } from '../lib/adminTransactionIntegrity.js'
 import { validateRequestPaymentPreferences } from '../../../src/shared/requestPaymentPreferences.js'
-import { validateCustomerRequestStatusTransition } from '../lib/adminCustomerRequestValidation.js'
+import { parseAdminCustomerRequestVisibilityCutoff, validateCustomerRequestStatusTransition } from '../lib/adminCustomerRequestValidation.js'
 import {
   getAdminUserByEmail,
   getAdminUserById,
@@ -143,7 +143,7 @@ const CUSTOMER_PHONE_SEARCH_SQL =
   "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(r.customer_phone, ''), ' ', ''), '-', ''), '(', ''), ')', ''), '+', '')"
 
 /**
- * @param {{ status?: string, q?: string, finalizationStatus?: string, assignedToEmail?: string }} opts
+ * @param {{ status?: string, q?: string, finalizationStatus?: string, assignedToEmail?: string, visibilityCutoff?: string }} opts
  * @returns {{ whereSql: string, binds: unknown[] }}
  */
 export function buildAdminCustomerRequestListFilter(opts) {
@@ -187,6 +187,15 @@ export function buildAdminCustomerRequestListFilter(opts) {
       binds.push(`%${escapeSqlLikeFragment(phoneNeedle)}%`)
     }
     wheres.push(`(${match.join(' OR ')})`)
+  }
+
+  if (opts.visibilityCutoff !== undefined) {
+    const cutoff = parseAdminCustomerRequestVisibilityCutoff(opts.visibilityCutoff)
+    if (!cutoff) throw new Error('A valid customer request visibility cutoff is required.')
+    // This exception bypasses only the date restriction, never scope/search/status.
+    // julianday accepts both SQLite UTC timestamps and ISO UTC timestamps.
+    wheres.push("(r.id IN ('cr-737b1d5a26c757f6588763e787854700', '77ece069-78e3-4fab-8a4d-ad118845dd47') OR julianday(r.created_at) >= julianday(?))")
+    binds.push(cutoff)
   }
 
   return {
@@ -289,6 +298,7 @@ export function mapAdminCustomerRequestItemRow(row) {
  * @param {{
  *   limit: number,
  *   offset: number,
+ *   visibilityCutoff: string,
  *   status?: string,
  *   q?: string,
  *   finalizationStatus?: string,
@@ -297,6 +307,9 @@ export function mapAdminCustomerRequestItemRow(row) {
  * }} opts
  */
 export async function listAdminCustomerRequests(db, opts) {
+  if (!parseAdminCustomerRequestVisibilityCutoff(opts.visibilityCutoff)) {
+    throw new Error('A valid customer request visibility cutoff is required.')
+  }
   db = customerRequestDb(db, opts.seasonId, opts.context)
   const limit = opts.limit
   const offset = opts.offset

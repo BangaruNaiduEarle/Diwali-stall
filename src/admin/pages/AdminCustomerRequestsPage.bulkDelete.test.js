@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { createServer } from 'node:net'
 import { build } from '../../../server/node_modules/esbuild/lib/main.js'
-import { Browser, delay } from '../../../server/scripts/offline-qr-pack-browser-client.mjs'
+import { Browser } from '../../../server/scripts/offline-qr-pack-browser-client.mjs'
 
 test('bulk-delete API adapter posts exact selected IDs through the authenticated client',async()=>{
   const original=globalThis.fetch
@@ -22,7 +22,7 @@ test('bulk-delete API adapter posts exact selected IDs through the authenticated
   }finally{globalThis.fetch=original}
 })
 
-test('request-list bulk selection, confirmation, results and pagination', async t => {
+test('request list removes bulk controls while preserving Open, filters, refresh and pagination', async t => {
   const bundle=await build({stdin:{resolveDir:process.cwd(),loader:'jsx',contents:`
     import React from 'react';import {createRoot} from 'react-dom/client';import {MemoryRouter} from 'react-router-dom';
     import Page from './src/admin/pages/AdminCustomerRequestsPage.jsx';
@@ -47,79 +47,37 @@ test('request-list bulk selection, confirmation, results and pagination', async 
   const response=(ids,page=1,total=ids.length,totalPages=Math.ceil(total/10))=>({ok:true,requests:ids.map(id=>({id,publicReference:id,customerName:id,status:'received',createdAt:'2026-11-05',itemCount:1})),pagination:{page,limit:10,total,totalPages}})
   const resolve=(index,value)=>browser.eval(`window.pending[${index}](${JSON.stringify(value)})`)
   const click=label=>browser.eval(`Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()===${JSON.stringify(label)}).click()`)
-  const select=id=>browser.eval(`document.querySelector('[aria-label="Select request ${id}"]').click()`)
   const last=async name=>browser.eval(`window.calls.findLastIndex(c=>c.name==='${name}')`)
   try {
     await browser.launch();await browser.eval("document.body.innerHTML='<div id=\"root\"></div>'");await browser.eval(bundle.outputFiles[0].text)
     await browser.wait('window.calls.length===1');await resolve(0,response(['a','b'],1,11,2))
-    await browser.wait('Boolean(document.querySelector("[aria-label=\\"Select request a\\"]"))')
-    await t.test('individual/mobile selection and current-page Select All require explicit confirmation',async()=>{
-      assert.equal(await browser.eval("Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='Delete Selected').disabled"),true)
-      await select('a');await browser.wait('document.body.textContent.includes("1 selected")')
-      assert.equal(await browser.eval('document.querySelector("[aria-label=\\"Select mobile request a\\"]").checked'),true)
-      await browser.eval('document.querySelector("[aria-label=\\"Select all requests on this page\\"]").click()')
-      await browser.wait('document.body.textContent.includes("2 selected")')
-      await click('Delete Selected');await browser.wait('Boolean(document.querySelector("[role=alertdialog]"))')
-      assert.equal(await browser.eval('document.querySelector("[role=alertdialog]").textContent.includes("Requests will be archived")'),true)
-      assert.equal(await browser.eval('document.querySelector("[role=alertdialog]").textContent.includes("Bills, invoices, payments and offline history remain available")'),true)
+    await browser.wait('document.body.textContent.includes("Page 1 of 2")')
+    const assertNoBulk = async () => {
+      assert.equal(await browser.eval('Boolean(document.querySelector("[aria-label^=\\"Select\\"]"))'),false)
+      assert.equal(await browser.eval('Boolean(document.querySelector("[role=alertdialog]"))'),false)
+      assert.equal(await browser.eval('document.body.textContent.includes("Delete Selected") || document.body.textContent.includes("Select All") || /[0-9]+ selected/.test(document.body.textContent)'),false)
       assert.equal(await browser.eval('window.calls.some(c=>c.name==="delete")'),false)
-      await click('Cancel');await browser.wait('!document.querySelector("[role=alertdialog]")')
-      assert.equal(await browser.eval('window.calls.some(c=>c.name==="delete")'),false)
-    })
-    await t.test('partial results refresh the list and keep failure messages and failed-row selection',async()=>{
-      await click('Delete Selected');await click('Delete requests')
-      await browser.wait('window.calls.some(c=>c.name==="delete")')
-      assert.deepEqual(await browser.eval('window.calls.at(-1).args'),['a','b'])
-      assert.equal(await browser.eval('document.querySelector("[role=alertdialog] button:not([aria-hidden])").disabled'),true)
-      await resolve(await last('delete'),{ok:true,deletedIds:['a'],archivedIds:['a'],failed:[{id:'b',code:'protected_request',message:'This request is protected and cannot be removed.'}]})
-      await browser.wait('window.calls.at(-1).name==="list"')
-      await resolve(await last('list'),response(['b'],1,10,1))
-      await browser.wait('document.body.textContent.includes("This request is protected and cannot be removed")')
-      assert.equal(await browser.eval('document.querySelector("[aria-label=\\"Select request b\\"]").checked'),true)
-      assert.equal(await browser.eval('Boolean(document.querySelector("[aria-label=\\"Select request a\\"]"))'),false)
-    })
-    await t.test('selection resets across paging and deleting the last page returns to a valid page',async()=>{
-      await click('Refresh');await browser.wait('window.calls.at(-1).name==="list"')
-      await resolve(await last('list'),response(['b'],1,11,2))
-      await browser.wait('document.body.textContent.includes("Page 1 of 2")')
-      await click('Next');await browser.wait('window.calls.at(-1).args.page===2')
-      await resolve(await last('list'),response(['last'],2,11,2))
-      await browser.wait('document.body.textContent.includes("0 selected")')
-      await select('last');await click('Delete Selected');await click('Delete requests')
-      await browser.wait('window.calls.at(-1).name==="delete"')
-      await resolve(await last('delete'),{ok:true,deletedIds:['last'],failed:[]})
-      await browser.wait('window.calls.at(-1).name==="list"')
-      await resolve(await last('list'),response([],2,10,1))
-      await browser.wait('window.calls.at(-1).name==="list" && window.calls.at(-1).args.page===1')
-      await resolve(await last('list'),response(['b'],1,10,1))
-      await browser.wait('Boolean(document.querySelector("[aria-label=\\"Select request b\\"]"))')
-      assert.equal(await browser.eval('document.body.textContent.includes("1 request removed from Customer Requests")'),true)
-      assert.equal(await browser.eval('document.body.textContent.includes("0 selected")'),true)
-    })
-    await t.test('API errors are visible and a stale deletion result cannot update a different stall',async()=>{
-      await select('b');await click('Delete Selected');await click('Delete requests')
-      await browser.wait('window.calls.at(-1).name==="delete"')
-      await resolve(await last('delete'),{ok:false,message:'Permission changed'})
-      await browser.wait('document.body.textContent.includes("Permission changed")')
-      await click('Delete Selected');await click('Delete requests')
-      await browser.wait('window.calls.at(-1).name==="delete"')
-      const old=await last('delete')
-      await browser.eval("window.session={...window.session,contextKey:'stall-b'};window.render()")
-      await browser.wait('window.calls.at(-1).name==="list"')
-      await resolve(await last('list'),response(['other']))
-      await resolve(old,{ok:true,deletedIds:['b'],failed:[]});await delay(100)
-      assert.equal(await browser.eval('Boolean(document.querySelector("[aria-label=\\"Select request other\\"]"))'),true)
-      assert.equal(await browser.eval('document.body.textContent.includes("1 request removed from Customer Requests")'),false)
-    })
-    await t.test('Admin and read-only sessions cannot use bulk selection',async()=>{
-      await browser.eval("window.session={...window.session,permissionRole:'admin'};window.render()")
-      await browser.wait('window.calls.at(-1).name==="list"')
-      await resolve(await last('list'),response(['other']));await browser.wait('document.body.textContent.includes("other")')
-      assert.equal(await browser.eval('Boolean(document.querySelector("[aria-label=\\"Select all requests on this page\\"]"))'),false)
-      await browser.eval("window.session={...window.session,permissionRole:'super_admin',capabilities:{write:false}};window.render()")
-      await browser.wait('window.calls.at(-1).name==="list"')
-      await resolve(await last('list'),response(['other']));await delay(100)
-      assert.equal(await browser.eval('Boolean(document.querySelector("[aria-label=\\"Select all requests on this page\\"]"))'),false)
-    })
+    }
+    await assertNoBulk()
+    assert.deepEqual(await browser.eval('Array.from(document.querySelectorAll("a")).map(a=>a.getAttribute("href"))'),['/admin/customer-requests/a','/admin/customer-requests/b'])
+    // Assigned-to-me is a filter checkbox and must remain.
+    assert.equal(await browser.eval('document.querySelectorAll("input[type=checkbox]").length'),1)
+    await browser.eval('document.querySelector("[aria-label=\\"Filter by status\\"]").value="received";document.querySelector("[aria-label=\\"Filter by status\\"]").dispatchEvent(new Event("change",{bubbles:true}))')
+    await browser.wait('window.calls.at(-1).args.status==="received"')
+    await resolve(await last('list'),response(['a','b'],1,11,2))
+    await browser.wait('document.body.textContent.includes("Page 1 of 2")')
+    await click('Next');await browser.wait('window.calls.at(-1).args.page===2')
+    assert.equal(await browser.eval('window.calls.at(-1).args.status'), 'received')
+    await resolve(await last('list'),response(['last'],2,11,2))
+    await browser.wait('document.body.textContent.includes("Page 2 of 2")')
+    await assertNoBulk()
+    await click('Previous');await browser.wait('window.calls.at(-1).args.page===1')
+    await resolve(await last('list'),response(['a','b'],1,11,2))
+    await browser.wait('document.body.textContent.includes("Page 1 of 2")')
+    const count = await browser.eval('window.calls.length')
+    await click('Refresh');await browser.wait(`window.calls.length>${count}`)
+    await resolve(await last('list'),response(['a','b'],1,11,2))
+    await browser.wait('document.body.textContent.includes("Page 1 of 2")')
+    await assertNoBulk()
   } finally {await browser.close()}
 })
