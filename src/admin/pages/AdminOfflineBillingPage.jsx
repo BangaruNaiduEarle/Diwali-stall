@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAdminSession } from '../context/AdminSessionContext.jsx'
 import { fetchAdminSession } from '../api/adminApi.js'
-import { fetchOfflineCatalogue, fetchOfflineRequest, registerOfflineDevice, sendOfflineOperation, prepareOfflineAuthorization } from '../api/adminOffline.js'
+import { fetchOfflineCatalogue, fetchOfflineRequest, registerOfflineDevice, sendOfflineOperation, prepareOfflineAuthorization, prepareOfflineHandover } from '../api/adminOffline.js'
 import { openOfflineStorage, offlineScopeKey } from '../offline/storage.js'
 import { synchronizeOutbox } from '../offline/synchronize.js'
 import { prepareOfflineAppShell, offlineAppShellReady } from '../offline/appShell.js'
@@ -188,6 +188,15 @@ export default function AdminOfflineBillingPage() {
           else authorizationNotice=' Optional Owner authorization was not refreshed: '+result.message
         }catch(reason){authorizationNotice=' Optional Owner authorization was not refreshed: '+reason.message}
       }
+      // Phone preparation must also cache QR signing and eligible recipients;
+      // neither the catalogue nor an Owner billing grant supplies these.
+      try {
+        const identity=await storage.current.signingIdentity(scope)
+        const result=await prepareOfflineHandover({deviceId:device.deviceId,deviceToken:device.deviceToken,publicKey:identity.publicKey})
+        if (!result.ok) throw Error(result.message ?? 'QR preparation failed.')
+        await storage.current.saveHandoverPreparation(scope,result)
+        authorizationNotice+=result.recipients.length ? ' QR signing and recipients saved for offline transfer.' : ' QR signing saved, but no eligible receivers were found. Ask the Owner to review stall and season access, then prepare again online.'
+      } catch(reason) { authorizationNotice+=' QR is not ready: '+reason.message+' Prepare QR online before transferring; saved bills are preserved.' }
       if (!profile || offlineScopeKey(profile.scope) !== offlineScopeKey(scope)) choose(null)
       await reload(prepared)
       const { persistent } = await readStorageHealth(navigator.storage, true)

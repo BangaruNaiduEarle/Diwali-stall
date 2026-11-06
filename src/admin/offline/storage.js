@@ -1,6 +1,6 @@
 import { canonicalJson, digest, publicJwk, verify, verifyTransfer } from '../../shared/handoverProtocol.js'
 import { grantStatus, verifyOfflineGrant, signGrantedOperation } from '../../shared/offlineGrant.js'
-import { matchTransferCatalogue } from './handover.js'
+import { matchTransferCatalogue, assertHandoverPreparation } from './handover.js'
 import { transferProductIds } from '../../shared/familyPackSnapshot.js'
 
 const stores = ['meta', 'profiles', 'catalogues', 'drafts', 'versions', 'outbox']
@@ -183,6 +183,7 @@ class OfflineStorage {
   async acceptHandover(scope, envelope, catalogue, familyPacks) {
     const profile = await this.get('profiles', scope, 'profile')
     if (!profile?.writable || !['owner','super_admin'].includes(profile.role) || !profile.handover) throw Error('Prepare an authorized Owner/Super Admin profile online before accepting QR.')
+    await assertHandoverPreparation(this,profile)
     await verifyTransfer(envelope, {rootKey:profile.handover.rootKey,grantRootKey:profile.handover.grantRootKey,scope,recipientUserId:scope.userId})
     if(!familyPacks)familyPacks=(await this.get('catalogues',scope,'catalogue'))?.familyPacks??[]
     const payload = envelope.payload, fingerprint = await digest(envelope)

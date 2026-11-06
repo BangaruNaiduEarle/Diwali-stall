@@ -1,4 +1,4 @@
-import { canonicalJson, digest, offlineRequestId, sign, transferScope, transferCustomer, validatePayload, verifyTransfer } from '../../shared/handoverProtocol.js'
+import { canonicalJson, digest, offlineRequestId, sign, transferScope, transferCustomer, validatePayload, verifyTransfer, verify } from '../../shared/handoverProtocol.js'
 import { familyPackLine, familyPackAvailable, sameFamilyPack } from '../../shared/familyPackSnapshot.js'
 
 export function sellingLines(items, catalogue, draftId) {
@@ -16,8 +16,23 @@ export function assertCompleteFamilyDraft(draft) {
   if(draft.serverSnapshot?.request.items.some(item=>item.familyPackId)&&draft.familyPackSnapshotsVersion!==1)throw Error('This saved draft predates complete Family Pack snapshots. Save a fresh revision as a separate draft online; the old request and pending work are preserved.')
 }
 
+export async function assertHandoverPreparation(storage, profile) {
+  if (profile?.authorityRevoked || !profile?.writable) throw Error('QR authorization is revoked or read-only. Reconnect to verify access; keep saved bills.')
+  const prep=profile.handover, claims=prep?.certificate?.claims
+  if (!claims) throw Error('QR preparation is missing. Prepare this phone online in the selected business, stall and season.')
+  if (!(Date.parse(claims.expiresAt)>Date.now()) || Date.parse(claims.issuedAt)>Date.now()+300000) throw Error('QR preparation has expired or the device clock is incorrect. Prepare this phone online again.')
+  if (canonicalJson(claims.scope)!==canonicalJson(transferScope(profile.scope)) || claims.userId!==profile.scope.userId || claims.deviceId!==profile.scope.deviceId || claims.role!==profile.role) throw Error('QR preparation does not match this user, device, role or workspace. Prepare online again.')
+  await verify(claims,prep.certificate.signature,prep.rootKey)
+  const identity=await storage.signingIdentity(profile.scope)
+  if (canonicalJson(identity.publicKey)!==canonicalJson(claims.publicKey)) throw Error('QR preparation belongs to another device signing key. Prepare online again; keep saved bills.')
+}
+
 export async function generateHandover({storage,profile,draft,operations,catalogue,recipientUserId}) {
   if (!profile?.handover || !profile.writable || !draft) throw Error('Prepare QR handover online and select a saved request first.')
+  // Read the durable authority rather than trusting a stale component profile.
+  const current=await storage.get('profiles',profile.scope,'profile')
+  await assertHandoverPreparation(storage,current)
+  profile=current
   assertCompleteFamilyDraft(draft)
   const durable=await storage.get('drafts',profile.scope,draft.draftId)
   if(!durable || durable.localRevision!==draft.localRevision || canonicalJson(durable.body)!==canonicalJson(draft.body))throw Error('Wait for this exact draft version to be saved before generating QR.')
