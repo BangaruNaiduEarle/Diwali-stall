@@ -8,10 +8,16 @@ export function posLine(item, catalogue) {
     ? Math.floor(product?.selling_price_paise / product?.pieces_per_pack) : product?.selling_price_paise
   const override = rupeesToPaise(item.priceInr, true)
   const unitPrice = override ?? price
+  const boxQuantity = item.unitType === 'piece' ? 0 : item.quantity
+  const looseQuantity = item.unitType === 'piece' ? item.quantity : 0
+  const validQuantity = Number.isInteger(item.quantity) && item.quantity >= 1 && item.quantity <= 99
+  const totalPieces = !item.familyPackId && validQuantity && Number.isSafeInteger(product?.pieces_per_pack) && product.pieces_per_pack > 0
+    ? boxQuantity * product.pieces_per_pack + looseQuantity : null
   return { name: pack?.name ?? product?.name ?? item.productId ?? item.familyPackId,
     pack: pack?.variant?.label ?? product?.pack ?? '', product,
+    boxQuantity, looseQuantity, totalPieces,
     unitPrice: Number.isSafeInteger(unitPrice) && unitPrice > 0 ? unitPrice : null,
-    total: Number.isSafeInteger(unitPrice) && Number.isInteger(item.quantity) ? unitPrice * item.quantity : null }
+    total: Number.isSafeInteger(unitPrice) && unitPrice > 0 && validQuantity && Number.isSafeInteger(unitPrice * item.quantity) ? unitPrice * item.quantity : null }
 }
 
 export function customerErrors(customer = {}) {

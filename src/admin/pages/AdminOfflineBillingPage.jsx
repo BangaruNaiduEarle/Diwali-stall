@@ -8,6 +8,7 @@ import { synchronizeOutbox } from '../offline/synchronize.js'
 import { prepareOfflineAppShell, offlineAppShellReady } from '../offline/appShell.js'
 import { readStorageHealth } from '../offline/storageHealth.js'
 import { sellingLines,assertCompleteFamilyDraft } from '../offline/handover.js'
+import { validateOfflineItems } from '../offline/offlineCart.js'
 import { transferProductIds } from '../../shared/familyPackSnapshot.js'
 import { adjustmentPayload, paiseInputValue, rupeesToPaise } from '../lib/billAdjustment.js'
 import { paymentPayload } from '../lib/payments.js'
@@ -225,7 +226,7 @@ export default function AdminOfflineBillingPage() {
       let lineSnapshots
       if (['CREATE','EDIT'].includes(kind)) {
         assertCompleteFamilyDraft(draft)
-        if (!items.length || items.some(item => !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99)) throw Error('Add products with quantities between 1 and 99.')
+        validateOfflineItems(draft.body.items, catalogue)
         lineSnapshots=sellingLines(draft.body.items,catalogue,draft.draftId)
         snapshots = transferProductIds(lineSnapshots).map(id => {
           const product = catalogue.find(row => row.id === id)

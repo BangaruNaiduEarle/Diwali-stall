@@ -10,6 +10,8 @@ import OfflineFinancialSummary from './OfflineFinancialSummary.jsx'
 import MobileDigitCount from './MobileDigitCount.jsx'
 import FamilyPackSnapshotPreview from './FamilyPackSnapshotPreview.jsx'
 import { customerErrors, posLine, posSummary } from '../offline/posPresentation.js'
+import { addOfflineProduct, changeOfflineUnit, offlineProductAvailable, validateOfflineItems } from '../offline/offlineCart.js'
+import { productMatchesQuickBillSearch } from '../../lib/quickBillProductSearch.js'
 import { formatPaymentPaise, PAYMENT_METHOD_OPTIONS } from '../lib/payments.js'
 import { rupeesToPaise } from '../lib/billAdjustment.js'
 import { offlineScopeKey } from '../offline/storage.js'
@@ -64,7 +66,8 @@ export default function OfflinePosWorkspace(props) {
   const attentionCount=failures+retainedCaptures.length
   const categories = [...new Set(catalogue.map(product => product.category_slug).filter(Boolean))]
   const visibleProducts = catalogue.filter(product => (filter === 'all' || product.category_slug === filter) &&
-    `${product.name} ${product.id} ${product.pack} ${product.company ?? ''}`.toLowerCase().includes(search.toLowerCase().trim()))
+    (productMatchesQuickBillSearch(search, product.name, product.company, product.id) ||
+      Boolean(search.trim()) && String(product.pack ?? '').toLowerCase().includes(search.toLowerCase().trim())))
   const visiblePacks = (filter === 'all' || filter === 'packs') ? familyPacks.filter(pack => `${pack.name} ${pack.variant.label}`.toLowerCase().includes(search.toLowerCase().trim())) : []
   const closed = Boolean(editor?.localClosure) || editor?.serverSnapshot?.request.status === 'closed'
   const count = editor?.body.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0) ?? 0
@@ -83,8 +86,7 @@ export default function OfflinePosWorkspace(props) {
 
   function goReview() {
     const errors = customerErrors(editor.body.customer)
-    if (!editor.body.items.length) errors.items = 'Add at least one product or Family Pack.'
-    if (editor.body.items.some(item => !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99)) errors.items = 'Quantities must be whole numbers between 1 and 99.'
+    try { validateOfflineItems(editor.body.items, catalogue) } catch (reason) { errors.items = reason.message }
     setValidation(errors)
     if (errors.name || errors.mobile) setCustomerOpen(true)
     if (!Object.keys(errors).length) { setCartOpen(false); reviewRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return true }
@@ -94,7 +96,7 @@ export default function OfflinePosWorkspace(props) {
     if (locked || actionLock.current) return false
     if (['CREATE','EDIT'].includes(kind)) {
       const errors = customerErrors(editor.body.customer)
-      if (!editor.body.items.length) errors.items = 'Add at least one product or Family Pack.'
+      try { validateOfflineItems(editor.body.items, catalogue) } catch (reason) { errors.items = reason.message }
       setValidation(errors)
       if (Object.keys(errors).length) return false
     }
@@ -103,24 +105,31 @@ export default function OfflinePosWorkspace(props) {
   }
   function newBill() { if (busy || saving || acting || !writable) return; actions.newDraft(); setTab('sale'); setSearch(''); setFilter('all'); setValidation({}) }
   function openDraft(draft) { if (busy || saving) return; actions.choose(draft); setTab('sale') }
-  function addProduct(product) {
+  function addProduct(product, unitType = 'box') {
     if (editingLocked || itemsLocked && !review) return
-    const items = editor.body.items
-    const found = items.find(item => item.productId === product.id && item.unitType === 'box')
-    if (found?.quantity >= 99) { setValidation({ items: 'Maximum quantity is 99. Review the cart before adding more.' }); return }
-    actions.patchBody({ items: found ? items.map(item => item === found ? { ...item, quantity: Number(item.quantity) + 1 } : item) : [...items, { lineId: crypto.randomUUID(), productId: product.id, quantity: 1, unitType: 'box' }] })
-    setProductFeedback(`${product.name} added to cart`)
+    try {
+      actions.patchBody({ items: addOfflineProduct(editor.body.items, product, unitType, crypto.randomUUID()) })
+      setValidation({}); setProductFeedback(`${product.name} (${unitType}) added to cart`)
+    } catch (reason) { setValidation({ items: reason.message }) }
   }
   function addPack(pack) {
     if (editingLocked || itemsLocked && !review) return
     const items = editor.body.items, found = items.find(item => item.familyPackId === pack.familyPackId)
+    if (!found && items.length >= 50) { setValidation({ items: 'Maximum 50 bill lines.' }); return }
     if (found?.quantity >= 99) { setValidation({ items: 'Maximum quantity is 99.' }); return }
     actions.patchBody({ items: found ? items.map(item => item === found ? { ...item, quantity: Number(item.quantity) + 1 } : item) : [...items, {
       lineId: crypto.randomUUID(), familyPackId: pack.familyPackId, quantity: 1, unitType: 'box', familyPackSnapshot: structuredClone(pack),
     }] })
     setProductFeedback(`${pack.name} added to cart`)
   }
-  function itemPatch(index, changes) { actions.patchBody({ items: editor.body.items.map((item, i) => i === index ? { ...item, ...changes } : item) }) }
+  function itemPatch(index, changes) {
+    if (editingLocked || itemsLocked && !review) return
+    try {
+      const items = changes.unitType ? changeOfflineUnit(editor.body.items, index, changes.unitType, catalogue) :
+        editor.body.items.map((item, i) => i === index ? { ...item, ...changes } : item)
+      actions.patchBody({ items }); setValidation({})
+    } catch (reason) { setValidation({ items: reason.message }) }
+  }
   const cart = editor ? <>
     {!editor.body.items.length ? <Empty icon={ShoppingCart} title="Your cart is empty">Add products from the catalogue to start this bill.</Empty> : <ul className="pos-cart-lines">{editor.body.items.map((item, index) => {
       const line = posLine(item, editor.sellingCatalogue??catalogue), lineLocked = editingLocked || itemsLocked && !review
@@ -130,7 +139,7 @@ export default function OfflinePosWorkspace(props) {
         <div className="pos-cart-line__bottom"><div className="pos-quantity"><Action icon={Minus} aria-label={`Decrease ${line.name}`} disabled={lineLocked || item.quantity <= 1} onClick={() => itemPatch(index, { quantity: item.quantity - 1 })} />
           <input aria-label={`Quantity for ${line.name}`} type="number" inputMode="numeric" min="1" max="99" value={item.quantity} disabled={lineLocked} onChange={event => itemPatch(index, { quantity: event.target.value === '' ? '' : Number(event.target.value) })} />
           <Action icon={Plus} aria-label={`Increase ${line.name}`} disabled={lineLocked || item.quantity >= 99} onClick={() => itemPatch(index, { quantity: Number(item.quantity) + 1 })} /></div><strong>{money(line.total)}</strong></div>
-        {!item.familyPackId ? <label className="pos-unit">Unit<select aria-label={`Unit for ${line.name}`} value={item.unitType} disabled={lineLocked} onChange={event => itemPatch(index, { unitType: event.target.value })}><option value="box">Box / pack</option><option value="piece" disabled={!line.product?.allow_loose_sale}>Loose piece</option></select></label> : <details className="pos-disclosure"><summary>View captured pack composition</summary><FamilyPackSnapshotPreview pack={item.familyPackSnapshot} quantity={item.quantity} /></details>}
+        {!item.familyPackId ? <><label className="pos-unit">Unit<select aria-label={`Unit for ${line.name}`} value={item.unitType ?? 'box'} disabled={lineLocked} onChange={event => itemPatch(index, { unitType: event.target.value })}><option value="box">Box / pack</option><option value="piece" disabled={!offlineProductAvailable(line.product, 'piece')}>Loose piece</option></select></label><p>{line.boxQuantity} boxes + {line.looseQuantity} loose pieces{line.totalPieces !== null ? ` · ${line.totalPieces} total pieces` : ''}</p></> : <details className="pos-disclosure"><summary>View captured pack composition</summary><FamilyPackSnapshotPreview pack={item.familyPackSnapshot} quantity={item.quantity} /></details>}
         {grantViewAllowed && !item.familyPackId ? <p className="pos-final-price">Final Price snapshot / box: {money(finalPrices.get(item.productId))}</p>:null}
         {privileged && hasWorkflow && !item.familyPackId ? <label className="pos-field pos-field--compact">Selling price override (₹)<input inputMode="decimal" placeholder="Use catalogue price" value={item.priceInr ?? ''} disabled={lineLocked} onChange={event => itemPatch(index, { priceInr: event.target.value })} /></label> : null}
       </li>
@@ -182,8 +191,8 @@ export default function OfflinePosWorkspace(props) {
                 {!catalogue.length && !familyPacks.length ? <div className="pos-panel"><Empty icon={Package} title="No saved products yet">Add products to this stall online, then refresh its offline preparation.</Empty><Action variant="outline" disabled={!canPrepare} onClick={actions.prepare}>Refresh catalogue</Action></div> : null}
                 <div className="pos-results" tabIndex={0} aria-label="Product results">
                 {filter !== 'packs' ? <div className="pos-product-grid">{visibleProducts.map(product => {
-                  const available = Number(product.active) === 1 && product.selling_price_paise > 0 && product.stock_status === 'available'
-                  return <article className="pos-product" key={product.id}><ProductPhoto blob={productImages[product.id]} name={product.name} id={product.id} /><div className="pos-product__body"><span className="pos-product__category">{categoryLabel(product.category_slug)}</span><h3>{product.name}</h3><p>{product.pack || 'Box / pack'}</p>{grantViewAllowed ? <span className='pos-final-price'>Final Price / box: {money(finalPrices.get(product.id))}</span> : null}<div className="pos-product__footer"><strong>{money(product.selling_price_paise)}</strong><Action icon={Plus} variant="soft" disabled={editingLocked || itemsLocked && !review || !available} onClick={() => addProduct(product)} aria-label={`Add ${product.name}`}>{available ? 'Add' : 'Unavailable'}</Action></div></div></article>
+                  const available = offlineProductAvailable(product), looseAvailable = offlineProductAvailable(product, 'piece')
+                  return <article className="pos-product" key={product.id}><ProductPhoto blob={productImages[product.id]} name={product.name} id={product.id} /><div className="pos-product__body"><span className="pos-product__category">{categoryLabel(product.category_slug)}</span><h3>{product.name}</h3><p>{product.pack || 'Box / pack'}</p>{grantViewAllowed ? <span className='pos-final-price'>Final Price / box: {money(finalPrices.get(product.id))}</span> : null}<div className="pos-product__footer"><strong>{money(product.selling_price_paise)}</strong><Action icon={Plus} variant="soft" disabled={editingLocked || itemsLocked && !review || !available} onClick={() => addProduct(product)} aria-label={`Add ${product.name}`}>{available ? 'Add' : 'Unavailable'}</Action></div>{looseAvailable ? <div className="pos-product__footer"><strong>{money(Math.floor(product.selling_price_paise / product.pieces_per_pack))} / piece</strong><Action icon={Plus} variant="soft" disabled={editingLocked || itemsLocked && !review} onClick={() => addProduct(product, 'piece')} aria-label={`Add ${product.name} loose piece`}>Add piece</Action></div> : null}</div></article>
                 })}</div> : null}
                 {visiblePacks.length ? <><div className="pos-section-heading pos-pack-heading"><Layers3 size={21} /><h2>Family Packs</h2></div><div className="pos-product-grid">{visiblePacks.map(pack => <article key={pack.familyPackId} className="pos-product pos-product--pack"><div className="pos-product__image"><Layers3 size={32} strokeWidth={1.4} /><span>FAMILY PACK</span></div><div className="pos-product__body"><h3>{pack.name}</h3><p>{pack.variant.label} · {pack.components.length} components</p><details className="pos-disclosure"><summary>View composition</summary><ul>{pack.components.map(component => <li key={component.componentId}>{component.quantity} × {component.productName}</li>)}</ul></details><div className="pos-product__footer"><strong>{money(pack.sellingUnitPaise)}</strong><Action icon={Plus} variant="soft" disabled={editingLocked || itemsLocked && !review} onClick={() => addPack(pack)} aria-label={`Add ${pack.name}`}>Add pack</Action></div></div></article>)}</div></> : null}
                 {(catalogue.length || familyPacks.length) && !visiblePacks.length && (filter === 'packs' || !visibleProducts.length) ? <Empty icon={Search} title="No matching products">Try another name or category.</Empty> : null}
