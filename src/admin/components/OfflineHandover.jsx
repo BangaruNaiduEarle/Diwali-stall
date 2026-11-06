@@ -13,6 +13,17 @@ export default function OfflineHandover({storage,profile,draft,catalogue,familyP
   const [scanning,setScanning]=useState(false),[progress,setProgress]=useState(''),[preview,setPreview]=useState(null),[pasted,setPasted]=useState('')
   const video=useRef(null),collector=useRef(createFrameCollector()),checking=useRef(false),frameHandler=useRef(null),handledScan=useRef(0),running=useRef(false)
   const prep=profile.handover
+  const recipients=prep?.recipients ?? []
+  const recipientPrepared=recipients.some(user=>user.userId===recipient)
+  const preparationExpired=Boolean(prep) && !(Date.parse(prep.certificate?.claims?.expiresAt)>Date.now())
+  const recipientHelp=!prep
+    ? 'Connect to the internet and sign in to this stall, then choose Prepare QR recipients below. Catalogue preparation and Owner billing authorization do not prepare QR recipients.'
+    : preparationExpired ? 'QR preparation has expired. Connect to the internet and prepare QR recipients again on this phone.'
+    : !recipients.length ? 'No authorized Owner / Super Admin recipients were returned for this stall and season. Ask the stall Owner to check active season and stall membership, then prepare QR recipients again online. Recipients cannot be added offline.'
+    : 'Choose from the recipients saved during online QR preparation. This list works offline; adding or updating recipients requires internet and authorized Owner / Super Admin membership in this stall and season.'
+  useEffect(()=>{
+    setRecipient(current=>recipients.some(user=>user.userId===current)?current:'')
+  },[prep])
   const savedCreation = draft && (draft.requestId || operations.some(row => row.draftId === draft.draftId && row.payload.kind === 'CREATE' && ['pending','synced'].includes(row.state)))
   const exportIsCurrent=exportSource?.draftId===draft?.draftId && exportSource?.revision===draft?.localRevision && exportSource?.recipient===recipient
   useEffect(()=>{
@@ -35,7 +46,8 @@ export default function OfflineHandover({storage,profile,draft,catalogue,familyP
     const result=await prepareOfflineHandover({deviceId:device.deviceId,deviceToken:device.deviceToken,publicKey:keys.publicKey})
     if(!result.ok)throw Error(result.message ?? 'QR preparation failed.')
     const next=await storage.saveHandoverPreparation(profile.scope,result);await onPrepared(next)
-    setNotice('QR signing and verification are prepared for seven days. Refresh every participating device online before offline work.')
+    setRecipient(current=>next.handover.recipients.some(user=>user.userId===current)?current:'')
+    setNotice(next.handover.recipients.length ? 'QR signing and recipients are saved for seven days. Choose the intended recipient below. Prepare the receiving phone online too.' : 'QR signing is prepared, but no authorized Owner / Super Admin recipients were found. Ask the stall Owner to review access, then prepare again online.')
   }
   async function receive(frame) {
     if(checking.current)return
@@ -56,12 +68,14 @@ export default function OfflineHandover({storage,profile,draft,catalogue,familyP
     <button type="button" disabled={!canPrepare||busy||disabled} onClick={()=>run(prepare)}>Prepare / refresh secure QR handover online</button>
     <p>{prep?`QR certificate expires ${prep.certificate.claims.expiresAt}.`:'Each device needs online QR preparation before offline transfer.'}</p>
     {error?<p role="alert">{error}</p>:null}{notice?<p role="status">{notice}</p>:null}
-    <fieldset disabled={!prep||busy||disabled}>
+    <p id="qr-recipient-help" role="status">{recipientHelp}{disabled ? ' Recipient selection is temporarily locked while saving or switching workspaces, or while this workspace is read-only. Wait for saving to finish; reconnect if access needs verification.' : ''}</p>
+    {!prep||preparationExpired||!recipients.length ? <button type="button" disabled={!canPrepare||busy||disabled} onClick={()=>run(prepare)}>Prepare QR recipients (internet required)</button> : null}
+    {!canPrepare ? <p>Online QR preparation requires internet and a signed-in account with access to this business, stall and season. An Owner must correct missing recipient access before you refresh.</p> : null}
+    <fieldset disabled={!prep||preparationExpired||busy||disabled}>
       <legend>Send the selected request</legend>
       {!draft ? <p>Open a saved bill in Bills &amp; sync before sending it.</p> : !savedCreation ? <p>Use Save bill in New sale before generating a handover. An autosaved draft alone cannot be transferred.</p> : <p>Selected: {draft.body.customer.name} · {draft.requestId || 'locally saved bill'}. Choose the intended recipient below.</p>}
-      {prep && !prep.recipients.length ? <p>No authorized Owner / Super Admin recipients were prepared for this stall. Refresh QR preparation online after access is reviewed.</p> : null}
-      <label className="admin-field">Intended recipient<select className="admin-input" value={recipient} onChange={event=>setRecipient(event.target.value)}><option value="">Choose Owner / Super Admin</option>{prep?.recipients.map(user=><option key={user.userId} value={user.userId}>{user.name || user.userId} · {user.userId} · {user.role}</option>)}</select></label>
-      <button type="button" disabled={!savedCreation||!recipient} onClick={()=>run(async()=>{const envelope=await generateHandover({storage,profile,draft,operations,catalogue,recipientUserId:recipient});setFrames(encodeFrames(envelope));setExportSource({draftId:draft.draftId,revision:draft.localRevision,recipient,requestId:envelope.payload.requestId});setIndex(0);setCycle(false)})}>Generate request handover QR</button>
+      <label className="admin-field">Intended recipient<select className="admin-input" aria-describedby="qr-recipient-help" disabled={!recipients.length} value={recipient} onChange={event=>setRecipient(event.target.value)}><option value="">Choose Owner / Super Admin</option>{recipients.map(user=><option key={user.userId} value={user.userId}>{user.name || user.userId} · {user.userId} · {user.role}</option>)}</select></label>
+      <button type="button" disabled={!savedCreation||!recipientPrepared} onClick={()=>run(async()=>{const envelope=await generateHandover({storage,profile,draft,operations,catalogue,recipientUserId:recipient});setFrames(encodeFrames(envelope));setExportSource({draftId:draft.draftId,revision:draft.localRevision,recipient,requestId:envelope.payload.requestId});setIndex(0);setCycle(false)})}>Generate request handover QR</button>
     </fieldset>
     {frames.length && exportIsCurrent?<div><p>Request {exportSource.requestId}. Complete sequence: frame {index+1} of {frames.length}. The receiving device must collect every frame and preview the request. QR contains customer details; share only with the intended recipient.</p>
       {image?<img src={image} width="500" height="500" style={{maxWidth:'100%',height:'auto'}} alt={`Diwali handover QR frame ${index+1} of ${frames.length}`} />:null}
