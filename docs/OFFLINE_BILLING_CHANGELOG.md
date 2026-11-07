@@ -1,5 +1,48 @@
 # Offline Billing changelog
 
+## 2026-11-07 - Safe bill deletion blocked by core-change restriction
+
+Task files only:
+
+- `docs/OFFLINE_BILLING_CHANGELOG.md`: record the blocker; no application changes made.
+
+Focused inspection of Bills & Sync cards and offline draft/status storage found no existing draft deletion or recoverable archive operation. Existing discard behavior belongs to failed/conflicted operation reconciliation and can cancel dependent operations; it is not a safe draft-delete handler. Saved operations enter the pending outbox, and drafts use revision checks and preserved versions for concurrent saves. Safe deletion requires a new atomic storage operation that checks current draft, operation and QR records and coordinates with saves; merely hiding a card would leave stored work and pending operations intact. These storage/workflow changes exceed the explicit instruction to leave existing core functionality unchanged. Delete was therefore not implemented, as requested for this blocker.
+
+No checks run (documentation only). Existing application changes, QR records, payments, reconciliation data and history preserved. No Git commands, commit, push or deployment.
+
+## 2026-11-07 - New Bill product company names
+
+Task files only:
+
+- `src/admin/components/OfflinePosWorkspace.jsx`: display each product's existing `company` field below its name when present, using the existing muted paragraph styling and wrapping long names on mobile, tablet and desktop. Catalogue products already retain this field; no snapshot/storage change required. Selection, actions, prices, cart, QR and sync unchanged.
+- `docs/OFFLINE_BILLING_CHANGELOG.md`: this record. Existing changes preserved.
+
+Verification: one targeted check, `node_modules/.bin/oxlint.cmd src/admin/components/OfflinePosWorkspace.jsx`, exited 0 with two existing react(set-state-in-effect) warnings at lines 37 and 77. No other checks, Git commands or deployment.
+
+## 2026-11-07 - Mobile UI layout only
+
+Task files only:
+
+- `src/styles/offline-pos.css`: separate and stack mobile box/piece purchase rows, permit price/button wrapping, retain horizontal tablet/desktop rows, remove product-results height caps and nested scrolling, and place the bottom action bar and Review & Save in normal page flow.
+- `docs/OFFLINE_BILLING_CHANGELOG.md`: this record.
+
+Verification: one targeted JSX lint check of unchanged `src/admin/components/OfflinePosWorkspace.jsx` completed with exit 0 and two existing react(set-state-in-effect) warnings (lines 37 and 77). No check was run after the CSS-only edits. No tests, Git commands, backend/database changes or deployment. All handlers and functionality unchanged. Existing work preserved. Screenshots unavailable in this chat; implemented the written layout requirements.
+
+## 2026-11-06 — Receiver verification status fix
+
+Confirmed cause: `receive()` set “Verifying signed bill and intended recipient” before awaiting cached receiver preparation/key verification and signed sender verification, but its catch handler never cleared that progress message. Any rejected certificate, key, scope, recipient or signature check left the same apparent loading status. The asynchronous storage/WebCrypto path also had no deadline. No payload field mismatch or network dependency was found in that path; the actual mobile rejection cannot be identified without its error/state.
+
+Task files only:
+
+- `src/admin/components/OfflineHandover.jsx`: replace verification progress with explicit failure status on errors, preserve the detailed error, use bounded local verification, and ignore completed results after unmount. Sender generation and provisional acceptance are unchanged.
+- `src/admin/offline/receiverVerification.js`: receiver-only local verification with stage-specific errors and a 15-second deadline; retains durable receiver preparation/signature/expiry/device/role checks and sender signature, signed grants, intended-recipient and workspace verification. A timed-out result cannot produce a preview or import a bill.
+- `src/admin/offline/receiverVerification.test.js`: one focused check covering valid offline Super Admin verification, wrong recipient, tampered signature, missing/expired/revoked receiver preparation, a stalled storage promise and failure-status replacement.
+- `docs/OFFLINE_BILLING_CHANGELOG.md`: this record.
+
+Verification: `node --test src/admin/offline/receiverVerification.test.js` passed (1 test; network calls forbidden during verification). No other checks run. Physical camera/mobile IndexedDB/WebCrypto behavior was not reproduced; this establishes local verification and error/timeout handling, not that the user's physical phone now accepts its particular QR.
+
+Preservation: read the Git index directly without Git commands; pre-existing tracked modification was `server/wrangler.toml`. New helper/test paths were absent before editing. Existing QR sender, cached preparation/storage, data, quantities, duplicate protection, receiver acceptance and reconciliation were not changed. No database/production changes, staging, Git commands or deployment.
+
 ## 2026-11-06 — Pending bill QR transfer completion
 
 Root cause in the code: phone/catalogue preparation did not invoke QR preparation, so a saved pending bill could exist without a device certificate or cached eligible recipients. The disabled dropdown inherited the missing preparation state. The previous follow-up only explained this; it did not connect phone preparation to QR preparation. Bills & sync also lacked a direct action selecting the bill and opening its QR sender. The actual phone's IndexedDB is unavailable from this workspace, so its specific missing/expired/access state was not inspected.
