@@ -8,6 +8,7 @@ import { STALL_FINALIZATION_FILTER_OPTIONS, stallBillFinalizationDisplay } from 
 import AdminCustomerRequestCard from '../components/AdminCustomerRequestCard.jsx'
 import AdminCustomerRequestListAudit from '../components/AdminCustomerRequestListAudit.jsx'
 import AdminCustomerRequestWorkflowAudit from '../components/AdminCustomerRequestWorkflowAudit.jsx'
+import { customerRequestsCsv } from '../lib/customerRequestsCsv.js'
 import {
   formatAdminPublicReference,
   formatRequestCreatedAt,
@@ -23,6 +24,9 @@ export default function AdminCustomerRequestsPage() {
   const { role, permissionRole: seasonRole, activeSeasonId, contextKey, email: sessionEmail } = useAdminSession()
   const pricingPermissionRole = activeSeasonId != null ? seasonRole : role
   const canFilterAssignedToMe = canViewSensitiveProductPricing(pricingPermissionRole)
+  const isOwner = pricingPermissionRole === 'owner'
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState(null)
   const [requests, setRequests] = useState(/** @type {Record<string, unknown>[]} */ ([]))
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 })
   const [loading, setLoading] = useState(true)
@@ -37,6 +41,37 @@ export default function AdminCustomerRequestsPage() {
   const [loadedKey, setLoadedKey] = useState('')
   const requestKey = JSON.stringify([contextKey, activeSeasonId, pricingPermissionRole, page, statusFilter, debouncedQ, stallFinalizationFilter, assignedToMeOnly])
   const listReady = !loading && loadedKey === requestKey
+  const currentExportScope = useRef(requestKey)
+  currentExportScope.current = requestKey
+
+  useEffect(() => () => { currentExportScope.current = null }, [])
+
+  const exportRequests = async () => {
+    if (exporting) return
+    const scope = requestKey
+    setExporting(true)
+    setExportError(null)
+    try {
+      const parts = await customerRequestsCsv(fetchAdminCustomerRequests, {
+        status: statusFilter || undefined,
+        q: debouncedQ || undefined,
+        finalizationStatus: stallFinalizationFilter || undefined,
+        assignedToMe: assignedToMeOnly && canFilterAssignedToMe ? true : undefined,
+      }, isOwner, () => currentExportScope.current === scope)
+      const url = URL.createObjectURL(new Blob(parts, { type: 'text/csv;charset=utf-8' }))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `customer-requests-${new Date().toISOString().slice(0, 10)}.csv`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (err) {
+      if (currentExportScope.current === scope) setExportError(err instanceof Error ? err.message : 'Unable to export requests.')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   useEffect(() => {
     if (searchInput.trim() === debouncedQ) return
@@ -185,6 +220,11 @@ export default function AdminCustomerRequestsPage() {
           <button type="button" className="admin-link-button admin-show-desktop" onClick={load} disabled={loading}>
             Refresh
           </button>
+          <button type="button" className="admin-link-button" onClick={exportRequests}
+            disabled={exporting || !listReady || Boolean(error) || searchInput.trim() !== debouncedQ}
+            aria-busy={exporting}>
+            {exporting ? 'Exporting…' : 'Export Requests'}
+          </button>
         </div>
       </div>
       {(loading || (!error && !listReady)) ? (
@@ -198,6 +238,7 @@ export default function AdminCustomerRequestsPage() {
           {error}
         </div>
       ) : null}
+      {exportError ? <div className="admin-alert admin-alert--error" role="alert">{exportError}</div> : null}
       {listReady && !error && requests.length === 0 ? (
         <div className="admin-state">
           {debouncedQ ? (
@@ -223,6 +264,7 @@ export default function AdminCustomerRequestsPage() {
                 key={String(r.id ?? '')}
                 request={r}
                 showListAudit={canFilterAssignedToMe}
+                showPurchased={isOwner}
               />
             ))}
           </div>
@@ -258,6 +300,7 @@ export default function AdminCustomerRequestsPage() {
                           ) : null}
                           {canFilterAssignedToMe ? (
                             <AdminCustomerRequestListAudit
+                              showPurchased={isOwner}
                               variant="inline"
                               auditSummary={
                                 r.auditSummary && typeof r.auditSummary === 'object'

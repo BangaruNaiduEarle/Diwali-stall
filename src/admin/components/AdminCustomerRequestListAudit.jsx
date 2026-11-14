@@ -2,10 +2,11 @@ import { formatAgreedBelowFinalListWarning } from '../lib/agreedBelowFinalWarnin
 import { formatListAuditPaise } from '../lib/adminCustomerRequestListAuditDisplay.js'
 
 /**
- * @param {{ auditSummary?: Record<string, unknown> | null, compact?: boolean, variant?: 'card' | 'inline' }} props
+ * @param {{ auditSummary?: Record<string, unknown> | null, showPurchased?: boolean, compact?: boolean, variant?: 'card' | 'inline' }} props
  */
 export default function AdminCustomerRequestListAudit({
   auditSummary,
+  showPurchased = false,
   compact = false,
   variant = 'card',
 }) {
@@ -17,8 +18,11 @@ export default function AdminCustomerRequestListAudit({
       ? formatListAuditPaise(auditSummary.acceptedAmountPaise)
       : null
   const warning = formatAgreedBelowFinalListWarning(auditSummary)
+  const purchased = showPurchased
+    ? auditSummary.purchaseSubtotalPaise == null ? 'Unavailable' : formatListAuditPaise(auditSummary.purchaseSubtotalPaise)
+    : null
 
-  if (!selling && agreed == null && !warning) return null
+  if (!selling && agreed == null && !warning && !purchased) return null
 
   if (variant === 'inline') {
     return (
@@ -33,6 +37,12 @@ export default function AdminCustomerRequestListAudit({
           <span className="admin-request-list__pricing-chip admin-request-list__pricing-chip--agreed">
             <span className="admin-request-list__pricing-chip-label">Agreed</span>
             <span className="admin-request-list__pricing-chip-value tabular-nums">{agreed}</span>
+          </span>
+        ) : null}
+        {purchased ? (
+          <span className="admin-request-list__pricing-chip">
+            <span className="admin-request-list__pricing-chip-label">Purchased</span>
+            <span className="admin-request-list__pricing-chip-value tabular-nums">{purchased}</span>
           </span>
         ) : null}
         {warning ? (

@@ -14,8 +14,8 @@ import AdminCustomerRequestListAudit from './AdminCustomerRequestListAudit.jsx'
 import AdminCustomerRequestWorkflowAudit from './AdminCustomerRequestWorkflowAudit.jsx'
 import AdminPaymentSummary from './AdminPaymentSummary.jsx'
 
-/** @param {{ request: Record<string, unknown>, showListAudit?: boolean }} props */
-export default function AdminCustomerRequestCard({ request, showListAudit = false }) {
+/** @param {{ request: Record<string, unknown>, showListAudit?: boolean, showPurchased?: boolean }} props */
+export default function AdminCustomerRequestCard({ request, showListAudit = false, showPurchased = false }) {
   const id = String(request.id ?? '')
   const rowStatus = String(request.status ?? '')
   const phone = String(request.customerPhone ?? '').trim()
@@ -59,6 +59,7 @@ export default function AdminCustomerRequestCard({ request, showListAudit = fals
         </p>
         {showListAudit ? (
           <AdminCustomerRequestListAudit
+            showPurchased={showPurchased}
             auditSummary={
               request.auditSummary && typeof request.auditSummary === 'object'
                 ? /** @type {Record<string, unknown>} */ (request.auditSummary)
