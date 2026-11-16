@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
-import { createFrameCollector, encodeFrames, verifyTransfer } from '../../shared/handoverProtocol.js'
-import { generateHandover, matchTransferCatalogue, assertHandoverPreparation } from '../offline/handover.js'
+import { createFrameCollector, encodeFrames } from '../../shared/handoverProtocol.js'
+import { generateHandover, matchTransferCatalogue } from '../offline/handover.js'
+import { verifyReceivedBill } from '../offline/receiverVerification.js'
 import { startQrCamera } from '../offline/qrCamera.js'
 import { prepareOfflineHandover } from '../api/adminOffline.js'
 import FamilyPackSnapshotPreview from './FamilyPackSnapshotPreview.jsx'
@@ -12,6 +13,16 @@ export default function OfflineHandover({storage,profile,draft,catalogue,familyP
   const [exportSource,setExportSource]=useState(null)
   const [scanning,setScanning]=useState(false),[progress,setProgress]=useState(''),[preview,setPreview]=useState(null),[pasted,setPasted]=useState('')
   const video=useRef(null),collector=useRef(createFrameCollector()),checking=useRef(false),frameHandler=useRef(null),handledScan=useRef(0),running=useRef(false)
+  const verificationAttempt=useRef(0)
+  const [scannerSession,setScannerSession]=useState(0)
+  useEffect(()=>()=>{verificationAttempt.current++},[])
+  function resetReceiver(nextScanning=false) {
+    const attempt=++verificationAttempt.current
+    checking.current=false;collector.current=createFrameCollector()
+    setScannerSession(attempt)
+    setPreview(null);setProgress('');setError('');setScanning(nextScanning)
+    return attempt
+  }
   const prep=profile.handover
   const recipients=prep?.recipients ?? []
   const recipientPrepared=recipients.some(user=>user.userId===recipient)
@@ -29,17 +40,19 @@ export default function OfflineHandover({storage,profile,draft,catalogue,familyP
   useEffect(()=>{
     if(!scanRequest||handledScan.current===scanRequest||!canAccept||disabled)return
     handledScan.current=scanRequest;onScanHandled?.()
+    resetReceiver()
     if(!prep||preparationExpired||profile.authorityRevoked){setNotice('QR preparation is missing, expired or revoked. Prepare this phone online before scanning. Saved bills are preserved.');return}
-    collector.current=createFrameCollector();setPreview(null);setProgress('');setError('');setScanning(true)
+    setScanning(true)
   },[scanRequest,canAccept,disabled,prep,onScanHandled])
   useEffect(()=>{ let cancelled=false; if (!frames.length) return; QRCode.toDataURL(frames[index],{errorCorrectionLevel:'M',margin:4,width:500}).then(value=>{if(!cancelled)setImage(value)}).catch(reason=>setError(reason.message)); return()=>{cancelled=true} },[frames,index])
   useEffect(()=>{if(!cycle||frames.length<2)return; const timer=setInterval(()=>setIndex(value=>(value+1)%frames.length),1800);return()=>clearInterval(timer)},[cycle,frames])
   useEffect(()=>{
     if(!scanning)return
     const controller=new AbortController()
-    startQrCamera(video.current,frame=>frameHandler.current?.(frame),{signal:controller.signal}).catch(reason=>{setError(reason.message);setScanning(false)})
+    const attempt=verificationAttempt.current
+    startQrCamera(video.current,frame=>{if(!controller.signal.aborted&&attempt===verificationAttempt.current)frameHandler.current?.(frame)},{signal:controller.signal}).catch(reason=>{if(!controller.signal.aborted&&attempt===verificationAttempt.current){setError(reason.message);setScanning(false)}})
     return()=>controller.abort()
-  },[scanning])
+  },[scanning,scannerSession])
   async function run(work) {if(running.current)return;running.current=true;setBusy(true);setError('');setNotice('');try{await work()}catch(reason){setError(reason.message)}finally{running.current=false;setBusy(false)}}
   async function prepare() {
     const device=await storage.device(),keys=await storage.signingIdentity(profile.scope)
@@ -51,17 +64,16 @@ export default function OfflineHandover({storage,profile,draft,catalogue,familyP
   }
   async function receive(frame) {
     if(checking.current)return
+    const attempt=verificationAttempt.current
     try {
       const result=collector.current(frame);setProgress(`${result.received} / ${result.total} QR frames collected`)
       if(!result.envelope)return
       checking.current=true;setScanning(false)
       setProgress('Verifying signed bill and intended recipient…')
-      const current=await storage.get('profiles',profile.scope,'profile')
-      await assertHandoverPreparation(storage,current)
-      if(!['owner','super_admin'].includes(current.role))throw Error('Only an authorized Owner / Super Admin can receive this bill.')
-      await verifyTransfer(result.envelope,{rootKey:current.handover.rootKey,grantRootKey:current.handover.grantRootKey,scope:profile.scope,recipientUserId:profile.scope.userId})
+      await verifyReceivedBill({storage,scope:profile.scope,envelope:result.envelope})
+      if(attempt!==verificationAttempt.current)return
       setPreview(result.envelope);setError('');setProgress('Complete sequence verified. Review this bill, then accept explicitly.')
-    } catch(reason){setPreview(null);setError(reason.message)}finally{checking.current=false}
+    } catch(reason){if(attempt===verificationAttempt.current){setPreview(null);setError(reason?.message || 'QR verification failed. Restart the scanner.');setProgress('Verification failed. No bill was imported.')}}finally{if(attempt===verificationAttempt.current)checking.current=false}
   }
   useEffect(()=>{frameHandler.current=receive})
   const matches=preview?matchTransferCatalogue(preview.payload,catalogue,familyPacks):[]
@@ -89,12 +101,12 @@ export default function OfflineHandover({storage,profile,draft,catalogue,familyP
     </div>:null}
     {canAccept?<>
       <h3>Receive and preview</h3>
-      <button type="button" disabled={!prep||preparationExpired||busy||disabled} onClick={()=>{collector.current=createFrameCollector();setPreview(null);setProgress('');setError('');setScanning(true)}}>Start camera scanner</button>{' '}
-      <button type="button" onClick={()=>setScanning(false)}>Stop camera</button>
+      <button type="button" disabled={!prep||preparationExpired||busy||disabled} onClick={()=>resetReceiver(true)}>Start camera scanner</button>{' '}
+      <button type="button" onClick={()=>resetReceiver()}>Stop camera</button>
       {scanning?<video ref={video} aria-label="QR camera preview" style={{width:'100%',maxWidth:600}} muted playsInline />:null}
       {progress?<p role="status">{progress}</p>:null}
       <details><summary>Paste a complete QR sequence instead</summary><textarea aria-label="QR frames to verify" maxLength={100000} value={pasted} onChange={event=>setPasted(event.target.value)} rows="4" style={{width:'100%'}} />
-        <button type="button" disabled={!prep||preparationExpired||busy||disabled} onClick={()=>run(async()=>{collector.current=createFrameCollector();setPreview(null);for(const frame of pasted.trim().split(/\s+/))await receive(frame)})}>Verify all pasted frames</button>
+        <button type="button" disabled={!prep||preparationExpired||busy||disabled} onClick={()=>run(async()=>{const attempt=resetReceiver();for(const frame of pasted.trim().split(/\s+/)){if(attempt!==verificationAttempt.current)break;await receive(frame)}})}>Verify all pasted frames</button>
       </details>
       {preview?<div><h3>Verified request preview</h3>
         {preview.payload.v===3?<p><strong>Finalized bill · payment handoff · ₹{(preview.payload.bill.agreedAmountPaise/100).toFixed(2)}</strong><br/>The Worker must acknowledge the original bill chain and this handoff before dependent payments become authoritative.</p>:null}
@@ -106,7 +118,7 @@ export default function OfflineHandover({storage,profile,draft,catalogue,familyP
         <ol>{matches.map(({line,matches,reason})=><li key={line.lineId}>{line.familyPackId?<FamilyPackSnapshotPreview pack={line.packSnapshot} quantity={line.quantity} />:<>{line.productName} ({line.productId}) · {line.quantity} × {line.unitType} · ₹{(line.sellingUnitPaise/100).toFixed(2)} · {line.packSnapshot.pack} · {line.packSnapshot.company} · {line.packSnapshot.piecesPerPack} pieces / pack · loose sale {line.packSnapshot.allowLooseSale?'allowed':'disabled'}</>} · line {line.lineId}{!matches?<p role="alert">{preview.payload.v===3?'Your catalogue differs. This finalized bill keeps its signed captured prices; the Worker must reconcile its original source chain.':reason??'Catalogue mismatch; refresh or resolve before acceptance.'} The captured snapshot is preserved.</p>:null}</li>)}</ol>
         <p>Boxes: {preview.payload.lines.filter(line=>!line.familyPackId&&line.unitType==='box').reduce((sum,line)=>sum+line.quantity,0)} ? Loose pieces: {preview.payload.lines.filter(line=>line.unitType==='piece').reduce((sum,line)=>sum+line.quantity,0)} ? Product pieces: {preview.payload.lines.filter(line=>!line.familyPackId).reduce((sum,line)=>sum+line.quantity*(line.unitType==='piece'?1:line.packSnapshot.piecesPerPack),0)}. Family Packs are listed separately above. Captured selling subtotal: ?{(preview.payload.lines.reduce((sum,line)=>sum+line.quantity*line.sellingUnitPaise,0)/100).toFixed(2)}. This is a calculation from signed selling snapshots; the finalized agreed amount, when present, is separate.</p>
         <button type="button" disabled={busy||disabled||preview.payload.v!==3&&matches.some(row=>!row.matches)} onClick={()=>run(async()=>{const accepted=await storage.acceptHandover(profile.scope,preview,catalogue,familyPacks);await onAccepted(accepted.draft);setNotice(accepted.duplicate?'This transfer was already accepted locally; opened its preserved draft.':'Accepted provisionally and saved atomically to drafts and outbox. Financial changes, finalization and payments are separate actions.');setPreview(null)})}>Accept provisionally and save to outbox</button>
-        <button type="button" onClick={()=>setPreview(null)}>Cancel preview</button>
+        <button type="button" onClick={()=>resetReceiver()}>Cancel preview</button>
       </div>:null}
     </>:null}
   </section>
