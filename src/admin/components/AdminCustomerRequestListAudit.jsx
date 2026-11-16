@@ -21,6 +21,9 @@ export default function AdminCustomerRequestListAudit({
   const purchased = showPurchased
     ? auditSummary.purchaseSubtotalPaise == null ? 'Unavailable' : formatListAuditPaise(auditSummary.purchaseSubtotalPaise)
     : null
+  const purchaseLabel = auditSummary.purchaseBasis === 'current_purchase_estimate'
+    ? 'Purchase estimate'
+    : auditSummary.purchaseBasis === 'finalization_purchase_snapshot' ? 'Purchase snapshot' : 'Purchased (basis unavailable)'
 
   if (!selling && agreed == null && !warning && !purchased) return null
 
@@ -41,7 +44,7 @@ export default function AdminCustomerRequestListAudit({
         ) : null}
         {purchased ? (
           <span className="admin-request-list__pricing-chip">
-            <span className="admin-request-list__pricing-chip-label">Purchased</span>
+            <span className="admin-request-list__pricing-chip-label">{purchaseLabel}</span>
             <span className="admin-request-list__pricing-chip-value tabular-nums">{purchased}</span>
           </span>
         ) : null}
@@ -70,6 +73,12 @@ export default function AdminCustomerRequestListAudit({
         <p className="admin-request-card__audit-row">
           <span className="admin-request-card__audit-label">Customer agreed</span>
           <span className="admin-request-card__audit-value tabular-nums">{agreed}</span>
+        </p>
+      ) : null}
+      {purchased ? (
+        <p className="admin-request-card__audit-row">
+          <span className="admin-request-card__audit-label">{purchaseLabel}</span>
+          <span className="admin-request-card__audit-value tabular-nums">{purchased}</span>
         </p>
       ) : null}
       {warning ? (

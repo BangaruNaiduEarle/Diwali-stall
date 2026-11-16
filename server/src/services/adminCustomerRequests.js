@@ -3,6 +3,7 @@ import {
   resolveOwnerListRequestAuditAmounts,
 } from '../lib/adminCustomerRequestListAudit.js'
 import { hasOfflineFinalization } from '../lib/offlineFinalizationAuthority.js'
+import { listBillPurchaseSummaries } from '../lib/billPurchaseSummary.js'
 import {
   canFinalizeQuickBillCustomerRequests,
   canViewSensitiveProductPricing,
@@ -348,7 +349,7 @@ export async function enrichAdminCustomerRequestListForRole(db, requests, role, 
   // Leave room for the operating-season and stall predicates added by the DB boundary.
   for (let start = 0; start < eligible.length; start += 90) {
     const ids = eligible.slice(start, start + 90).map(req => String(req.id))
-    const result = await db.prepare(`SELECT customer_request_id, selling_subtotal_paise,
+    const result = await db.prepare(`SELECT id, customer_request_id, selling_subtotal_paise,
       final_subtotal_paise, accepted_amount_paise, total_paise
       FROM quotations WHERE customer_request_id IN (${ids.map(() => '?').join(',')})
       AND status != 'void'${season ? ' AND season_id = ?' : ''}
@@ -357,16 +358,22 @@ export async function enrichAdminCustomerRequestListForRole(db, requests, role, 
       if (!quotations.has(String(row.customer_request_id))) quotations.set(String(row.customer_request_id), row)
     }
   }
+  const purchases = await listBillPurchaseSummaries(db, eligible, quotations, role, seasonId)
   return requests.map(req => {
     const row = quotations.get(String(req.id))
-    if (!row) return req
+    if (!row) return role === 'owner' ? { ...req, auditSummary: { purchaseSubtotalPaise: null, purchaseBasis: null } } : req
     const amounts = resolveOwnerListRequestAuditAmounts({
       sellingSubtotalPaise: row.selling_subtotal_paise,
       finalSubtotalPaise: row.final_subtotal_paise,
       acceptedAmountPaise: row.accepted_amount_paise,
       totalPaise: row.total_paise,
     }, null)
-    const auditSummary = buildOwnerCustomerRequestListAuditSummary(amounts)
+    let auditSummary = buildOwnerCustomerRequestListAuditSummary(amounts)
+    if (role === 'owner') {
+      const purchase = purchases.get(String(req.id))
+      auditSummary = { ...auditSummary, purchaseSubtotalPaise: purchase?.purchaseSubtotalPaise ?? null,
+        purchaseBasis: purchase?.basis ?? null }
+    }
     return auditSummary ? { ...req, auditSummary } : req
   })
 }

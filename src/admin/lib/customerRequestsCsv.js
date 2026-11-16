@@ -14,7 +14,7 @@ const csvRow = cells => cells.map(requestCsvCell).join(',') + '\r\n'
 export async function customerRequestsCsv(fetchPage, filters, owner, isCurrent = () => true) {
   const parts = ['\uFEFF', csvRow([
     'Reference', 'Customer', 'Phone', 'Status', 'Selling Amount', 'Agreed Amount',
-    'Items Count', 'Created Date', ...(owner ? ['Purchased Amount'] : []),
+    'Items Count', 'Created Date', ...(owner ? ['Purchased Amount', 'Purchase Calculation Basis'] : []),
   ])]
   let totalPages = 1
   for (let page = 1; page <= totalPages; page++) {
@@ -30,7 +30,9 @@ export async function customerRequestsCsv(fetchPage, filters, owner, isCurrent =
         customerRequestStatusLabel(request.status), amount(audit?.sellingSubtotalPaise),
         amount(audit?.acceptedAmountPaise ?? request.paymentSummary?.amountDuePaise),
         request.itemCount ?? 0, request.createdAt,
-        ...(owner ? [amount(audit?.purchaseSubtotalPaise)] : []),
+        ...(owner ? [amount(audit?.purchaseSubtotalPaise),
+          audit?.purchaseBasis === 'current_purchase_estimate' ? 'Current purchase estimate'
+            : audit?.purchaseBasis === 'finalization_purchase_snapshot' ? 'Finalization purchase snapshot' : 'Unavailable'] : []),
       ]))
     }
   }
